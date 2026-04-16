@@ -84,7 +84,7 @@ function WelcomeIllustration() {
   );
 }
 
-function PreviewWrapper({
+export function PreviewWrapper({
   onReady,
   children,
 }: {

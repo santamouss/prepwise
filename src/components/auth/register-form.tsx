@@ -61,7 +61,7 @@ export function RegisterForm() {
       }
 
       if (data.session) {
-        window.location.href = "/organizations";
+        window.location.href = "/dashboard";
         return;
       }
 
@@ -80,7 +80,7 @@ export function RegisterForm() {
         return;
       }
 
-      window.location.href = "/organizations";
+      window.location.href = "/dashboard";
     } finally {
       setLoading(false);
     }

@@ -3,14 +3,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { AntiCheatingGuard } from "@/components/session/anti-cheating-banner";
-import { IntervieweeOnboarding } from "@/components/session/interviewee-onboarding";
+import { IntervieweeOnboarding, PreviewWrapper } from "@/components/session/interviewee-onboarding";
+import { IntervieweeTourOverlay } from "@/components/session/interviewee-tour-overlay";
+import { IntervieweeTourProvider } from "@/components/session/interviewee-tour-provider";
 import { PreparingScreen } from "@/components/session/preparing-screen";
 import { Card, CardContent } from "@/components/ui/card";
+import type { InterviewContext } from "@/hooks/use-voice";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 const STORAGE_PREFIX = "aural_session_";
 
@@ -29,9 +32,21 @@ export default function SlugSessionPage() {
   const router = useRouter();
   const slug = params.slug as string;
   const sidParam = searchParams.get("sid");
+  const isPreview = searchParams.get("preview") === "true";
 
   const [completed, setCompleted] = useState(false);
-  const [onboardingDone, setOnboardingDone] = useState(false);
+  const [completionReason, setCompletionReason] = useState<string | undefined>();
+  const [onboardingDone, setOnboardingDone] = useState(isPreview);
+  const [previewTourDone, setPreviewTourDone] = useState(false);
+
+  const handleComplete = (reason?: string) => {
+    setCompletionReason(reason);
+    setCompleted(true);
+  };
+
+  const handleTourReady = useCallback(() => {
+    setPreviewTourDone(true);
+  }, []);
 
   const sessionId = useMemo(() => {
     if (sidParam) return sidParam;
@@ -63,6 +78,11 @@ export default function SlugSessionPage() {
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-secondary-500" />
             <h2 className="mt-4 text-2xl font-bold">Thank you!</h2>
+            {completionReason === "TIME_LIMIT_EXCEEDED" && (
+              <p className="mt-2 text-sm text-amber-600">
+                The session time limit has been reached and the interview was ended automatically.
+              </p>
+            )}
             <p className="mt-2 text-muted-foreground">
               Your interview has been completed successfully. We appreciate your
               time and thoughtful responses.
@@ -73,6 +93,8 @@ export default function SlugSessionPage() {
     );
   }
 
+  const antiCheatingEnabled = !isPreview && !!interview.data.antiCheatingEnabled;
+
   if (!onboardingDone) {
     return (
       <IntervieweeOnboarding
@@ -81,7 +103,7 @@ export default function SlugSessionPage() {
         questionCount={interview.data.questions.length}
         timeLimitMinutes={interview.data.timeLimitMinutes}
         language={interview.data.language}
-        antiCheatingEnabled={!!interview.data.antiCheatingEnabled}
+        antiCheatingEnabled={antiCheatingEnabled}
         voiceEnabled={!!interview.data.voiceEnabled}
         chatEnabled={!!interview.data.chatEnabled}
         aiName={interview.data.aiName}
@@ -118,6 +140,64 @@ export default function SlugSessionPage() {
 
   const useVoice = interview.data.voiceEnabled;
 
+  const showPreviewTour = isPreview && !previewTourDone;
+
+  if (showPreviewTour) {
+    const mode = useVoice ? "voice" : "chat";
+    const mockContext: InterviewContext = {
+      title: interview.data.title,
+      aiName: interview.data.aiName ?? "AI Interviewer",
+      aiTone: "professional",
+      language: interview.data.language ?? "en-US",
+      followUpDepth: "medium",
+      questions: interview.data.questions.map((q: any, i: number) => ({
+        text: q.text,
+        type: q.type as string,
+        order: i,
+      })),
+    };
+
+    return (
+      <IntervieweeTourProvider mode={mode}>
+        <PreviewWrapper onReady={handleTourReady}>
+          {mode === "voice" ? (
+            <VoiceInterface
+              sessionId="__preview__"
+              interviewId="__preview__"
+              interviewTitle={interview.data.title}
+              aiName={interview.data.aiName ?? "AI Interviewer"}
+              questionCount={interview.data.questions.length}
+              interviewContext={mockContext}
+              durationMinutes={interview.data.timeLimitMinutes ?? undefined}
+              chatEnabled={!!interview.data.chatEnabled}
+              onComplete={() => {}}
+              preview
+            />
+          ) : (
+            <ChatInterface
+              sessionId="__preview__"
+              interview={{
+                id: "__preview__",
+                title: interview.data.title,
+                aiName: interview.data.aiName ?? "AI Interviewer",
+                mode: "CHAT",
+                questions: mockContext.questions.map((q, i) => ({
+                  id: `preview-q-${i}`,
+                  text: q.text,
+                  type: q.type,
+                })),
+              }}
+              durationMinutes={interview.data.timeLimitMinutes ?? undefined}
+              onComplete={() => {}}
+              preview
+            />
+          )}
+        </PreviewWrapper>
+        <IntervieweeTourOverlay />
+      </IntervieweeTourProvider>
+    );
+  }
+
   if (useVoice) {
     const interviewContext = {
       title: interview.data.title,
@@ -139,7 +219,7 @@ export default function SlugSessionPage() {
 
     return (
       <>
-        <AntiCheatingGuard enabled={!!interview.data.antiCheatingEnabled} sessionId={sessionId!} />
+        <AntiCheatingGuard enabled={antiCheatingEnabled} sessionId={sessionId!} />
         <VoiceInterface
           sessionId={sessionId!}
           interviewId={interview.data.id}
@@ -151,8 +231,8 @@ export default function SlugSessionPage() {
           initialMessages={isResuming ? resumeTextMessages : undefined}
           initialDrawings={isResuming && resumeDrawings?.length ? resumeDrawings : undefined}
           chatEnabled={!!interview.data.chatEnabled}
-          onComplete={() => setCompleted(true)}
-          videoMode={!!interview.data.videoEnabled}
+          onComplete={handleComplete}
+          videoMode={isPreview ? false : !!interview.data.videoEnabled}
         />
       </>
     );
@@ -160,7 +240,7 @@ export default function SlugSessionPage() {
 
   return (
     <>
-      <AntiCheatingGuard enabled={!!interview.data.antiCheatingEnabled} sessionId={sessionId!} />
+      <AntiCheatingGuard enabled={antiCheatingEnabled} sessionId={sessionId!} />
       <ChatInterface
         sessionId={sessionId!}
         interview={{
@@ -180,7 +260,7 @@ export default function SlugSessionPage() {
             timestamp: m.timestamp.toString(),
           }))}
         initialQuestionIndex={isResuming ? resumeQuestionIndex : undefined}
-        onComplete={() => setCompleted(true)}
+        onComplete={handleComplete}
       />
     </>
   );

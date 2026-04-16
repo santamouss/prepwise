@@ -82,6 +82,86 @@ export const sessionRouter = router({
       return { sessionId: session.id, interview };
     }),
 
+  createPreview: protectedProcedure
+    .input(z.object({ interviewId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const { data: interviewAccess } = await ctx.supabase
+        .from("interviews")
+        .select("id, projectId, project:projects!inner(organizationId)")
+        .eq("id", input.interviewId)
+        .single();
+
+      if (!interviewAccess) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Interview not found" });
+      }
+
+      const project = interviewAccess.project as unknown as { organizationId: string };
+      const { data: membership } = await ctx.supabase
+        .from("organization_members")
+        .select("role")
+        .eq("workspaceId", project.organizationId)
+        .eq("userId", ctx.user.id)
+        .single();
+
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not a member of this organization",
+        });
+      }
+
+      const projAccess = await hasProjectAccess(
+        ctx.supabase,
+        interviewAccess.projectId,
+        ctx.user.id,
+      );
+      if (!projAccess) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You do not have access to this project",
+        });
+      }
+
+      const { data: interview } = await ctx.supabase
+        .from("interviews")
+        .select("*, questions(*)")
+        .eq("id", input.interviewId)
+        .order("order", { referencedTable: "questions", ascending: true })
+        .single();
+
+      if (!interview) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Interview not found" });
+      }
+
+      const { data: profile } = await ctx.supabase
+        .from("profiles")
+        .select("name, email")
+        .eq("id", ctx.user.id)
+        .single();
+
+      const questions = (interview.questions ?? []) as { id: string }[];
+      const derivedMode = interview.voiceEnabled ? "VOICE" : "CHAT";
+
+      const { data: sessionJson, error } = await ctx.supabase.rpc(
+        "create_interview_session",
+        {
+          p_interview_id: interview.id,
+          p_participant_name: profile?.name ?? "Preview User",
+          p_participant_email: profile?.email ?? ctx.user.email ?? null,
+          p_mode_used: derivedMode,
+          p_current_question_id: questions[0]?.id ?? null,
+        },
+      );
+
+      if (error) {
+        log.error("RPC error (createPreview):", error);
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+      }
+
+      const session = sessionJson as { id: string };
+      return { sessionId: session.id };
+    }),
+
   createFromInvite: publicProcedure
     .input(z.object({ inviteToken: z.string() }))
     .mutation(async ({ ctx, input }) => {
@@ -177,7 +257,7 @@ export const sessionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { data: session } = await ctx.supabase
         .from("sessions")
-        .select("id, status")
+        .select("id, status, startedAt, lastActivityAt, activitySegments, interviewId")
         .eq("id", input.sessionId)
         .single();
 

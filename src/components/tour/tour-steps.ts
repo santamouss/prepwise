@@ -31,15 +31,6 @@ export interface TourStep {
 
 export const TOUR_STEPS: TourStep[] = [
   {
-    id: "project-card",
-    selector: '[data-tour="project-card"]',
-    title: "Select a project",
-    description:
-      "**Click on a project** to open it. This is where your interviews and sessions live.",
-    page: "/organizations",
-    placement: "right",
-  },
-  {
     id: "new-interview",
     selector: '[data-tour="new-interview"]',
     title: "Create a new interview",

@@ -80,10 +80,11 @@ export function TourChecklist({ open, onClose }: TourChecklistProps) {
 
   const handleRestart = () => {
     onClose();
-    if (!pathname.includes("/organizations")) {
-      router.push("/organizations");
+    const firstPage = tour.steps[0]?.page ?? "/dashboard";
+    if (!pathname.includes(firstPage)) {
+      router.push(firstPage);
     }
-    tour.goToStep(0);
+    tour.restart();
   };
 
   return createPortal(

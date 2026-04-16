@@ -68,6 +68,12 @@
     <td width="25%" align="center"><strong>🌐 Multilingual</strong><br/><sub>English and Chinese with pluggable locale system</sub></td>
     <td width="25%" align="center"><strong>🔌 Pluggable LLMs</strong><br/><sub>OpenAI, Moonshot Kimi, MiniMax — or any OpenAI-compatible API</sub></td>
   </tr>
+  <tr>
+    <td width="25%" align="center"><strong>🚀 Quick Start Templates</strong><br/><sub>Pre-built interview templates for technical, behavioral, research, and more</sub></td>
+    <td width="25%" align="center"><strong>🔗 Share & Preview</strong><br/><sub>Share interviews with a link and preview as a candidate before going live</sub></td>
+    <td width="25%" align="center"><strong>🔑 Developer API</strong><br/><sub>Full REST API with OpenAPI spec for programmatic interview management</sub></td>
+    <td width="25%" align="center"><strong>📈 Activity Tracking</strong><br/><sub>Session activity segments and multi-segment audio recordings</sub></td>
+  </tr>
 </table>
 
 ---
@@ -304,7 +310,8 @@ Track all your interviews, sessions, and candidates from a unified dashboard. Or
 |--------|----------|----------------|
 | **App Router** | `src/app/` | Pages and layouts organized into route groups: `(auth)` for login/register, `(dashboard)` for the main app, `(docs)` for documentation, and `i/` for public interview links. |
 | **tRPC Routers** | `src/server/routers/` | Typed API layer handling interviews, sessions, analysis, organizations, projects, candidates, and access control. |
-| **REST API Routes** | `src/app/api/` | Endpoints for AI operations (chat, generate, refine, summarize), voice token/save, auth, and file uploads. These are used where streaming or non-tRPC patterns are needed. |
+| **REST API Routes** | `src/app/api/` | Endpoints for AI operations (chat, generate, refine, summarize), voice token/save, auth, session lifecycle (complete/leave), and file uploads. |
+| **Developer API (v1)** | `src/app/api/v1/` | Full REST API for programmatic interview management — CRUD for interviews, questions, sessions, candidates, publish, and usage. Authenticated via `dlv_` API keys with rate limiting. OpenAPI 3.1 spec at `/api/v1/openapi.json`. |
 | **AI Provider Registry** | `src/lib/ai/` | Pluggable LLM system with a provider registry, per-task model selection, and prompt templates for interviewing, generation, and report summarization. |
 | **Voice Relay** | `server/` | Standalone WebSocket servers that proxy audio between the browser and speech-to-speech APIs (Volcengine Doubao or Azure OpenAI Realtime). |
 | **Components** | `src/components/` | React components split by domain — `session/` (chat/voice/video UI, anti-cheating), `interview/` (builder, question cards), `auth/`, `layout/`, and `ui/` (shadcn primitives). |
@@ -420,7 +427,8 @@ aural/
 │   │   ├── (auth)/         # Login, register, password reset
 │   │   ├── (dashboard)/    # Dashboard, interviews, projects, settings
 │   │   ├── (docs)/         # Documentation pages
-│   │   ├── api/            # API routes (AI, auth, voice, etc.)
+│   │   ├── api/            # API routes (AI, auth, voice, session, etc.)
+│   │   │   └── v1/         # Developer REST API (interviews, sessions, etc.)
 │   │   └── i/              # Public interview and invite links
 │   ├── components/         # React components
 │   │   ├── auth/           # Auth forms
@@ -432,7 +440,10 @@ aural/
 │   ├── lib/                # Shared utilities
 │   │   ├── ai/             # LLM provider registry and implementations
 │   │   ├── supabase/       # Supabase client/server/admin helpers
-│   │   └── voice/          # Voice relay types and utilities
+│   │   ├── voice/          # Voice relay types and utilities
+│   │   ├── api-key-auth.ts # Developer API key validation
+│   │   ├── api-rate-limit.ts # Per-key rate limiter
+│   │   └── interview-templates.ts # Quick start interview templates
 │   ├── server/             # tRPC routers
 │   └── content/            # Documentation content
 ├── server/                 # Voice relay WebSocket servers
@@ -474,11 +485,13 @@ Report generation uses a higher-capability model because it requires synthesizin
 
 ## Voice Relay
 
-Aural supports real-time AI voice interviews via WebSocket relay servers. Two relay implementations are provided:
+Aural supports real-time AI voice interviews via WebSocket relay servers. Two relay implementations are provided.
 
-### Primary: Volcengine Doubao (`server/voice-relay.ts`)
+> **Recommendation:** We strongly recommend using **Volcengine Doubao** as your primary voice relay. It delivers a noticeably better interview experience than the OpenAI Realtime model — lower latency, more natural speech-to-speech flow, superior Chinese language support, and built-in server-side auto-reconnect for reliability. The OpenAI relay is provided as a backup for environments where Volcengine credentials are unavailable.
 
-The recommended voice relay for production use. It provides full-featured Speech-to-Speech capabilities with per-question interview flow, LLM-powered context summarization, and native Chinese language support.
+### Primary (Recommended): Volcengine Doubao (`server/voice-relay.ts`)
+
+The recommended voice relay for production use. It provides full-featured Speech-to-Speech capabilities with per-question interview flow, LLM-powered context summarization, native Chinese language support, and automatic server-side reconnection (up to 3 retry attempts with backoff) for resilient voice sessions.
 
 ```bash
 npm run dev:voice          # starts on port 8081
@@ -488,7 +501,7 @@ npm run dev:voice          # starts on port 8081
 
 ### Backup: Azure OpenAI Realtime (`server/openai-voice-relay.ts`)
 
-An alternative relay using Azure OpenAI's Realtime API (`gpt-4o-realtime-preview`). Use this when Volcengine credentials are unavailable or for English-only deployments.
+An alternative relay using Azure OpenAI's Realtime API (`gpt-4o-realtime-preview`). Use this when Volcengine credentials are unavailable or for English-only deployments. Note that the OpenAI relay may have higher latency and less natural conversational flow compared to Volcengine.
 
 ```bash
 npm run dev:openai-voice   # starts on port 8082
@@ -497,6 +510,64 @@ npm run dev:openai-voice   # starts on port 8082
 **Required env vars:** `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_DEPLOYMENT`
 
 > **Tip:** You can run both relays simultaneously. The frontend selects the appropriate relay based on the interview's language configuration.
+
+---
+
+## Developer API
+
+Aural includes a full REST API for programmatic access to interviews, questions, sessions, and candidates. Use it to integrate Aural into your existing workflows, automate interview creation, or build custom integrations.
+
+### Authentication
+
+All API requests require a developer API key in the `Authorization` header:
+
+```
+Authorization: Bearer dlv_your_key_here
+```
+
+Create and manage API keys from **Settings > API Keys** in the dashboard.
+
+### Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/interviews` | List interviews (paginated) |
+| `POST` | `/api/v1/interviews` | Create interview |
+| `GET` | `/api/v1/interviews/{id}` | Get interview with questions |
+| `PATCH` | `/api/v1/interviews/{id}` | Update interview |
+| `DELETE` | `/api/v1/interviews/{id}` | Archive interview |
+| `POST` | `/api/v1/interviews/{id}/publish` | Publish interview (shareable link) |
+| `GET/POST` | `/api/v1/interviews/{id}/questions` | List or add questions |
+| `PATCH/DELETE` | `/api/v1/questions/{id}` | Update or delete a question |
+| `GET` | `/api/v1/interviews/{id}/sessions` | List sessions (paginated) |
+| `GET` | `/api/v1/sessions/{id}` | Get session with transcript |
+| `GET/POST` | `/api/v1/interviews/{id}/candidates` | List or create candidates |
+| `GET` | `/api/v1/usage` | Current usage snapshot |
+| `GET` | `/api/v1/openapi.json` | OpenAPI 3.1 specification |
+
+### Rate Limiting
+
+API requests are rate-limited to 60 requests per minute per API key. Exceeded requests receive a `429` response with `Retry-After` header.
+
+### Quick Example
+
+```bash
+# Create an interview
+curl -X POST http://localhost:3000/api/v1/interviews \
+  -H "Authorization: Bearer dlv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "Backend Engineer Screen", "voiceEnabled": true}'
+
+# Add questions
+curl -X POST http://localhost:3000/api/v1/interviews/{id}/questions \
+  -H "Authorization: Bearer dlv_your_key" \
+  -H "Content-Type: application/json" \
+  -d '[{"text": "Describe your experience with distributed systems"}]'
+
+# Publish and get shareable link
+curl -X POST http://localhost:3000/api/v1/interviews/{id}/publish \
+  -H "Authorization: Bearer dlv_your_key"
+```
 
 ---
 

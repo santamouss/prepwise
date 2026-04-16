@@ -1,11 +1,13 @@
 "use client";
 
+import { ShareModal } from "@/components/interview/share-modal";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { Link2, ListOrdered, Lock, Settings, Users } from "lucide-react";
+import { Eye, Link2, ListOrdered, Lock, Loader2, Settings, Share2, Users } from "lucide-react";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import { EditInterviewProvider } from "./edit-context";
@@ -60,6 +62,8 @@ export default function EditInterviewLayout({
 
   const interview = trpc.interview.getById.useQuery({ id });
   const utils = trpc.useUtils();
+  const [shareOpen, setShareOpen] = useState(false);
+  const createPreviewMutation = trpc.session.createPreview.useMutation();
 
   const updateMutation = trpc.interview.update.useMutation({
     onSuccess: () => {
@@ -73,6 +77,31 @@ export default function EditInterviewLayout({
     if (pathname.endsWith("/sessions")) return "sessions";
     return "content";
   }, [pathname]);
+
+  const publishMutation = trpc.interview.publish.useMutation();
+
+  const handlePreview = async () => {
+    if (!interview.data) return;
+    let slug = (interview.data as { publicSlug?: string | null }).publicSlug;
+    if (!slug) {
+      try {
+        const result = await publishMutation.mutateAsync({ id });
+        slug = result.slug;
+        utils.interview.getById.invalidate({ id });
+      } catch {
+        toast({ title: "Failed to generate preview link", variant: "destructive" });
+        return;
+      }
+    }
+    try {
+      const { sessionId } = await createPreviewMutation.mutateAsync({
+        interviewId: id,
+      });
+      window.open(`/i/${slug}?sid=${sessionId}&preview=true`, "_blank");
+    } catch {
+      toast({ title: "Failed to start preview", variant: "destructive" });
+    }
+  };
 
   if (interview.isLoading) {
     return (
@@ -88,6 +117,15 @@ export default function EditInterviewLayout({
   }
 
   const data = interview.data;
+  const publicSlug =
+    typeof (data as { publicSlug?: string | null }).publicSlug === "string"
+      ? (data as { publicSlug: string }).publicSlug
+      : null;
+  const shareIsPublic = !!(
+    publicSlug &&
+    (data as { isActive?: boolean }).isActive &&
+    !(data as { requireInvite?: boolean }).requireInvite
+  );
 
   return (
     <EditInterviewProvider
@@ -95,9 +133,10 @@ export default function EditInterviewLayout({
     >
       <div className="space-y-6">
         {/* Header */}
-        <div className="no-print">
+        <div className="no-print flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
           <h1 className="text-2xl font-bold">{data.title}</h1>
-          <div className="flex items-center gap-2 mt-1">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {(data as any).publicSlug && (data as any).isActive && !(data as any).requireInvite ? (
               <Badge
@@ -126,7 +165,43 @@ export default function EditInterviewLayout({
             {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
             {(data as any).videoEnabled && <Badge variant="outline">Video</Badge>}
           </div>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setShareOpen(true)}
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={createPreviewMutation.isPending || publishMutation.isPending}
+              onClick={() => void handlePreview()}
+            >
+              {(createPreviewMutation.isPending || publishMutation.isPending) ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+              Preview
+            </Button>
+          </div>
         </div>
+
+        <ShareModal
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          interviewId={id}
+          publicSlug={publicSlug}
+          isPublic={shareIsPublic}
+        />
 
         {/* Tab navigation */}
         <div

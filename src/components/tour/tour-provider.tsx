@@ -41,6 +41,8 @@ interface TourContextValue {
   /** Call when the user performs the action for the current step */
   completeStep: (stepId: string) => void;
   clearRecoveryHint: () => void;
+  /** Reset tour progress and show the welcome screen again */
+  restart: () => void;
   /** Start the tour from the welcome screen */
   acceptWelcome: () => void;
   /** Hide the welcome screen for this session only */
@@ -199,6 +201,14 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     [active, stepIndex, next],
   );
 
+  const restart = useCallback(() => {
+    setActive(false);
+    setStepIndex(0);
+    setCompleted(false);
+    setShowWelcome(true);
+    persist(0, false, false);
+  }, [persist]);
+
   const acceptWelcome = useCallback(() => {
     setShowWelcome(false);
     setStepIndex(0);
@@ -235,6 +245,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       goToStep,
       completeStep,
       clearRecoveryHint,
+      restart,
       acceptWelcome,
       dismissWelcome,
       showCelebration,
@@ -259,6 +270,7 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       goToStep,
       completeStep,
       clearRecoveryHint,
+      restart,
       acceptWelcome,
       dismissWelcome,
       dismissCelebration,

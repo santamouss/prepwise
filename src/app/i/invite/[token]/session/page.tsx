@@ -27,7 +27,13 @@ export default function InviteSessionPage() {
   const router = useRouter();
 
   const [completed, setCompleted] = useState(false);
+  const [completionReason, setCompletionReason] = useState<string | undefined>();
   const [onboardingDone, setOnboardingDone] = useState(false);
+
+  const handleComplete = (reason?: string) => {
+    setCompletionReason(reason);
+    setCompleted(true);
+  };
 
   const candidate = trpc.candidate.getByToken.useQuery(
     { token },
@@ -64,6 +70,11 @@ export default function InviteSessionPage() {
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-secondary-500" />
             <h2 className="mt-4 text-2xl font-bold">Thank you!</h2>
+            {completionReason === "TIME_LIMIT_EXCEEDED" && (
+              <p className="mt-2 text-sm text-amber-600">
+                The session time limit has been reached and the interview was ended automatically.
+              </p>
+            )}
             <p className="mt-2 text-muted-foreground">
               Your interview has been completed successfully. We appreciate your
               time and thoughtful responses.
@@ -124,7 +135,7 @@ export default function InviteSessionPage() {
           interviewContext={interviewContext}
           durationMinutes={interview.timeLimitMinutes ?? undefined}
           chatEnabled={!!interview.chatEnabled}
-          onComplete={() => setCompleted(true)}
+          onComplete={handleComplete}
           videoMode={!!interview.videoEnabled}
         />
       </>
@@ -144,7 +155,7 @@ export default function InviteSessionPage() {
           })),
         }}
         durationMinutes={interview.timeLimitMinutes ?? undefined}
-        onComplete={() => setCompleted(true)}
+        onComplete={handleComplete}
       />
     </>
   );

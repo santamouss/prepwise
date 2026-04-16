@@ -10,6 +10,60 @@ export type VoiceSavePayload = {
   currentQuestionIndex?: number;
 };
 
+export type ActivitySegment = { enteredAt: string; leftAt: string | null };
+
+const ACTIVITY_GAP_CAP_MS = 5 * 60 * 1000;
+const STALE_SESSION_GRACE_MS = 10 * 60 * 1000;
+
+/**
+ * For IN_PROGRESS sessions, caps the effective "now" so that abandoned
+ * sessions don't accumulate unbounded duration. If the session's last
+ * activity was more than STALE_SESSION_GRACE_MS ago, we treat the session
+ * as having ended shortly after that last activity.
+ */
+export function effectiveNowForSession(
+  lastActivityAt: string | null | undefined,
+  nowMs: number,
+): number {
+  if (!lastActivityAt) return nowMs;
+  const lastMs = new Date(lastActivityAt).getTime();
+  if (Number.isNaN(lastMs)) return nowMs;
+  return Math.min(nowMs, lastMs + STALE_SESSION_GRACE_MS);
+}
+
+export function computeSegmentDuration(
+  segments: ActivitySegment[],
+  nowMs: number,
+): number {
+  let totalMs = 0;
+  for (const seg of segments) {
+    const start = new Date(seg.enteredAt).getTime();
+    const end = seg.leftAt ? new Date(seg.leftAt).getTime() : nowMs;
+    if (end > start) totalMs += end - start;
+  }
+  return Math.round(totalMs / 1000);
+}
+
+/**
+ * Fallback for pre-migration sessions without activity segments.
+ * Sums gaps between consecutive message timestamps, capping each gap
+ * at 5 minutes to exclude idle periods.
+ */
+export function computeMessageBasedDuration(
+  sessionStartMs: number,
+  messageTimestamps: number[],
+  endMs: number,
+): number {
+  const points = [sessionStartMs, ...messageTimestamps, endMs].sort(
+    (a, b) => a - b,
+  );
+  let totalMs = 0;
+  for (let i = 1; i < points.length; i++) {
+    totalMs += Math.min(points[i] - points[i - 1], ACTIVITY_GAP_CAP_MS);
+  }
+  return Math.round(totalMs / 1000);
+}
+
 export type CompletionSession = {
   startedAt: string;
   interview: {

@@ -72,9 +72,21 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  BrainCircuit,
+  Briefcase,
+  Clock,
+  Code2,
+  MessageSquare,
+  Sparkles,
+  type LucideIcon,
+  Users,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { exportToXlsx } from "@/lib/export-xlsx";
+import {
+  INTERVIEW_TEMPLATES,
+  type InterviewTemplate,
+} from "@/lib/interview-templates";
 import { useProject } from "@/components/project-provider";
 
 /* ------------------------------------------------------------------ */
@@ -157,6 +169,14 @@ function SortableHead({
   );
 }
 
+const TEMPLATE_ICONS: Record<string, LucideIcon> = {
+  Code2,
+  Users,
+  Search,
+  BrainCircuit,
+  Briefcase,
+};
+
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
@@ -186,6 +206,36 @@ export default function InterviewsPage() {
   const [singleDeleteId, setSingleDeleteId] = useState<string | null>(null);
   const [navigatingId, setNavigatingId] = useState<string | null>(null);
   const [creatingNew, setCreatingNew] = useState(false);
+  const [creatingTemplateId, setCreatingTemplateId] = useState<string | null>(
+    null,
+  );
+
+  const createFromTemplate = trpc.interview.createFromTemplate.useMutation({
+    onSuccess: (interview) => {
+      utils.interview.list.invalidate();
+      router.push(`/interviews/${interview.id}/edit`);
+    },
+    onError: (err) => {
+      toast({
+        title: "Failed to create interview",
+        description: err.message,
+        variant: "destructive",
+      });
+      setCreatingTemplateId(null);
+    },
+  });
+
+  const handleTemplateClick = useCallback(
+    (template: InterviewTemplate) => {
+      if (creatingTemplateId) return;
+      setCreatingTemplateId(template.id);
+      createFromTemplate.mutate({
+        templateId: template.id,
+        projectId: projectId ?? undefined,
+      });
+    },
+    [creatingTemplateId, createFromTemplate, projectId],
+  );
 
   const TIME_RANGE_OPTIONS = [
     { value: "ALL", label: t("interviews.allTime") },
@@ -702,22 +752,82 @@ export default function InterviewsPage() {
             </p>
           </div>
         ) : (
-          <Card>
-            <CardContent className="py-16 text-center">
-              <h3 className="text-lg font-semibold">
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-xl font-semibold">
                 {t("dashboard.noInterviews")}
               </h3>
               <p className="text-sm text-muted-foreground mt-1">
-                {t("dashboard.createFirstInterview")}
+                Pick a template to get started instantly, or create from scratch.
               </p>
-              <Link href="/interviews/new" className="mt-4 inline-block">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("dashboard.createInterview")}
-                </Button>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {INTERVIEW_TEMPLATES.map((tpl) => {
+                const Icon = TEMPLATE_ICONS[tpl.icon] ?? FileText;
+                const isCreating = creatingTemplateId === tpl.id;
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    disabled={!!creatingTemplateId}
+                    onClick={() => handleTemplateClick(tpl)}
+                    className={cn(
+                      "group relative flex flex-col items-start gap-3 rounded-lg border bg-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-md",
+                      isCreating && "border-primary/40 shadow-md",
+                      creatingTemplateId && !isCreating && "opacity-50",
+                    )}
+                  >
+                    <div className="flex w-full items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        {isCreating ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Icon className="h-5 w-5" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-semibold leading-tight">
+                          {tpl.title}
+                        </h4>
+                      </div>
+                      <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-primary/60" />
+                    </div>
+                    <p className="text-[13px] leading-relaxed text-muted-foreground line-clamp-2">
+                      {tpl.description}
+                    </p>
+                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground/70">
+                      <span className="inline-flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3" />
+                        {tpl.questions.length} questions
+                      </span>
+                      {tpl.timeLimitMinutes ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {tpl.timeLimitMinutes} min
+                        </span>
+                      ) : null}
+                    </div>
+                  </button>
+                );
+              })}
+
+              <Link
+                href="/interviews/new"
+                className={cn(
+                  "group flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed bg-card p-5 text-center transition-all hover:border-primary/40 hover:shadow-md",
+                  creatingTemplateId && "pointer-events-none opacity-50",
+                )}
+              >
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                  <Plus className="h-5 w-5" />
+                </div>
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground">
+                  Create from scratch
+                </span>
               </Link>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )
       ) : viewMode === "card" ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

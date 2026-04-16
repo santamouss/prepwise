@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2, Link2Off, Loader2, Lock, MessageSquare, Mic, Plus, RotateCcw } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 const STORAGE_PREFIX = "aural_session_";
@@ -17,7 +17,16 @@ export default function PublicInterviewPage() {
   const params = useParams();
   const slug = params.slug as string;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get("preview") === "true";
+  const sidParam = searchParams.get("sid");
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (isPreview && sidParam) {
+      router.replace(`/i/${slug}/session?sid=${sidParam}&preview=true`);
+    }
+  }, [isPreview, sidParam, slug, router]);
 
   const [participantName, setParticipantName] = useState("");
   const [participantEmail, setParticipantEmail] = useState("");
@@ -85,6 +94,10 @@ export default function PublicInterviewPage() {
     setStoredSessionId(null);
   }, [slug]);
 
+  if (isPreview && sidParam) {
+    return <PreparingScreen />;
+  }
+
   if (interview.isLoading) {
     return <PreparingScreen />;
   }
@@ -144,7 +157,7 @@ export default function PublicInterviewPage() {
         </CardHeader>
         <CardContent>
           {/* ── Invite-only notice ───────────────────────── */}
-          {interview.data.requireInvite && !canResume && (
+          {interview.data.requireInvite && !isPreview && !canResume && (
             <div className="py-6 text-center">
               <Lock className="mx-auto h-10 w-10 text-muted-foreground/50" />
               <p className="mt-3 font-medium">Invite only</p>
@@ -180,7 +193,7 @@ export default function PublicInterviewPage() {
           )}
 
           {/* ── Start form ────────────────────────────────── */}
-          {!interview.data.requireInvite && (
+          {(!interview.data.requireInvite || isPreview) && (
             <form
               onSubmit={(e) => {
                 e.preventDefault();

@@ -633,7 +633,7 @@ async function handleMicTestConnection(browserWs: WebSocket) {
         return;
       }
       volcWs.send(buildSendAudio(volcSessionId, Buffer.alloc(3200)));
-    }, 5000);
+    }, 2000);
   } catch (err) {
     log.error("Mic test connection failed:", err);
     if (browserWs.readyState === WebSocket.OPEN) {
@@ -743,6 +743,17 @@ async function handleBrowserConnection(browserWs: WebSocket, ctx: InterviewConte
     questionTranscript.push({ role: "assistant", text: farewell });
     pendingInterviewEnd = true;
     log.info(reason);
+
+    // Safety net: if the farewell TTS never completes (Volcengine drops,
+    // suppressModelOutput stays true, tts_ended never fires), force-end
+    // after 10s so the interview_complete signal still reaches the browser.
+    setTimeout(() => {
+      if (pendingInterviewEnd && !interviewDone) {
+        log.warn("Farewell TTS timed out after 10s — forcing interview end");
+        pendingInterviewEnd = false;
+        endInterview();
+      }
+    }, 10_000);
   }
 
   // ── LLM-controlled response state ─────────────────────────────
@@ -1757,20 +1768,83 @@ async function handleBrowserConnection(browserWs: WebSocket, ctx: InterviewConte
     }
   };
 
-  const volcOnClose = () => {
-    log.info("Volcengine WS closed");
+  let volcReconnecting = false;
+  const MAX_VOLC_RECONNECT_ATTEMPTS = 3;
+  const VOLC_RECONNECT_DELAY_MS = 1000;
+
+  const volcOnClose = (code: number, reason: Buffer) => {
+    const reasonStr = reason?.toString() || "";
+    log.warn(`Volcengine WS closed (code=${code}, reason="${reasonStr}")`);
     isAlive = false;
-    // During transitions we intentionally close the old socket to stop
-    // stale audio.  Don't tear down the browser connection in that case.
-    if (!isTransitioning && browserWs.readyState === WebSocket.OPEN) {
-      browserWs.send(JSON.stringify({ type: "disconnected" }));
-      browserWs.close();
+
+    if (isTransitioning || interviewDone) return;
+    if (browserWs.readyState !== WebSocket.OPEN) return;
+
+    if (!volcReconnecting) {
+      volcReconnecting = true;
+      autoReconnectVolcengine()
+        .then(() => {
+          volcReconnecting = false;
+        })
+        .catch((err) => {
+          volcReconnecting = false;
+          log.error("All Volcengine reconnect attempts failed:", err instanceof Error ? err.message : err);
+          if (browserWs.readyState === WebSocket.OPEN) {
+            browserWs.send(JSON.stringify({ type: "disconnected" }));
+            browserWs.close();
+          }
+        });
     }
   };
 
-  const volcOnError = (err: Error) => {
-    log.error("Volcengine WS error:", err.message);
+  const volcOnError = (err: Error & { code?: string }) => {
+    log.error(`Volcengine WS error: ${err.message} (code=${err.code || "unknown"})`);
   };
+
+  async function autoReconnectVolcengine(): Promise<void> {
+    browserWs.send(JSON.stringify({ type: "session_reconnecting" }));
+
+    for (let attempt = 1; attempt <= MAX_VOLC_RECONNECT_ATTEMPTS; attempt++) {
+      if (interviewDone || browserWs.readyState !== WebSocket.OPEN) return;
+
+      const delay = VOLC_RECONNECT_DELAY_MS * attempt;
+      log.info(`Volcengine auto-reconnect attempt ${attempt}/${MAX_VOLC_RECONNECT_ATTEMPTS} (waiting ${delay}ms)...`);
+      await new Promise((r) => setTimeout(r, delay));
+
+      if (interviewDone || browserWs.readyState !== WebSocket.OPEN) return;
+
+      try {
+        await reconnectVolcengine();
+
+        volcSessionId = randomUUID();
+        const newSystemText = buildSystemText(ctx);
+        volcWs!.send(
+          buildStartSession(volcSessionId, ctx.aiName, newSystemText, buildTTSOptions(ctx.language))
+        );
+        await waitForEvent(volcWs!, ServerEvent.SESSION_STARTED, 5000);
+        isAlive = true;
+
+        if (!keepAliveInterval) {
+          keepAliveInterval = setInterval(() => {
+            if (!isAlive || !volcWs || volcWs.readyState !== WebSocket.OPEN) return;
+            const silence = Buffer.alloc(3200);
+            volcWs.send(buildSendAudio(volcSessionId, silence));
+          }, 2000);
+        }
+
+        suppressModelOutput = false;
+        awaitingSayHelloTts = false;
+
+        browserWs.send(JSON.stringify({ type: "session_reconnected" }));
+        log.info(`Volcengine auto-reconnect succeeded on attempt ${attempt}`);
+        return;
+      } catch (err) {
+        log.warn(`Volcengine auto-reconnect attempt ${attempt} failed:`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    throw new Error("Exhausted all reconnect attempts");
+  }
 
   /** Attach the three volcWs event handlers.  Idempotent-safe because
    *  callers always removeAllListeners() on the old socket first. */
@@ -1968,7 +2042,8 @@ async function handleBrowserConnection(browserWs: WebSocket, ctx: InterviewConte
 
   browserWs.on("close", () => {
     log.info("Browser disconnected");
-    if (keepAliveInterval) clearInterval(keepAliveInterval);
+    interviewDone = true;
+    if (keepAliveInterval) { clearInterval(keepAliveInterval); keepAliveInterval = null; }
     if (finalResponseTimeout) clearTimeout(finalResponseTimeout);
     if (pendingLastQuestionTimeout) clearTimeout(pendingLastQuestionTimeout);
     if (isAlive && volcWs && volcWs.readyState === WebSocket.OPEN) {
@@ -1979,6 +2054,7 @@ async function handleBrowserConnection(browserWs: WebSocket, ctx: InterviewConte
         // ignore
       }
     }
+    volcWs?.removeAllListeners();
     volcWs?.close();
   });
 
@@ -1990,13 +2066,11 @@ async function handleBrowserConnection(browserWs: WebSocket, ctx: InterviewConte
 
   keepAliveInterval = setInterval(() => {
     if (!isAlive || !volcWs || volcWs.readyState !== WebSocket.OPEN) {
-      if (keepAliveInterval) clearInterval(keepAliveInterval);
       return;
     }
-    // 100ms of silence at 16kHz int16 mono = 3200 bytes
     const silence = Buffer.alloc(3200);
     volcWs.send(buildSendAudio(volcSessionId, silence));
-  }, 5000);
+  }, 2000);
 }
 
 // ── Helper: wait for a specific event ───────────────────────────────

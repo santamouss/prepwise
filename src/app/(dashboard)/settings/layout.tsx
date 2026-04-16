@@ -4,7 +4,7 @@ import { useAppLocale } from "@/components/app-locale-provider";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, Building2, Settings, Users } from "lucide-react";
+import { ArrowUpRight, Building2, KeyRound, Settings, Users } from "lucide-react";
 
 export default function SettingsLayout({
   children,
@@ -31,6 +31,11 @@ export default function SettingsLayout({
       name: isZh ? "成员" : "Members",
       href: "/settings/members",
       icon: Users,
+    },
+    {
+      name: isZh ? "API 密钥" : "API Keys",
+      href: "/settings/api-keys",
+      icon: KeyRound,
     },
     {
       name: isZh ? "组织" : "Organizations",

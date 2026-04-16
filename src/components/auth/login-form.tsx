@@ -47,7 +47,7 @@ export function LoginForm() {
         });
         setLoading(false);
       } else {
-        router.push("/organizations");
+        router.push("/dashboard");
         router.refresh();
       }
     } catch {

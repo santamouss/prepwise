@@ -1,4 +1,5 @@
 import { nanoid } from "@/lib/id";
+import { INTERVIEW_TEMPLATES } from "@/lib/interview-templates";
 import { getSessionOverallScore } from "@/lib/session-score";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -95,6 +96,30 @@ async function getInterviewWithAccess(
   );
 
   return { interview, orgId: project.organizationId, role: effectiveRole };
+}
+
+async function resolveDefaultProject(
+  supabase: Parameters<typeof getOrgMembership>[0],
+  userId: string,
+): Promise<string | null> {
+  const { data: membership } = await supabase
+    .from("organization_members")
+    .select("workspaceId")
+    .eq("userId", userId)
+    .limit(1)
+    .single();
+
+  if (!membership) return null;
+
+  const { data: defaultProject } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("organizationId", membership.workspaceId)
+    .order("createdAt", { ascending: true })
+    .limit(1)
+    .single();
+
+  return defaultProject?.id ?? null;
 }
 
 export const interviewRouter = router({
@@ -406,6 +431,108 @@ export const interviewRouter = router({
           code: "INTERNAL_SERVER_ERROR",
           message: error.message,
         });
+      }
+
+      return interview;
+    }),
+
+  createFromTemplate: protectedProcedure
+    .input(
+      z.object({
+        templateId: z.string(),
+        projectId: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const template = INTERVIEW_TEMPLATES.find((t) => t.id === input.templateId);
+      if (!template) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Template not found",
+        });
+      }
+
+      const projectId =
+        input.projectId ?? (await resolveDefaultProject(ctx.supabase, ctx.user.id));
+      if (!projectId) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "No project found" });
+      }
+
+      const { data: project } = await ctx.supabase
+        .from("projects")
+        .select("id, organizationId")
+        .eq("id", projectId)
+        .single();
+
+      if (!project) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Project not found" });
+      }
+
+      const membership = await getOrgMembership(
+        ctx.supabase,
+        project.organizationId,
+        ctx.user.id,
+      );
+      if (!membership) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not a member of this organization",
+        });
+      }
+
+      const hasAccess = await hasProjectAccess(ctx.supabase, projectId, ctx.user.id);
+      if (!hasAccess) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "No access to project" });
+      }
+
+      const effectiveRole = await getEffectiveProjectRole(
+        ctx.supabase,
+        project.id,
+        ctx.user.id,
+        membership.role,
+      );
+      assertMinRole(effectiveRole, "MEMBER");
+
+      const { data: interview, error } = await ctx.supabase
+        .from("interviews")
+        .insert({
+          title: template.title,
+          description: template.description,
+          objective: template.objective,
+          aiTone: template.aiTone,
+          followUpDepth: template.followUpDepth,
+          assessmentCriteria: template.assessmentCriteria,
+          chatEnabled: template.chatEnabled,
+          voiceEnabled: template.voiceEnabled,
+          videoEnabled: template.videoEnabled,
+          timeLimitMinutes: template.timeLimitMinutes ?? null,
+          projectId,
+          userId: ctx.user.id,
+          requireInvite: true,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error.message,
+        });
+      }
+
+      if (template.questions.length > 0) {
+        const questionRows = template.questions.map((q) => ({
+          interviewId: interview.id,
+          text: q.text,
+          type: q.type,
+          order: q.order,
+          isRequired: q.isRequired ?? true,
+          probeOnShort: q.probeOnShort ?? true,
+          options: q.options ?? null,
+          description: q.description ?? null,
+        }));
+
+        await ctx.supabase.from("questions").insert(questionRows);
       }
 
       return interview;
