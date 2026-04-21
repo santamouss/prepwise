@@ -25,13 +25,13 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
-  const { interview, feedback, language } = await req.json();
+  const { interview, feedback, language, jobDescription, resumeText } = await req.json();
   if (!interview || !feedback) {
     return new Response(JSON.stringify({ error: "Interview and feedback are required" }), { status: 400 });
   }
 
   const provider = getProvider(GENERATOR_MODEL);
-  const messages = buildImprovePrompt(interview, feedback, language);
+  const messages = buildImprovePrompt(interview, feedback, language, jobDescription, resumeText);
 
   const encoder = new TextEncoder();
   const sse = (obj: Record<string, unknown>) =>

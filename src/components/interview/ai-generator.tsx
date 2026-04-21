@@ -49,11 +49,25 @@ import { AI_TONES, FOLLOW_UP_DEPTHS, LANGUAGES } from "@/lib/constants";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+    ArrowRight,
     BrainCircuit,
     Briefcase,
     Check,
     Code2,
     Copy,
+    FileText,
+    Globe,
     ListOrdered,
     Loader2,
     MessageSquareText,
@@ -271,6 +285,20 @@ export function AIGenerator({ projectId }: { projectId?: string } = {}) {
   const [editingCriterionIndex, setEditingCriterionIndex] = useState<number | null>(null);
   const criterionSnapshotRef = useRef<AssessmentCriterion | null>(null);
 
+  // Context documents (JD / Resume)
+  const [jdText, setJdText] = useState("");
+  const [jdSource, setJdSource] = useState("");
+  const [jdLoading, setJdLoading] = useState(false);
+  const [jdError, setJdError] = useState("");
+  const [jdUrlInput, setJdUrlInput] = useState("");
+  const [jdPopoverOpen, setJdPopoverOpen] = useState(false);
+  const jdFileRef = useRef<HTMLInputElement>(null);
+  const [resumeText, setResumeText] = useState("");
+  const [resumeSource, setResumeSource] = useState("");
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState("");
+  const resumeFileRef = useRef<HTMLInputElement>(null);
+
   // AI feedback refinement
   const [feedback, setFeedback] = useState("");
   const [refining, setRefining] = useState(false);
@@ -332,6 +360,69 @@ export function AIGenerator({ projectId }: { projectId?: string } = {}) {
     return result;
   };
 
+  const extractText = useCallback(async (source: { file?: File; url?: string }) => {
+    const formData = new FormData();
+    if (source.file) formData.append("file", source.file);
+    if (source.url) formData.append("url", source.url);
+    const res = await fetch("/api/ai/extract-text", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Extraction failed");
+    return data.text as string;
+  }, []);
+
+  const handleJdFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setJdLoading(true);
+    setJdError("");
+    setJdPopoverOpen(false);
+    try {
+      const text = await extractText({ file });
+      setJdText(text);
+      setJdSource(file.name);
+    } catch (err) {
+      setJdError(err instanceof Error ? err.message : "Failed to extract text");
+    } finally {
+      setJdLoading(false);
+      if (jdFileRef.current) jdFileRef.current.value = "";
+    }
+  }, [extractText]);
+
+  const handleJdUrl = useCallback(async (pastedUrl?: string) => {
+    const url = (pastedUrl ?? jdUrlInput).trim();
+    if (!url) return;
+    setJdLoading(true);
+    setJdError("");
+    setJdPopoverOpen(false);
+    setJdUrlInput("");
+    try {
+      const text = await extractText({ url });
+      setJdText(text);
+      setJdSource(url);
+    } catch (err) {
+      setJdError(err instanceof Error ? err.message : "Failed to extract text");
+    } finally {
+      setJdLoading(false);
+    }
+  }, [jdUrlInput, extractText]);
+
+  const handleResumeFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setResumeLoading(true);
+    setResumeError("");
+    try {
+      const text = await extractText({ file });
+      setResumeText(text);
+      setResumeSource(file.name);
+    } catch (err) {
+      setResumeError(err instanceof Error ? err.message : "Failed to extract text");
+    } finally {
+      setResumeLoading(false);
+      if (resumeFileRef.current) resumeFileRef.current.value = "";
+    }
+  }, [extractText]);
+
   const handleGenerate = async () => {
     if (!description.trim()) return;
 
@@ -356,6 +447,8 @@ export function AIGenerator({ projectId }: { projectId?: string } = {}) {
           language: LANGUAGES.find((l) => l.value === language)?.label ?? language,
           organizationId: currentOrg?.id,
           projectId,
+          ...(jdText && { jobDescription: jdText }),
+          ...(resumeText && { resumeText }),
         }),
       });
 
@@ -405,6 +498,8 @@ export function AIGenerator({ projectId }: { projectId?: string } = {}) {
           language: LANGUAGES.find((l) => l.value === language)?.label ?? language,
           organizationId: currentOrg?.id,
           projectId,
+          ...(jdText && { jobDescription: jdText }),
+          ...(resumeText && { resumeText }),
         }),
       });
 
@@ -593,40 +688,199 @@ export function AIGenerator({ projectId }: { projectId?: string } = {}) {
               const hasHL = segments?.some((s) => typeof s !== "string") ?? false;
               return (
                 <>
-                  <div className="relative">
-                    <Textarea
-                      id="ai-description"
-                      placeholder="e.g. I want to assess senior React developers for our fintech startup, focusing on system design and problem-solving skills..."
-                      value={description}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setHlRanges((prev) => adjustRanges(prev, prevDescRef.current, next));
-                        prevDescRef.current = next;
-                        setDescription(next);
-                        setActiveTemplate(null);
-                      }}
-                      rows={4}
-                      className={hasHL ? "text-transparent caret-foreground selection:bg-primary/20" : ""}
-                    />
-                    {hasHL && segments && (
-                      <div
-                        aria-hidden
-                        className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words border border-transparent px-3 py-2 text-sm leading-normal"
-                      >
-                        {segments.map((seg, j) =>
-                          typeof seg === "string" ? (
-                            <span key={j}>{seg}</span>
-                          ) : (
-                            <mark
-                              key={j}
-                              style={{ backgroundColor: "hsl(var(--primary) / 0.12)", color: "hsl(var(--primary))", borderRadius: "3px", boxShadow: "-3px 0 0 hsl(var(--primary) / 0.12), 3px 0 0 hsl(var(--primary) / 0.12)", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}
-                            >
-                              {seg.text}
-                            </mark>
-                          ),
+                  {/* Textarea with attachment area */}
+                  <div className="rounded-md border bg-background focus-within:border-ring transition-colors">
+                    {/* Hidden file inputs */}
+                    <input ref={jdFileRef} type="file" accept=".pdf" className="hidden" onChange={handleJdFile} />
+                    <input ref={resumeFileRef} type="file" accept=".pdf" className="hidden" onChange={handleResumeFile} />
+
+                    {/* Attached files at the top */}
+                    {(jdText || resumeText || jdLoading || resumeLoading || jdError || resumeError) && (
+                      <div className="flex flex-wrap items-center gap-2 px-3 pt-2.5 pb-1">
+                        {jdLoading && (
+                          <span className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Extracting JD...
+                          </span>
                         )}
+                        {jdText && (
+                          <span className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-foreground">
+                            {jdSource.startsWith("http") ? <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <Briefcase className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                            <span className="max-w-[180px] truncate">{jdSource}</span>
+                            <button
+                              type="button"
+                              className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => { setJdText(""); setJdSource(""); setJdUrlInput(""); setJdError(""); }}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        )}
+                        {jdError && <span className="text-xs text-destructive">{jdError}</span>}
+
+                        {resumeLoading && (
+                          <span className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Extracting resume...
+                          </span>
+                        )}
+                        {resumeText && (
+                          <span className="inline-flex items-center gap-2 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-foreground">
+                            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            <span className="max-w-[180px] truncate">{resumeSource}</span>
+                            <button
+                              type="button"
+                              className="shrink-0 rounded-full p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => { setResumeText(""); setResumeSource(""); setResumeError(""); }}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </span>
+                        )}
+                        {resumeError && <span className="text-xs text-destructive">{resumeError}</span>}
                       </div>
                     )}
+
+                    <div className="relative">
+                      <Textarea
+                        id="ai-description"
+                        placeholder="e.g. I want to assess senior React developers for our fintech startup, focusing on system design and problem-solving skills..."
+                        value={description}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setHlRanges((prev) => adjustRanges(prev, prevDescRef.current, next));
+                          prevDescRef.current = next;
+                          setDescription(next);
+                          setActiveTemplate(null);
+                        }}
+                        rows={4}
+                        className={cn(
+                          "border-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 resize-none min-h-[96px] bg-transparent",
+                          hasHL && "text-transparent caret-foreground selection:bg-primary/20",
+                        )}
+                      />
+                      {hasHL && segments && (
+                        <div
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 overflow-hidden whitespace-pre-wrap break-words border border-transparent px-3 py-2 text-sm leading-normal"
+                        >
+                          {segments.map((seg, j) =>
+                            typeof seg === "string" ? (
+                              <span key={j}>{seg}</span>
+                            ) : (
+                              <mark
+                                key={j}
+                                style={{ backgroundColor: "hsl(var(--primary) / 0.12)", color: "hsl(var(--primary))", borderRadius: "3px", boxShadow: "-3px 0 0 hsl(var(--primary) / 0.12), 3px 0 0 hsl(var(--primary) / 0.12)", boxDecorationBreak: "clone", WebkitBoxDecorationBreak: "clone" }}
+                              >
+                                {seg.text}
+                              </mark>
+                            ),
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom toolbar: JD & Resume buttons (right-aligned) */}
+                    <div className="flex items-center justify-end gap-1.5 px-3 pb-2">
+                      {/* JD button */}
+                      <Popover open={jdPopoverOpen} onOpenChange={(open) => { setJdPopoverOpen(open); if (!open) setJdUrlInput(""); }}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                              jdText
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            )}
+                          >
+                            {jdLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Briefcase className="h-3.5 w-3.5" />}
+                            JD
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="end" className="w-64 p-2">
+                          {jdText ? (
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive hover:bg-muted transition-colors"
+                              onClick={() => { setJdText(""); setJdSource(""); setJdUrlInput(""); setJdError(""); setJdPopoverOpen(false); }}
+                            >
+                              <X className="h-4 w-4" />
+                              Remove JD
+                            </button>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <label className="block px-1 text-xs font-medium text-muted-foreground">Paste JD link</label>
+                              <div className="flex items-center gap-1.5 rounded-md border bg-muted/50 px-2 py-1.5">
+                                <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                                <input
+                                  type="text"
+                                  placeholder="https://..."
+                                  value={jdUrlInput}
+                                  onChange={(e) => setJdUrlInput(e.target.value)}
+                                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleJdUrl(); } }}
+                                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none"
+                                  autoFocus
+                                />
+                                {jdUrlInput.trim() && (
+                                  <button
+                                    type="button"
+                                    className="shrink-0 rounded p-0.5 text-primary hover:text-primary/80 transition-colors"
+                                    onClick={() => handleJdUrl()}
+                                  >
+                                    <ArrowRight className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="relative">
+                                <div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div>
+                                <div className="relative flex justify-center"><span className="bg-popover px-2 text-xs text-muted-foreground">or</span></div>
+                              </div>
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                onClick={() => { jdFileRef.current?.click(); setJdPopoverOpen(false); }}
+                              >
+                                <FileText className="h-4 w-4" />
+                                Upload PDF
+                              </button>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+
+                      {/* Resume button */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors",
+                              resumeText
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            )}
+                          >
+                            {resumeLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                            Resume
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                          {resumeText ? (
+                            <DropdownMenuItem onClick={() => { setResumeText(""); setResumeSource(""); setResumeError(""); }}>
+                              <X className="mr-2 h-4 w-4" />
+                              Remove Resume
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem onClick={() => resumeFileRef.current?.click()}>
+                              <FileText className="mr-2 h-4 w-4" />
+                              Upload PDF
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {PROMPT_TEMPLATES.map((t, i) => (

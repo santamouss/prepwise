@@ -25,13 +25,13 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
-  const { description, durationMinutes, language } = await req.json();
+  const { description, durationMinutes, language, jobDescription, resumeText } = await req.json();
   if (!description) {
     return new Response(JSON.stringify({ error: "Description is required" }), { status: 400 });
   }
 
   const provider = getProvider(GENERATOR_MODEL);
-  const messages = buildGeneratorPrompt(description, durationMinutes, language);
+  const messages = buildGeneratorPrompt(description, durationMinutes, language, jobDescription, resumeText);
 
   const encoder = new TextEncoder();
   const sse = (obj: Record<string, unknown>) =>
