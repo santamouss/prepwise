@@ -90,14 +90,12 @@ if (USE_AZURE_OPENAI_REALTIME) {
   OPENAI_WS_URL = `${wsBase}?model=${encodeURIComponent(model)}`;
   OPENAI_REALTIME_WS_HEADERS = {
     Authorization: `Bearer ${openAiKey}`,
-    "OpenAI-Beta": "realtime=v1",
   };
   REALTIME_VOICE = (
     process.env.OPENAI_REALTIME_VOICE || "alloy"
   ).toLowerCase();
   REALTIME_MODEL_LABEL = model;
-  REALTIME_AUTH_HEADER_SUMMARY =
-    "OpenAI direct: Authorization Bearer + OpenAI-Beta realtime=v1";
+  REALTIME_AUTH_HEADER_SUMMARY = "OpenAI direct: bearer (Authorization only)";
 }
 
 /**
@@ -110,12 +108,9 @@ function websocketHeadersForRealtimeUpstream(): Record<string, string> {
     return { "api-key": key };
   }
   const bearer = OPENAI_REALTIME_WS_HEADERS.Authorization;
-  const beta = OPENAI_REALTIME_WS_HEADERS["OpenAI-Beta"];
   if (!bearer) throw new Error("OpenAI direct realtime: missing Authorization");
-  if (!beta) throw new Error("OpenAI direct realtime: missing OpenAI-Beta");
   return {
     Authorization: bearer,
-    "OpenAI-Beta": beta,
   };
 }
 
@@ -153,7 +148,7 @@ function waitForOpenAiSessionCreated(
           clearTimeout(t);
           ws.removeListener("message", h);
           log.error(
-            `${context}: realtime handshake error (full msg.error):`,
+            `${context}: session.created handshake — msg.type=error (full msg.error):`,
             JSON.stringify(msg.error ?? msg),
           );
           reject(
@@ -171,6 +166,82 @@ function waitForOpenAiSessionCreated(
         }
       } catch {
         log.debug(`${context}: non-JSON upstream message during session.created wait`);
+      }
+    }
+    ws.on("message", h);
+  });
+}
+
+const OPENAI_SESSION_UPDATE_WAIT_MS = 20_000;
+
+function waitForOpenAiSessionUpdated(
+  ws: WebSocket,
+  context: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      ws.removeListener("message", h);
+      reject(new Error(`${context}: Session update timeout`));
+    }, OPENAI_SESSION_UPDATE_WAIT_MS);
+    function h(data: Buffer) {
+      try {
+        const msg = JSON.parse(data.toString()) as {
+          type?: string;
+          error?: Record<string, unknown>;
+          session?: Record<string, unknown>;
+        };
+
+        if (msg.type === "session.updated") {
+          clearTimeout(t);
+          ws.removeListener("message", h);
+          const sess = msg.session as Record<string, unknown> | undefined;
+          const audio =
+            sess && typeof sess.audio === "object" && sess.audio !== null
+              ? (sess.audio as Record<string, unknown>)
+              : {};
+          const audioIn =
+            audio.input !== undefined &&
+            typeof audio.input === "object" &&
+            audio.input !== null
+              ? (audio.input as Record<string, unknown>)
+              : {};
+          const turnDet = audioIn.turn_detection as
+            | { type?: string }
+            | undefined;
+          log.info(
+            `${context}: session.updated — transcription:`,
+            JSON.stringify(audioIn.transcription),
+            "turn_detection:",
+            turnDet?.type,
+            "noise_reduction:",
+            JSON.stringify(audioIn.noise_reduction),
+          );
+          resolve();
+          return;
+        }
+
+        if (msg.type === "error") {
+          clearTimeout(t);
+          ws.removeListener("message", h);
+          log.error(
+            `${context}: session.updated wait — msg.type=error (full msg.error):`,
+            JSON.stringify(msg.error ?? msg),
+          );
+          reject(
+            new Error(
+              `${context}: session.update failed: ${JSON.stringify(msg.error ?? msg)}`,
+            ),
+          );
+          return;
+        }
+
+        if (msg.type) {
+          log.info(
+            `${context}: waiting for session.updated — upstream message type: ${msg.type}`,
+          );
+        }
+      } catch {
+        log.debug(`${context}: non-JSON upstream message during session.updated wait`);
       }
     }
     ws.on("message", h);
@@ -725,17 +796,7 @@ async function handleMicTest(browserWs: WebSocket) {
       },
     }));
 
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Session update timeout")), 10_000);
-      const h = (data: Buffer) => {
-        try {
-          const msg = JSON.parse(data.toString());
-          if (msg.type === "session.updated") { clearTimeout(t); oaiWs!.removeListener("message", h); resolve(); }
-          else if (msg.type === "error") { clearTimeout(t); oaiWs!.removeListener("message", h); reject(new Error(`Session update error: ${JSON.stringify(msg.error)}`)); }
-        } catch { /* ignore */ }
-      };
-      oaiWs!.on("message", h);
-    });
+    await waitForOpenAiSessionUpdated(oaiWs!, "mic test");
 
     let micTestAsrBuffer = "";
     oaiWs!.on("message", (data: Buffer) => {
@@ -1910,26 +1971,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       },
     }));
 
-    // Wait for session.updated and log effective config
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Session update timeout")), 10_000);
-      const h = (data: Buffer) => {
-        try {
-          const msg = JSON.parse(data.toString());
-          if (msg.type === "session.updated") {
-            clearTimeout(t);
-            ws.removeListener("message", h);
-            const s = msg.session || {};
-            const audioIn = s.audio?.input || {};
-            log.info("Session updated — transcription:", JSON.stringify(audioIn.transcription), "turn_detection:", audioIn.turn_detection?.type, "noise_reduction:", JSON.stringify(audioIn.noise_reduction));
-            resolve();
-          } else if (msg.type === "error") {
-            log.error("Session update error:", JSON.stringify(msg.error));
-          }
-        } catch { /* ignore */ }
-      };
-      ws.on("message", h);
-    });
+    await waitForOpenAiSessionUpdated(ws, "interview");
 
     return ws;
   }
