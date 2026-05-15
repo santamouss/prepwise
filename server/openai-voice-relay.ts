@@ -42,9 +42,15 @@ const USE_AZURE_OPENAI_REALTIME =
   process.env.USE_AZURE_OPENAI_REALTIME === "true";
 
 let OPENAI_WS_URL: string;
+/** Upstream handshake headers — never logged. */
 let OPENAI_REALTIME_WS_HEADERS: Record<string, string>;
 let REALTIME_VOICE: string;
-let REALTIME_BACKEND_LABEL: string;
+let REALTIME_MODEL_LABEL = "";
+/** Short description only (no credential values). */
+let REALTIME_AUTH_HEADER_SUMMARY = "";
+
+const REALTIME_PROVIDER: "azure" | "openai" =
+  USE_AZURE_OPENAI_REALTIME ? "azure" : "openai";
 
 if (USE_AZURE_OPENAI_REALTIME) {
   const azureEndpoint = (process.env.AZURE_OPENAI_ENDPOINT || "").replace(/\/+$/, "");
@@ -62,7 +68,8 @@ if (USE_AZURE_OPENAI_REALTIME) {
   OPENAI_WS_URL = `${azureEndpoint}/openai/v1/realtime?model=${encodeURIComponent(azureDeployment)}`;
   OPENAI_REALTIME_WS_HEADERS = { "api-key": azureApiKey };
   REALTIME_VOICE = (process.env.AZURE_OPENAI_VOICE || "ash").toLowerCase();
-  REALTIME_BACKEND_LABEL = `azure:${azureDeployment}`;
+  REALTIME_MODEL_LABEL = azureDeployment;
+  REALTIME_AUTH_HEADER_SUMMARY = "Azure: api-key header only";
 } else {
   const openAiKey =
     process.env.OPENAI_REALTIME_API_KEY || process.env.OPENAI_API_KEY || "";
@@ -88,7 +95,86 @@ if (USE_AZURE_OPENAI_REALTIME) {
   REALTIME_VOICE = (
     process.env.OPENAI_REALTIME_VOICE || "alloy"
   ).toLowerCase();
-  REALTIME_BACKEND_LABEL = `openai:${model}`;
+  REALTIME_MODEL_LABEL = model;
+  REALTIME_AUTH_HEADER_SUMMARY =
+    "OpenAI direct: Authorization Bearer + OpenAI-Beta realtime=v1";
+}
+
+/**
+ * Headers for upstream OpenAI / Azure Realtime WebSocket connections.
+ */
+function websocketHeadersForRealtimeUpstream(): Record<string, string> {
+  if (USE_AZURE_OPENAI_REALTIME) {
+    const key = OPENAI_REALTIME_WS_HEADERS["api-key"];
+    if (!key) throw new Error("Azure realtime upstream: missing api-key");
+    return { "api-key": key };
+  }
+  const bearer = OPENAI_REALTIME_WS_HEADERS.Authorization;
+  const beta = OPENAI_REALTIME_WS_HEADERS["OpenAI-Beta"];
+  if (!bearer) throw new Error("OpenAI direct realtime: missing Authorization");
+  if (!beta) throw new Error("OpenAI direct realtime: missing OpenAI-Beta");
+  return {
+    Authorization: bearer,
+    "OpenAI-Beta": beta,
+  };
+}
+
+const OPENAI_SESSION_CREATED_WAIT_MS = 20_000;
+
+function waitForOpenAiSessionCreated(
+  ws: WebSocket,
+  context: string,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => {
+      ws.removeListener("message", h);
+      reject(new Error(`${context}: Session create timeout`));
+    }, OPENAI_SESSION_CREATED_WAIT_MS);
+    function h(data: Buffer) {
+      try {
+        const msg = JSON.parse(data.toString()) as {
+          type?: string;
+          error?: Record<string, unknown>;
+          session?: Record<string, unknown>;
+        };
+
+        if (msg.type === "session.created") {
+          clearTimeout(t);
+          ws.removeListener("message", h);
+          log.info(
+            `${context}: session.created — default config keys:`,
+            Object.keys(msg.session || {}),
+          );
+          resolve();
+          return;
+        }
+
+        if (msg.type === "error") {
+          clearTimeout(t);
+          ws.removeListener("message", h);
+          log.error(
+            `${context}: realtime handshake error (full msg.error):`,
+            JSON.stringify(msg.error ?? msg),
+          );
+          reject(
+            new Error(
+              `${context}: realtime error: ${JSON.stringify(msg.error ?? msg)}`,
+            ),
+          );
+          return;
+        }
+
+        if (msg.type) {
+          log.info(
+            `${context}: waiting for session.created — upstream message type: ${msg.type}`,
+          );
+        }
+      } catch {
+        log.debug(`${context}: non-JSON upstream message during session.created wait`);
+      }
+    }
+    ws.on("message", h);
+  });
 }
 
 // ── Volcengine Big-Model streaming ASR config ───────────────────────
@@ -451,7 +537,11 @@ const OPENAI_TOOLS = [{
 
 const wss = new WebSocketServer({ port: RELAY_PORT });
 log.info(`OpenAI voice relay listening on ws://localhost:${RELAY_PORT}`);
-log.info(`Realtime: ${REALTIME_BACKEND_LABEL}, Voice: ${REALTIME_VOICE}`);
+log.info(`Realtime provider: ${REALTIME_PROVIDER}`);
+log.info(`Realtime model/deployment: ${REALTIME_MODEL_LABEL}`);
+log.info(`Realtime voice: ${REALTIME_VOICE}`);
+log.info(`Realtime upstream WebSocket URL (no secrets): ${OPENAI_WS_URL}`);
+log.info(`Realtime upstream auth: ${REALTIME_AUTH_HEADER_SUMMARY}`);
 log.info(
   `ASR: ${USE_VOLC_ASR_PRIMARY ? "Volcengine primary" : "OpenAI primary"}`
   + ` (OpenAI transcription model: ${OPENAI_REALTIME_TRANSCRIPTION_MODEL}; `
@@ -598,7 +688,7 @@ async function handleMicTest(browserWs: WebSocket) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
         oaiWs = new WebSocket(OPENAI_WS_URL, {
-          headers: OPENAI_REALTIME_WS_HEADERS,
+          headers: websocketHeadersForRealtimeUpstream(),
         });
         await new Promise<void>((resolve, reject) => {
           const t = setTimeout(() => reject(new Error("OpenAI connect timeout")), 10_000);
@@ -615,16 +705,7 @@ async function handleMicTest(browserWs: WebSocket) {
       }
     }
 
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Session create timeout")), 10_000);
-      const h = (data: Buffer) => {
-        try {
-          const msg = JSON.parse(data.toString());
-          if (msg.type === "session.created") { clearTimeout(t); oaiWs!.removeListener("message", h); resolve(); }
-        } catch { /* ignore */ }
-      };
-      oaiWs!.on("message", h);
-    });
+    await waitForOpenAiSessionCreated(oaiWs!, "mic test");
 
     oaiWs!.send(JSON.stringify({
       type: "session.update",
@@ -1798,7 +1879,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   async function connectOai(): Promise<WebSocket> {
     const ws = new WebSocket(OPENAI_WS_URL, {
-      headers: OPENAI_REALTIME_WS_HEADERS,
+      headers: websocketHeadersForRealtimeUpstream(),
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -1807,22 +1888,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       ws.on("error", (e) => { clearTimeout(t); reject(e); });
     });
 
-    // Wait for session.created and log default config
-    await new Promise<void>((resolve, reject) => {
-      const t = setTimeout(() => reject(new Error("Session create timeout")), 10_000);
-      const h = (data: Buffer) => {
-        try {
-          const msg = JSON.parse(data.toString());
-          if (msg.type === "session.created") {
-            clearTimeout(t);
-            ws.removeListener("message", h);
-            log.info("Session created — default config keys:", Object.keys(msg.session || {}));
-            resolve();
-          }
-        } catch { /* ignore */ }
-      };
-      ws.on("message", h);
-    });
+    await waitForOpenAiSessionCreated(ws, "interview");
 
     const systemPrompt = buildSystemPrompt(ctx, currentQuestionIndex);
 
