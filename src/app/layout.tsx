@@ -30,8 +30,8 @@ export const metadata: Metadata = {
   },
   description: defaultDescription,
   icons: {
-    icon: "/images/marketing/prepwise-icon.png",
-    apple: "/images/marketing/prepwise-icon.png",
+    icon: "/images/marketing/parker-icon.png",
+    apple: "/images/marketing/parker-icon.png",
   },
   keywords: [
     "Parker",

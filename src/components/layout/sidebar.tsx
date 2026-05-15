@@ -189,14 +189,14 @@ export function Sidebar({
         >
           {!collapsed ? (
             <img
-              src="/images/marketing/prepwise-logo.png"
+              src="/images/marketing/parker-logo.png"
               alt="Parker"
               height={28}
               className="h-7 w-auto max-w-[200px] object-contain object-left"
             />
           ) : (
             <img
-              src="/images/marketing/prepwise-icon.png"
+              src="/images/marketing/parker-icon.png"
               alt="Parker"
               height={28}
               width={28}

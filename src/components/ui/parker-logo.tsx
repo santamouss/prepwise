@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
-const WORDMARK_SRC = "/images/marketing/prepwise-logo.png";
-const ICON_SRC = "/images/marketing/prepwise-icon.png";
+const WORDMARK_SRC = "/images/marketing/parker-logo.png";
+const ICON_SRC = "/images/marketing/parker-icon.png";
 
 type ParkerLogoProps = {
   /** Pixel height; width follows aspect ratio for wordmark. */
