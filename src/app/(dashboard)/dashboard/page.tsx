@@ -53,17 +53,17 @@ function formatDuration(seconds: number): string {
 
 const CHART_COLORS = {
   primary: "hsl(var(--primary))",
-  orange: "hsl(24, 80%, 55%)",
-  green: "hsl(142, 60%, 45%)",
+  secondary: "hsl(var(--chart-2))",
+  green: "hsl(var(--chart-3))",
   muted: "hsl(var(--muted-foreground))",
 };
 
 const PIE_COLORS = [
   CHART_COLORS.primary,
-  CHART_COLORS.orange,
+  CHART_COLORS.secondary,
   CHART_COLORS.green,
   CHART_COLORS.muted,
-  "hsl(262, 50%, 55%)",
+  "hsl(262, 45%, 58%)",
 ];
 
 const TOOLTIP_STYLE = {
@@ -98,8 +98,10 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t("dashboard.title")}</h1>
-          <p className="text-muted-foreground">{t("dashboard.subtitle")}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {t("dashboard.title")}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("dashboard.subtitle")}</p>
         </div>
         <Button
           data-tour="new-interview"
@@ -160,7 +162,7 @@ export default function DashboardPage() {
           title={t("dashboard.dailySessionTime")}
           data={data?.daily ?? []}
           dataKey="sessionMinutes"
-          color={CHART_COLORS.orange}
+          color={CHART_COLORS.secondary}
           yLabel={locale === "zh" ? "分钟" : "minutes"}
           loading={isLoading}
         />
@@ -263,7 +265,7 @@ export default function DashboardPage() {
                   className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#EEF2FF] text-xs font-semibold text-[#3B6FF0]">
                       {s.name.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -400,15 +402,17 @@ function StatsCard({
   return (
     <Card>
       <CardContent className="flex items-center gap-4 p-6">
-        <div className="rounded-lg bg-primary/10 p-3">
-          <Icon className="h-5 w-5 text-primary" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#EEF2FF]">
+          <Icon className="h-5 w-5 text-[#3B6FF0]" />
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="text-xs font-normal text-muted-foreground">{title}</p>
           {loading ? (
-            <Skeleton className="mt-1 h-7 w-16" />
+            <Skeleton className="mt-1 h-8 w-20" />
           ) : (
-            <p className="text-2xl font-bold">{value ?? 0}</p>
+            <p className="text-[28px] font-semibold leading-none tracking-tight text-foreground">
+              {value ?? 0}
+            </p>
           )}
         </div>
       </CardContent>
@@ -431,17 +435,18 @@ function DailyChart({
   yLabel: string;
   loading: boolean;
 }) {
+  const { t } = useAppLocale();
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <Skeleton className="h-48 w-full" />
         ) : data.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-            No data yet
+            {t("dashboard.noData")}
           </div>
         ) : (
           <div className="h-48">
@@ -501,17 +506,18 @@ function DailyDoubleChart({
   }[];
   loading: boolean;
 }) {
+  const { t } = useAppLocale();
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <Skeleton className="h-48 w-full" />
         ) : data.length === 0 ? (
           <div className="flex h-48 items-center justify-center text-sm text-muted-foreground">
-            No data yet
+            {t("dashboard.noData")}
           </div>
         ) : (
           <div className="h-48">
@@ -555,7 +561,7 @@ function DailyDoubleChart({
                 <Bar
                   dataKey="questions"
                   name="Questions"
-                  fill={CHART_COLORS.orange}
+                  fill={CHART_COLORS.secondary}
                   radius={[4, 4, 0, 0]}
                   maxBarSize={20}
                 />
@@ -579,6 +585,7 @@ function PieCard({
   data: { name: string; value: number }[];
   loading: boolean;
 }) {
+  const { t } = useAppLocale();
   const total = data.reduce((s, d) => s + d.value, 0);
   const filtered = data.filter((d) => d.value > 0);
   const [hovered, setHovered] = useState<number | null>(null);
@@ -586,14 +593,14 @@ function PieCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pb-6">
         {loading ? (
           <Skeleton className="h-80 w-full" />
         ) : total === 0 ? (
           <div className="flex h-80 items-center justify-center text-sm text-muted-foreground">
-            No data yet
+            {t("dashboard.noData")}
           </div>
         ) : (
           <div>
@@ -625,9 +632,7 @@ function PieCard({
                           style={{
                             transition: "opacity 0.2s ease, filter 0.2s ease",
                             filter:
-                              hovered === idx
-                                ? "brightness(1.1) drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
-                                : "none",
+                              hovered === idx ? "brightness(1.06)" : "none",
                             cursor: "pointer",
                           }}
                         />
@@ -647,7 +652,9 @@ function PieCard({
                 <span className="text-xs text-muted-foreground/60">
                   {centerLabel}
                 </span>
-                <span className="text-4xl">{total.toLocaleString()}</span>
+                <span className="text-3xl font-semibold tracking-tight">
+                  {total.toLocaleString()}
+                </span>
               </div>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
@@ -687,7 +694,7 @@ function ThemesCard({
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="text-sm font-semibold text-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (

@@ -18,7 +18,7 @@ export async function generateMetadata({
   const category = getCategory(slug);
   if (!category) return {};
   return {
-    title: `${category.title} | Aural Docs`,
+    title: `${category.title} | Parker Docs`,
     description: category.description,
   };
 }

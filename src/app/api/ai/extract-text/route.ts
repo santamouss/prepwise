@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       const res = await fetch(targetUrl, {
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (compatible; AuralBot/1.0; +https://aural.app)",
+            "Mozilla/5.0 (compatible; ParkerBot/1.0; +https://parker.app)",
           Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
         signal: AbortSignal.timeout(15_000),

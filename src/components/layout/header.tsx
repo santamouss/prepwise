@@ -2,7 +2,7 @@
 
 import { useAppLocale } from "@/components/app-locale-provider";
 import { trpc } from "@/lib/trpc/client";
-import { ChevronDown, Compass, Plus, Settings } from "lucide-react";
+import { ChevronDown, Compass, Plus, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
@@ -11,6 +11,7 @@ import { useProject } from "@/components/project-provider";
 import { useTourSafe } from "@/components/tour/tour-provider";
 import { TourChecklist } from "@/components/tour/tour-checklist";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,7 +49,7 @@ function OrgSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="flex items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-muted outline-none">
+        <button className="flex max-w-[160px] items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10 outline-none">
           <span className="truncate max-w-[160px]">{currentOrg.name}</span>
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </button>
@@ -105,10 +106,10 @@ function ProjectSwitcher() {
 
   return (
     <>
-      <span className="mx-1 text-muted-foreground/50 text-sm">/</span>
+      <span className="mx-1 text-xs text-muted-foreground/45">/</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex items-center gap-1 rounded-md px-1.5 py-1 text-sm transition-colors hover:bg-muted outline-none">
+          <button className="flex max-w-[160px] items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10 outline-none">
             <span className="truncate max-w-[160px]">
               {currentProject.name}
             </span>
@@ -247,49 +248,66 @@ export function Header({ sidebarToggle }: { sidebarToggle?: React.ReactNode }) {
   }
 
   return (
-    <header className="flex h-14 items-center border-b bg-background px-4">
-      <div className="flex items-center gap-1">
-        {sidebarToggle}
+    <header className="shrink-0 border-b border-border bg-background">
+      <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-3 px-8 py-2.5 md:flex-nowrap md:gap-4">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 md:gap-1.5">
+          {sidebarToggle}
 
-        {!isOrgLevelPage ? (
-          <>
+          {!isOrgLevelPage ? (
+            <>
+              <OrgSwitcher />
+              <ProjectSwitcher />
+            </>
+          ) : segments[0] === "usage" ? (
             <OrgSwitcher />
-            <ProjectSwitcher />
-          </>
-        ) : segments[0] === "usage" ? (
-          <OrgSwitcher />
-        ) : null}
+          ) : null}
 
-        {breadcrumbs.length > 0 && (
-          <nav className="flex items-center text-sm">
-            {breadcrumbs.map((crumb, i) => (
-              <React.Fragment key={i}>
-                {(i > 0 ||
-                  !isOrgLevelPage ||
-                  segments[0] === "usage") && (
-                  <span className="mx-1 text-muted-foreground/50 text-sm">
-                    /
-                  </span>
-                )}
-                {i < breadcrumbs.length - 1 ? (
-                  <Link
-                    href={crumb.href}
-                    className="px-1.5 text-foreground hover:text-foreground/80 transition-colors truncate max-w-[160px]"
-                  >
-                    {crumb.label}
-                  </Link>
-                ) : (
-                  <span className="px-1.5 text-foreground truncate max-w-[200px]">
-                    {crumb.label}
-                  </span>
-                )}
-              </React.Fragment>
-            ))}
-          </nav>
-        )}
-      </div>
-      <div className="ml-auto relative" style={{ zIndex: 10002 }}>
-        <TourHeaderButton />
+          {breadcrumbs.length > 0 && (
+            <nav className="flex min-w-0 flex-wrap items-center text-xs text-muted-foreground">
+              {breadcrumbs.map((crumb, i) => (
+                <React.Fragment key={i}>
+                  {(i > 0 || !isOrgLevelPage || segments[0] === "usage") && (
+                    <span className="mx-1 shrink-0 text-muted-foreground/45">
+                      /
+                    </span>
+                  )}
+                  {i < breadcrumbs.length - 1 ? (
+                    <Link
+                      href={crumb.href}
+                      className="max-w-[160px] truncate px-1.5 text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span className="max-w-[200px] truncate px-1.5 text-muted-foreground/90">
+                      {crumb.label}
+                    </span>
+                  )}
+                </React.Fragment>
+              ))}
+            </nav>
+          )}
+        </div>
+
+        <div className="relative mx-auto hidden w-full max-w-xl flex-none md:block md:flex-1 md:min-w-0 lg:mx-6">
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden
+          />
+          <Input
+            type="search"
+            placeholder={t("header.searchPlaceholder")}
+            aria-label={t("header.searchPlaceholder")}
+            className="h-9 rounded-lg border-border bg-background pl-9 text-sm shadow-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-[#3B6FF0]/25 focus-visible:ring-offset-0"
+          />
+        </div>
+
+        <div
+          className="relative flex flex-1 justify-end md:flex-none"
+          style={{ zIndex: 10002 }}
+        >
+          <TourHeaderButton />
+        </div>
       </div>
     </header>
   );

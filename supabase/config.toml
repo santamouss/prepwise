@@ -227,19 +227,19 @@ otp_expiry = 3600
 # sender_name = "Admin"
 
 [auth.email.template.confirmation]
-subject = "Your Aural verification code"
+subject = "Your PrepWise verification code"
 content_path = "./supabase/templates/confirm-signup.html"
 
 [auth.email.template.invite]
-subject = "You've been invited to Aural"
+subject = "You've been invited to PrepWise"
 content_path = "./supabase/templates/invite.html"
 
 [auth.email.template.magic_link]
-subject = "Sign in to Aural"
+subject = "Sign in to PrepWise"
 content_path = "./supabase/templates/magic-link.html"
 
 [auth.email.template.recovery]
-subject = "Your Aural password reset code"
+subject = "Your PrepWise password reset code"
 content_path = "./supabase/templates/reset-password.html"
 
 [auth.email.template.email_change]
@@ -247,7 +247,7 @@ subject = "Confirm email change"
 content_path = "./supabase/templates/change-email.html"
 
 [auth.email.template.reauthentication]
-subject = "Your Aural verification code"
+subject = "Your PrepWise verification code"
 content_path = "./supabase/templates/reauthentication.html"
 
 [auth.sms]

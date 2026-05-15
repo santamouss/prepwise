@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { AuralLogo } from "@/components/ui/aural-logo";
+import { ParkerLogo } from "@/components/ui/parker-logo";
 import { DocsSearch } from "./docs-search";
 import { ExternalLink } from "lucide-react";
 
@@ -11,15 +11,12 @@ export function DocsHeader() {
       <div className="flex items-center gap-6 px-6 py-3">
         <Link
           href="/docs"
-          className="flex items-center gap-1.5 shrink-0 group"
+          className="flex shrink-0 items-center gap-1.5 group transition-transform duration-300 hover:opacity-90"
         >
-          <AuralLogo
-            size={30}
-            className="transition-transform duration-300 group-hover:scale-110"
+          <ParkerLogo
+            height={28}
+            className="transition-transform duration-300 group-hover:scale-[1.02]"
           />
-          <span className="font-heading text-base font-bold tracking-[1.5px] text-mk-text">
-            AURAL
-          </span>
         </Link>
 
         <div className="flex-1 max-w-lg mx-auto">

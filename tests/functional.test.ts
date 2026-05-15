@@ -173,7 +173,7 @@ test("login honors browser locale and persisted locale cache", async () => {
   const cachedContext = await browser.newContext({ locale: "en-US" });
   const cachedPage = await cachedContext.newPage();
   await cachedPage.addInitScript(() => {
-    window.localStorage.setItem("aural.app.locale", "zh");
+    window.localStorage.setItem("parker.app.locale", "zh");
   });
   await cachedPage.goto(`${baseUrl}/login`);
   await waitForText(cachedPage, "欢迎回来");
@@ -186,19 +186,19 @@ test("mobile auth callback page hands OAuth params back to the app", async () =>
   await page.goto(`${baseUrl}/mobile-auth/callback?code=oauth-code&state=xyz`, {
     waitUntil: "domcontentloaded",
   });
-  await waitForText(page, "Returning you to Aural");
+  await waitForText(page, "Returning you to Parker");
 
   const expected =
-    "com.aural.mobile://login-callback?code=oauth-code&state=xyz";
+    "com.parker.mobile://login-callback?code=oauth-code&state=xyz";
 
   await waitForCondition(async () => {
     const href = await page
-      .getByRole("link", { name: "Open Aural" })
+      .getByRole("link", { name: "Open Parker" })
       .getAttribute("href");
     return href === expected;
   });
   assert.equal(
-    await page.getByRole("link", { name: "Open Aural" }).getAttribute("href"),
+    await page.getByRole("link", { name: "Open Parker" }).getAttribute("href"),
     expected,
   );
 
@@ -211,19 +211,19 @@ test("marketing landing page falls back to the same mobile auth handoff", async 
   await page.goto(`${baseUrl}/?code=oauth-code&state=xyz`, {
     waitUntil: "domcontentloaded",
   });
-  await waitForText(page, "Returning you to Aural");
+  await waitForText(page, "Returning you to Parker");
 
   const expected =
-    "com.aural.mobile://login-callback?code=oauth-code&state=xyz";
+    "com.parker.mobile://login-callback?code=oauth-code&state=xyz";
 
   await waitForCondition(async () => {
     const href = await page
-      .getByRole("link", { name: "Open Aural" })
+      .getByRole("link", { name: "Open Parker" })
       .getAttribute("href");
     return href === expected;
   });
   assert.equal(
-    await page.getByRole("link", { name: "Open Aural" }).getAttribute("href"),
+    await page.getByRole("link", { name: "Open Parker" }).getAttribute("href"),
     expected,
   );
 

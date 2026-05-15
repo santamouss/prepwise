@@ -4,65 +4,74 @@
 
 @layer base {
   :root {
-    --background: 40 15% 97%;
-    --foreground: 0 0% 20%;
+    /* Otter-style light theme: #FFFFFF, #111827, #6B7280, #3B6FF0 */
+    --background: 0 0% 100%;
+    --foreground: 220 13% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
+    --card-foreground: 220 13% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 20%;
+    --popover-foreground: 220 13% 11%;
 
-    --primary: 14 52% 49%;
+    --primary: 226 86% 59%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 138 31% 87%;
-    --secondary-foreground: 138 25% 23%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 13% 11%;
 
-    --muted: 45 22% 89%;
-    --muted-foreground: 0 0% 29%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 14% 46%;
 
-    --accent: 25 77% 88%;
-    --accent-foreground: 23 57% 18%;
+    --accent: 229 100% 97%;
+    --accent-foreground: 226 86% 59%;
 
     --destructive: 0 75% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 41 16% 80%;
-    --input: 41 16% 80%;
-    --ring: 14 52% 49%;
+    --border: 218 16% 91%;
+    --input: 218 16% 91%;
+    --ring: 226 86% 59%;
+
+    --sidebar: 218 20% 98%;
+    --chart-2: 226 70% 62%;
+    --chart-3: 172 45% 42%;
 
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 30 13% 10%;
-    --foreground: 40 24% 90%;
+    --background: 224 18% 8%;
+    --foreground: 210 20% 96%;
 
-    --card: 40 24% 12%;
-    --card-foreground: 40 24% 90%;
+    --card: 224 16% 11%;
+    --card-foreground: 210 20% 96%;
 
-    --popover: 40 24% 12%;
-    --popover-foreground: 40 24% 90%;
+    --popover: 224 16% 11%;
+    --popover-foreground: 210 20% 96%;
 
-    --primary: 14 76% 68%;
-    --primary-foreground: 14 57% 18%;
+    --primary: 226 86% 62%;
+    --primary-foreground: 226 55% 12%;
 
-    --secondary: 36 12% 17%;
-    --secondary-foreground: 40 24% 90%;
+    --secondary: 224 14% 16%;
+    --secondary-foreground: 210 20% 96%;
 
-    --muted: 36 12% 17%;
-    --muted-foreground: 41 10% 62%;
+    --muted: 224 14% 16%;
+    --muted-foreground: 215 12% 58%;
 
-    --accent: 21 49% 23%;
-    --accent-foreground: 25 77% 88%;
+    --accent: 226 40% 18%;
+    --accent-foreground: 226 86% 72%;
 
-    --destructive: 0 91% 71%;
+    --destructive: 0 62% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 37 12% 21%;
-    --input: 37 12% 21%;
-    --ring: 14 76% 68%;
+    --border: 224 14% 18%;
+    --input: 224 14% 18%;
+    --ring: 226 86% 62%;
+
+    --sidebar: 224 18% 10%;
+    --chart-2: 226 70% 58%;
+    --chart-3: 172 40% 48%;
   }
 }
 
@@ -74,13 +83,13 @@
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground text-sm font-normal antialiased;
   }
   body:has(.dashboard-shell) {
     overflow: hidden;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading), system-ui, sans-serif;
+    font-family: var(--font-body), system-ui, sans-serif;
   }
 }
 
@@ -120,25 +129,25 @@
 /* ── Force light theme during PDF capture ────────────────────── */
 .pdf-capture,
 .pdf-capture * {
-  --background: 40 15% 97%;
-  --foreground: 0 0% 20%;
+  --background: 0 0% 100%;
+  --foreground: 220 13% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 20%;
+  --card-foreground: 220 13% 11%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 20%;
-  --primary: 19 56% 40%;
+  --popover-foreground: 220 13% 11%;
+  --primary: 226 86% 59%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 138 31% 87%;
-  --secondary-foreground: 138 25% 23%;
-  --muted: 45 22% 89%;
-  --muted-foreground: 0 0% 29%;
-  --accent: 25 77% 88%;
-  --accent-foreground: 23 57% 18%;
+  --secondary: 220 14% 96%;
+  --secondary-foreground: 220 13% 11%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 215 14% 46%;
+  --accent: 229 100% 97%;
+  --accent-foreground: 226 86% 59%;
   --destructive: 0 75% 42%;
   --destructive-foreground: 0 0% 100%;
-  --border: 41 16% 80%;
-  --input: 41 16% 80%;
-  --ring: 19 56% 40%;
+  --border: 218 16% 91%;
+  --input: 218 16% 91%;
+  --ring: 226 86% 59%;
   color-scheme: light;
 }
 
@@ -146,17 +155,17 @@
 @media print {
   :root {
     color-scheme: light !important;
-    --background: 40 15% 97%;
-    --foreground: 0 0% 20%;
+    --background: 0 0% 100%;
+    --foreground: 220 13% 11%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 20%;
-    --primary: 19 56% 40%;
+    --card-foreground: 220 13% 11%;
+    --primary: 226 86% 59%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 138 31% 87%;
-    --secondary-foreground: 138 25% 23%;
-    --muted: 45 22% 89%;
-    --muted-foreground: 0 0% 29%;
-    --border: 41 16% 80%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 13% 11%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 215 14% 46%;
+    --border: 218 16% 91%;
   }
 
   html,

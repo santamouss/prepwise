@@ -6,7 +6,6 @@ import { TourCelebration } from "@/components/tour/tour-celebration";
 import { TourOverlay } from "@/components/tour/tour-overlay";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourWelcome } from "@/components/tour/tour-welcome";
-import { AuralLogo } from "@/components/ui/aural-logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,14 +34,13 @@ import {
     PanelLeftClose,
     PanelLeftOpen,
     PlayCircle,
-    Plus,
     Settings,
     Sun
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Header } from "./header";
 import { SupportDrawer } from "./support-drawer";
 
@@ -117,10 +115,10 @@ function SidebarLink({
         });
       }}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors",
         active
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+          ? "bg-[#EEF2FF] text-[#3B6FF0]"
+          : "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10",
       )}
     >
       {navigating ? (
@@ -148,11 +146,9 @@ export function Sidebar({
   onToggle: () => void;
 }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, profile } = useAuth();
   const [signingOut, setSigningOut] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
-  const [creatingInterview, setCreatingInterview] = useState(false);
   const { t } = useAppLocale();
 
   const projectNavigation = [
@@ -161,10 +157,6 @@ export function Sidebar({
     { name: t("sidebar.sessions"), href: "/candidates", icon: PlayCircle },
     { name: t("sidebar.questions"), href: "/questions", icon: HelpCircle },
   ];
-
-  useEffect(() => {
-    setCreatingInterview(false);
-  }, [pathname]);
 
   const displayName = profile?.name || user?.email?.split("@")[0] || "User";
   const initials =
@@ -184,18 +176,32 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col border-r bg-background transition-all duration-200",
-        collapsed ? "w-16" : "w-52",
+        "flex flex-col border-r border-border bg-sidebar transition-all duration-200",
+        collapsed ? "w-16" : "w-[240px]",
       )}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center border-b px-4">
-        <Link href="/organizations" className="flex items-center gap-1">
-          <AuralLogo size={28} className="shrink-0" />
-          {!collapsed && (
-            <span className="font-heading text-base font-bold tracking-[2px]">
-              AURAL
-            </span>
+      <div className="flex h-14 items-center px-4">
+        <Link
+          href="/organizations"
+          className="flex items-center overflow-hidden"
+          aria-label="Parker home"
+        >
+          {!collapsed ? (
+            <img
+              src="/images/marketing/prepwise-logo.png"
+              alt="Parker"
+              height={28}
+              className="h-7 w-auto max-w-[200px] object-contain object-left"
+            />
+          ) : (
+            <img
+              src="/images/marketing/prepwise-icon.png"
+              alt="Parker"
+              height={28}
+              width={28}
+              className="h-7 w-7 object-contain"
+            />
           )}
         </Link>
       </div>
@@ -203,7 +209,7 @@ export function Sidebar({
       {isOrgLevelPage ? (
         <>
           {/* Org-level nav */}
-          <nav className="flex-1 space-y-1 px-3 pt-3">
+          <nav className="flex-1 space-y-0.5 px-3 pb-3 pt-2">
             <SidebarLink
               href="/organizations"
               icon={FolderKanban}
@@ -214,12 +220,12 @@ export function Sidebar({
           </nav>
 
           {/* Bottom section: Support */}
-          <div className="space-y-1 px-3 pb-2">
+          <div className="space-y-0.5 px-3 pb-2 pt-2">
             <button
               onClick={() => setSupportOpen(true)}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors",
+                "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10",
               )}
             >
               <LifeBuoy className="h-4 w-4 shrink-0" />
@@ -236,32 +242,8 @@ export function Sidebar({
         </>
       ) : (
         <>
-          {/* New Interview */}
-          <div className="p-3">
-            <Button
-              className={cn(
-                "w-full gap-2",
-                collapsed ? "justify-center" : "justify-start",
-              )}
-              size={collapsed ? "icon" : "default"}
-              disabled={creatingInterview}
-              onClick={() => {
-                if (pathname === "/interviews/new") return;
-                setCreatingInterview(true);
-                router.push("/interviews/new");
-              }}
-            >
-              {creatingInterview ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Plus className="h-4 w-4" />
-              )}
-              {!collapsed && t("sidebar.newInterview")}
-            </Button>
-          </div>
-
           {/* Navigation */}
-          <nav className="flex-1 space-y-1 px-3">
+          <nav className="flex-1 space-y-0.5 px-3 pt-2">
             {projectNavigation.map((item) => (
               <SidebarLink
                 key={item.name}
@@ -275,7 +257,7 @@ export function Sidebar({
           </nav>
 
           {/* Bottom section: Settings + Support */}
-          <div className="space-y-1 px-3 pb-2">
+          <div className="space-y-0.5 px-3 pb-2 pt-2">
             <SidebarLink
               href="/settings"
               icon={Settings}
@@ -286,8 +268,8 @@ export function Sidebar({
             <button
               onClick={() => setSupportOpen(true)}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors",
+                "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10",
               )}
             >
               <LifeBuoy className="h-4 w-4 shrink-0" />
@@ -304,7 +286,7 @@ export function Sidebar({
                   className={cn(
                     "h-3.5 w-3.5 shrink-0",
                     pathname.startsWith("/usage")
-                      ? "text-primary"
+                      ? "text-[#3B6FF0]"
                       : "text-muted-foreground",
                   )}
                 />
@@ -317,12 +299,12 @@ export function Sidebar({
       <SupportDrawer open={supportOpen} onOpenChange={setSupportOpen} />
 
       {/* User profile */}
-      <div className="border-t">
+      <div className="border-t border-border">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-muted outline-none",
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm outline-none transition-colors hover:bg-black/[0.04] dark:hover:bg-white/10",
                 collapsed && "justify-center px-0",
               )}
             >
@@ -334,11 +316,11 @@ export function Sidebar({
               </Avatar>
               {!collapsed && (
                 <>
-                  <div className="flex flex-col items-start overflow-hidden text-left">
-                    <span className="truncate w-full font-medium text-foreground">
+                  <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                    <span className="truncate font-normal text-foreground">
                       {displayName}
                     </span>
-                    <span className="truncate w-full text-xs text-muted-foreground">
+                    <span className="truncate text-xs text-muted-foreground">
                       {user?.email ?? ""}
                     </span>
                   </div>
@@ -438,21 +420,21 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         <Sidebar
           collapsed={collapsed}
           onToggle={() => setCollapsed(!collapsed)}
+        />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+          <Header
+            sidebarToggle={
+              <SidebarToggle
+                collapsed={collapsed}
+                onToggle={() => setCollapsed(!collapsed)}
+              />
+            }
           />
-          <div className="flex flex-1 flex-col overflow-hidden">
-            <Header
-              sidebarToggle={
-                <SidebarToggle
-                  collapsed={collapsed}
-                  onToggle={() => setCollapsed(!collapsed)}
-                />
-              }
-            />
-            <main className="flex-1 overflow-y-auto p-6 code-scrollbar">
-              {children}
-            </main>
-          </div>
+          <main className="code-scrollbar flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-[1200px] px-8 py-8">{children}</div>
+          </main>
         </div>
+      </div>
       <TourOverlay />
       <TourWelcome />
       <TourCelebration />

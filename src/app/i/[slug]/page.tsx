@@ -11,7 +11,7 @@ import { CheckCircle2, Link2Off, Loader2, Lock, MessageSquare, Mic, Plus, Rotate
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_PREFIX = "aural_session_";
+const STORAGE_PREFIX = "parker_session_";
 
 export default function PublicInterviewPage() {
   const params = useParams();

@@ -1,5 +1,5 @@
 -- ============================================================
--- Aural — Squashed Initial Schema
+-- PrepWise — Squashed Initial Schema
 --
 -- Single migration combining all DDL for a fresh install.
 -- Uses camelCase column names to match the TypeScript codebase.
@@ -129,7 +129,7 @@ CREATE TABLE interviews (
   "userId"              uuid NOT NULL REFERENCES auth.users(id),
   "projectId"           uuid REFERENCES projects(id) ON DELETE SET NULL,
   "aiPersona"           text,
-  "aiName"              text NOT NULL DEFAULT 'Aural',
+  "aiName"              text NOT NULL DEFAULT 'PrepWise',
   "aiTone"              "ToneLevel" NOT NULL DEFAULT 'PROFESSIONAL',
   "followUpDepth"       "FollowUpDepth" NOT NULL DEFAULT 'MODERATE',
   language              text NOT NULL DEFAULT 'en',

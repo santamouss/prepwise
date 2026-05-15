@@ -12,7 +12,7 @@ type AppLocaleContextValue = {
   t: (key: string, params?: Record<string, string | number>) => string;
 };
 
-const STORAGE_KEY = "aural.app.locale";
+const STORAGE_KEY = "parker.app.locale";
 
 const translations: TranslationMap = {
   en: {
@@ -69,8 +69,9 @@ const translations: TranslationMap = {
     "header.orgList": "Organizations",
     "header.projectList": "Projects",
     "header.newProject": "New Project",
+    "header.searchPlaceholder": "Ask or search",
     "auth.welcomeBack": "Welcome back",
-    "auth.signInSubtitle": "Sign in to your Aural account",
+    "auth.signInSubtitle": "Sign in to your Parker account",
     "auth.googleSignIn": "Continue with Google",
     "auth.email": "Email",
     "auth.emailPlaceholder": "you@example.com",
@@ -277,8 +278,9 @@ const translations: TranslationMap = {
     "header.orgList": "组织",
     "header.projectList": "项目",
     "header.newProject": "新建项目",
+    "header.searchPlaceholder": "提问或搜索",
     "auth.welcomeBack": "欢迎回来",
-    "auth.signInSubtitle": "登录你的 Aural 账户",
+    "auth.signInSubtitle": "登录你的 Parker 账户",
     "auth.googleSignIn": "使用 Google 继续",
     "auth.email": "邮箱",
     "auth.emailPlaceholder": "you@example.com",

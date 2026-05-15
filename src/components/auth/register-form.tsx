@@ -1,7 +1,8 @@
 "use client";
 
+import { GoogleOAuthButton } from "@/components/auth/google-oauth-button";
 import { useAppLocale } from "@/components/app-locale-provider";
-import { AuralLogo } from "@/components/ui/aural-logo";
+import { ParkerLogo } from "@/components/ui/parker-logo";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -13,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -89,13 +91,21 @@ export function RegisterForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <AuralLogo size={64} className="mx-auto mb-2" />
+        <ParkerLogo height={64} className="mx-auto mb-2" />
         <CardTitle className="font-heading text-2xl">
           {t("auth.createAccount")}
         </CardTitle>
         <CardDescription>{t("auth.createAccountSubtitle")}</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <GoogleOAuthButton />
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t("common.or")}
+          </span>
+          <Separator className="flex-1" />
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">{t("auth.email")}</Label>

@@ -16,7 +16,7 @@ export const categories: DocCategory[] = [
   {
     slug: "getting-started",
     title: "Getting Started",
-    description: "Learn the basics of Aural and set up your first interview",
+    description: "Learn the basics of Parker and set up your first interview",
     iconName: "Rocket",
     audience: "both",
     order: 1,
