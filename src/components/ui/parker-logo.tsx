@@ -15,7 +15,7 @@ type ParkerLogoProps = {
  * Parker brand logo for auth, headers, and session UIs.
  */
 export function ParkerLogo({
-  height = 28,
+  height = 56,
   variant = "wordmark",
   className,
 }: ParkerLogoProps) {

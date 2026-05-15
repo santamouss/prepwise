@@ -14,7 +14,7 @@ export function DocsHeader() {
           className="flex shrink-0 items-center gap-1.5 group transition-transform duration-300 hover:opacity-90"
         >
           <ParkerLogo
-            height={28}
+            height={56}
             className="transition-transform duration-300 group-hover:scale-[1.02]"
           />
         </Link>

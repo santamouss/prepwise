@@ -60,7 +60,7 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader className="text-center">
-        <ParkerLogo height={64} className="mx-auto mb-2" />
+        <ParkerLogo height={128} className="mx-auto mb-2" />
         <CardTitle className="font-heading text-2xl">
           {t("auth.welcomeBack")}
         </CardTitle>

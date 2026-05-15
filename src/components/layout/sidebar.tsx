@@ -177,11 +177,16 @@ export function Sidebar({
     <aside
       className={cn(
         "flex flex-col border-r border-border bg-sidebar transition-all duration-200",
-        collapsed ? "w-16" : "w-[240px]",
+        collapsed ? "w-24" : "w-[240px]",
       )}
     >
       {/* Logo */}
-      <div className="flex h-14 items-center px-4">
+      <div
+        className={cn(
+          "flex min-h-16 items-center py-3",
+          collapsed ? "justify-center px-2" : "px-4",
+        )}
+      >
         <Link
           href="/organizations"
           className="flex items-center overflow-hidden"
@@ -191,16 +196,16 @@ export function Sidebar({
             <img
               src="/images/marketing/parker-logo.png"
               alt="Parker"
-              height={28}
-              className="h-7 w-auto max-w-[200px] object-contain object-left"
+              height={56}
+              className="h-14 w-auto max-w-[400px] object-contain object-left"
             />
           ) : (
             <img
               src="/images/marketing/parker-icon.png"
               alt="Parker"
-              height={28}
-              width={28}
-              className="h-7 w-7 object-contain"
+              height={56}
+              width={56}
+              className="h-14 w-14 object-contain"
             />
           )}
         </Link>

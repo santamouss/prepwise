@@ -6,7 +6,7 @@ export function PreparingScreen() {
     <div className="flex min-h-screen flex-col bg-muted/30">
       <header className="sticky top-0 z-50 flex h-14 items-center border-b bg-card px-6">
         <div className="flex items-center gap-1">
-          <ParkerLogo height={28} className="shrink-0" />
+          <ParkerLogo height={56} className="shrink-0" />
         </div>
       </header>
       <div className="flex flex-1 flex-col items-center justify-center gap-4">

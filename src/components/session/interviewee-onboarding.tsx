@@ -1194,7 +1194,7 @@ export function IntervieweeOnboarding({
   const header = (
     <header className="sticky top-0 z-50 flex h-14 items-center border-b bg-card px-4 sm:px-6">
       <div className="flex items-center gap-1">
-        <ParkerLogo height={28} className="shrink-0" />
+        <ParkerLogo height={56} className="shrink-0" />
       </div>
     </header>
   );
