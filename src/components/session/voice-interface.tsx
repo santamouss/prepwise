@@ -371,10 +371,12 @@ interface VoiceInterfaceProps {
   initialMessages?: Array<{ id: string; role: string; content: string }>;
   initialDrawings?: Array<{ id: string; label: string; snapshotData: string }>;
   chatEnabled?: boolean;
-  onComplete?: () => void;
+  onComplete?: (payload: import("@/lib/session/session-completion-types").SessionCompletionPayload) => void;
   videoMode?: boolean;
   /** Render in static preview mode — shows full layout without connecting */
   preview?: boolean;
+  /** Practice sessions: request mic on connect and keep listening without manual Unmute */
+  autoStartMicrophone?: boolean;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -395,6 +397,7 @@ export function VoiceInterface({
   onComplete,
   videoMode = false,
   preview = false,
+  autoStartMicrophone = false,
 }: VoiceInterfaceProps) {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -413,6 +416,8 @@ export function VoiceInterface({
   const [locallyCompleted, setLocallyCompleted] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [micAccessBlocked, setMicAccessBlocked] = useState(false);
+  const autoMicStartedRef = useRef(false);
   const [desktopTranscriptCollapsed, setDesktopTranscriptCollapsed] = useState(false);
   const [mobileTranscriptCollapsed, setMobileTranscriptCollapsed] = useState(false);
   const [chatInput, setChatInput] = useState("");
@@ -435,6 +440,7 @@ export function VoiceInterface({
   // ── Countdown timer state ────────────────────────────────────────
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const timerExpiredRef = useRef(false);
+  const endReasonRef = useRef<string | undefined>(undefined);
   const timerStartedRef = useRef(false);
 
   // ── Multiple drawings state ───────────────────────────────────
@@ -648,10 +654,19 @@ export function VoiceInterface({
     });
   }, []);
 
-  const handleError = useCallback((err: string) => {
-    setError(err);
-    setTimeout(() => setError(""), 5000);
-  }, []);
+  const handleError = useCallback(
+    (err: string) => {
+      if (
+        autoStartMicrophone &&
+        /microphone|mic access|permission|not allowed|denied/i.test(err)
+      ) {
+        setMicAccessBlocked(true);
+      }
+      setError(err);
+      setTimeout(() => setError(""), 5000);
+    },
+    [autoStartMicrophone],
+  );
 
   const voice = useVoice({
     interviewId,
@@ -664,6 +679,15 @@ export function VoiceInterface({
     onInterrupt: videoMode ? recording.cancelTts : undefined,
   });
 
+  const tryEnableMicrophone = useCallback(async () => {
+    setMicAccessBlocked(false);
+    const ok = await voice.startListening();
+    if (!ok) {
+      setMicAccessBlocked(true);
+    }
+    return ok;
+  }, [voice]);
+
   useEffect(() => {
     if (voice.isConnected) {
       setIsStartingInterview(false);
@@ -675,6 +699,14 @@ export function VoiceInterface({
       setIsStartingInterview(false);
     }
   }, [error]);
+
+  useEffect(() => {
+    if (preview || !autoStartMicrophone || !voice.isConnected || autoMicStartedRef.current) {
+      return;
+    }
+    autoMicStartedRef.current = true;
+    void tryEnableMicrophone();
+  }, [autoStartMicrophone, preview, voice.isConnected, tryEnableMicrophone]);
 
   // ── Start recording when voice connects (video mode) ───────────
   const recordingStartedRef = useRef(false);
@@ -1222,11 +1254,21 @@ export function VoiceInterface({
         console.error("[voice] Failed to save recording:", err);
       }
 
-      await withTimeout(voice.disconnect(), 8000, "voice disconnect");
+      const saveSucceeded = await withTimeout(
+        voice.disconnect(),
+        8000,
+        "voice disconnect",
+      );
+      onComplete?.({
+        saveSucceeded: saveSucceeded !== false,
+        reason: endReasonRef.current,
+      });
     } catch (err) {
       console.error("[voice] Failed to end interview cleanly:", err);
-    } finally {
-      onComplete?.();
+      onComplete?.({
+        saveSucceeded: false,
+        reason: endReasonRef.current,
+      });
     }
   }, [saveAllDrawings, saveAllCodeSnippets, videoMode, recording, sessionId, voice, onComplete]);
 
@@ -1238,6 +1280,7 @@ export function VoiceInterface({
   useEffect(() => {
     if (remainingSeconds !== 0 || timerExpiredRef.current) return;
     timerExpiredRef.current = true;
+    endReasonRef.current = "TIME_LIMIT_EXCEEDED";
     handleEndInterviewRef.current();
   }, [remainingSeconds]);
 
@@ -1980,15 +2023,39 @@ export function VoiceInterface({
                 )}
               </div>
 
-              {!voice.isConnected && !preview && (
+              {micAccessBlocked && !preview && (
+                <div className="flex flex-col items-center gap-4">
+                  <p className="max-w-md text-center text-sm text-muted-foreground">
+                    Microphone access is needed to start your voice interview.
+                  </p>
+                  <Button
+                    size="lg"
+                    className="gap-2 rounded-full px-8"
+                    onClick={() => void tryEnableMicrophone()}
+                  >
+                    <Mic className="h-5 w-5" />
+                    Try again
+                  </Button>
+                </div>
+              )}
+
+              {!voice.isConnected && !preview && !micAccessBlocked && (
                 <Button
                   size="lg"
                   disabled={isStartingInterview}
                   onClick={async () => {
                     setError("");
+                    setMicAccessBlocked(false);
                     setIsStartingInterview(true);
                     try {
                       await voice.connect();
+                      if (autoStartMicrophone && !autoMicStartedRef.current) {
+                        autoMicStartedRef.current = true;
+                        const ok = await voice.startListening();
+                        if (!ok) {
+                          setMicAccessBlocked(true);
+                        }
+                      }
                     } catch {
                       setIsStartingInterview(false);
                     }
@@ -2000,7 +2067,7 @@ export function VoiceInterface({
                   ) : (
                     <Mic className="h-5 w-5" />
                   )}
-                  {isStartingInterview ? "Connecting..." : "Start Voice Interview"}
+                  {isStartingInterview ? "Connecting..." : "Click here to start voice interview"}
                 </Button>
               )}
 
@@ -2015,14 +2082,32 @@ export function VoiceInterface({
                   This is where the voice conversation happens
                 </p>
               )}
-              {voice.isConnected && !voice.isListening && (
-                <p className="text-sm text-muted-foreground">
-                  Click the mic to start speaking
-                </p>
-              )}
+              {voice.isConnected &&
+                !voice.isListening &&
+                !micAccessBlocked &&
+                autoStartMicrophone && (
+                  <Button
+                    size="lg"
+                    className="gap-2 rounded-full px-8"
+                    onClick={() => void tryEnableMicrophone()}
+                  >
+                    <Mic className="h-5 w-5" />
+                    Turn on microphone
+                  </Button>
+                )}
+              {voice.isConnected &&
+                !voice.isListening &&
+                !autoStartMicrophone &&
+                !micAccessBlocked && (
+                  <p className="text-sm text-muted-foreground">
+                    Click the mic to start speaking
+                  </p>
+                )}
               {voice.isConnected && voice.isListening && !voice.isSpeaking && (
                 <p className="text-sm text-muted-foreground">
-                  Speak naturally — AI will respond automatically
+                  {autoStartMicrophone
+                    ? "You can answer when you're ready."
+                    : "Speak naturally — AI will respond automatically"}
                 </p>
               )}
               </div>
@@ -2373,7 +2458,7 @@ export function VoiceInterface({
                 if (voice.isListening) {
                   voice.stopListening();
                 } else {
-                  voice.startListening();
+                  void tryEnableMicrophone();
                 }
               }}
             >

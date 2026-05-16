@@ -7,7 +7,6 @@ import {
   practiceQuestionCount,
   type PracticeDuration,
   type PracticeInterviewType,
-  type PracticeMode,
 } from "@/lib/practice/constants";
 import { getSessionOverallScore, type SessionScoreInsights } from "@/lib/session-score";
 import { TRPCError } from "@trpc/server";
@@ -27,7 +26,6 @@ const startInput = z.object({
     "LEADERSHIP",
   ]),
   durationMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
-  mode: z.enum(["voice", "chat"]),
 });
 
 type PracticeSessionRow = {
@@ -231,7 +229,6 @@ export const practiceRouter = router({
     const questionCount = practiceQuestionCount(duration);
     const followUpDepth = practiceFollowUpDepth(duration);
     const interviewType = input.interviewType as PracticeInterviewType;
-    const mode = input.mode as PracticeMode;
 
     const generatorDescription = buildPracticeGeneratorDescription({
       role: input.role,
@@ -279,8 +276,8 @@ export const practiceRouter = router({
         description,
         objective: objective || generated.objective,
         assessmentCriteria: generated.assessmentCriteria ?? [],
-        chatEnabled: mode === "chat",
-        voiceEnabled: mode === "voice",
+        chatEnabled: true,
+        voiceEnabled: true,
         videoEnabled: false,
         antiCheatingEnabled: false,
         isPractice: true,
@@ -358,7 +355,7 @@ export const practiceRouter = router({
       });
     }
 
-    const modeUsed = mode === "voice" ? "VOICE" : "CHAT";
+    const modeUsed = "VOICE";
     const firstQuestionId = insertedQuestions?.[0]?.id ?? null;
 
     const { data: sessionJson, error: sessionError } = await ctx.supabase.rpc(

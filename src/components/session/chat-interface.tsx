@@ -69,7 +69,7 @@ export function ChatInterface({
   durationMinutes?: number;
   initialMessages?: Message[];
   initialQuestionIndex?: number;
-  onComplete: () => void;
+  onComplete: (payload: import("@/lib/session/session-completion-types").SessionCompletionPayload) => void;
   /** Render in static preview mode — shows full layout without API calls */
   preview?: boolean;
 }) {
@@ -744,13 +744,13 @@ export function ChatInterface({
         // Save all whiteboard drawings and code snippets before completing
         await Promise.all([saveAllDrawings(), saveAllCodeSnippets()]);
 
-        await fetch(`/api/trpc/session.complete`, {
+        const completeRes = await fetch(`/api/trpc/session.complete`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ json: { id: sessionId } }),
         });
 
-        setTimeout(onComplete, 2000);
+        onComplete({ saveSucceeded: completeRes.ok });
       }
     } catch (error) {
       console.error("AI response error:", error);
@@ -766,12 +766,15 @@ export function ChatInterface({
 
     (async () => {
       await Promise.all([saveAllDrawings(), saveAllCodeSnippets()]);
-      await fetch(`/api/trpc/session.complete`, {
+      const completeRes = await fetch(`/api/trpc/session.complete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ json: { id: sessionId } }),
       });
-      onComplete();
+      onComplete({
+        saveSucceeded: completeRes.ok,
+        reason: "TIME_LIMIT_EXCEEDED",
+      });
     })();
   }, [remainingSeconds, saveAllDrawings, saveAllCodeSnippets, sessionId, onComplete]);
 

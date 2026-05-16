@@ -5,10 +5,10 @@
 import { AntiCheatingGuard } from "@/components/session/anti-cheating-banner";
 import { IntervieweeOnboarding } from "@/components/session/interviewee-onboarding";
 import { PreparingScreen } from "@/components/session/preparing-screen";
-import { Card, CardContent } from "@/components/ui/card";
+import { SessionCompletionScreen } from "@/components/session/session-completion-screen";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
+import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
 import { trpc } from "@/lib/trpc/client";
-import { CheckCircle2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -28,11 +28,14 @@ export default function InviteSessionPage() {
   const router = useRouter();
 
   const [completed, setCompleted] = useState(false);
+  const [completionPayload, setCompletionPayload] =
+    useState<SessionCompletionPayload | null>(null);
   const [completionReason, setCompletionReason] = useState<string | undefined>();
   const [onboardingDone, setOnboardingDone] = useState(false);
 
-  const handleComplete = (reason?: string) => {
-    setCompletionReason(reason);
+  const handleComplete = (payload: SessionCompletionPayload) => {
+    setCompletionPayload(payload);
+    setCompletionReason(payload.reason);
     setCompleted(true);
   };
 
@@ -66,23 +69,17 @@ export default function InviteSessionPage() {
 
   if (completed || session.status === "COMPLETED") {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-12 text-center">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-secondary-500" />
-            <h2 className="mt-4 text-2xl font-bold">Thank you!</h2>
-            {completionReason === "TIME_LIMIT_EXCEEDED" && (
-              <p className="mt-2 text-sm text-amber-600">
-                The session time limit has been reached and the interview was ended automatically.
-              </p>
-            )}
-            <p className="mt-2 text-muted-foreground">
-              Your interview has been completed successfully. We appreciate your
-              time and thoughtful responses.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <SessionCompletionScreen
+        sessionId={session.id}
+        interviewId={interview.id}
+        isPractice={isPracticeInterview(interview)}
+        isPreview={false}
+        isInviteFlow
+        completionReason={completionReason}
+        saveSucceeded={
+          completionPayload?.saveSucceeded ?? session.status === "COMPLETED"
+        }
+      />
     );
   }
 
@@ -137,6 +134,7 @@ export default function InviteSessionPage() {
           interviewContext={interviewContext}
           durationMinutes={interview.timeLimitMinutes ?? undefined}
           chatEnabled={!!interview.chatEnabled}
+          autoStartMicrophone={isPracticeInterview(interview)}
           onComplete={handleComplete}
           videoMode={!!interview.videoEnabled}
         />

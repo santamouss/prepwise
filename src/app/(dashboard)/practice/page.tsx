@@ -14,7 +14,6 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
-  MessageSquare,
   Mic,
   Users,
   Wrench,
@@ -56,7 +55,6 @@ export default function PracticePage() {
   const [showJobDescription, setShowJobDescription] = useState(false);
   const [interviewType, setInterviewType] = useState<PracticeInterviewType>("BEHAVIORAL");
   const [durationMinutes, setDurationMinutes] = useState<PracticeDuration>(10);
-  const [mode, setMode] = useState<"voice" | "chat">("voice");
 
   const isStarting = startPractice.isPending;
 
@@ -71,14 +69,13 @@ export default function PracticePage() {
         jobDescription: jobDescription.trim() || undefined,
         interviewType,
         durationMinutes,
-        mode,
       });
       router.push(result.redirectUrl);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not start practice. Please try again.";
       toast({
-        title: "Could not start practice",
+        title: "Could not start voice practice",
         description: message,
         variant: "destructive",
       });
@@ -92,7 +89,7 @@ export default function PracticePage() {
           Practice Interview
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Set up your mock interview and start practicing
+          Set up a voice mock interview and practice speaking with Parker
         </p>
       </div>
 
@@ -100,7 +97,8 @@ export default function PracticePage() {
         <CardHeader>
           <CardTitle className="text-lg">Interview setup</CardTitle>
           <CardDescription>
-            Parker will tailor questions to your role and interview type.
+            Parker will tailor spoken questions to your role and interview type. You may be asked
+            for microphone access when the session starts.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,42 +218,14 @@ export default function PracticePage() {
                   );
                 })}
               </div>
-            </div>
-
-            <div className="space-y-3">
-              <Label>Mode</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  disabled={isStarting}
-                  onClick={() => setMode("voice")}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors",
-                    mode === "voice"
-                      ? "border-[#3B6FF0] bg-[#EEF2FF]"
-                      : "border-border hover:border-[#3B6FF0]/40",
-                  )}
-                >
-                  <Mic className="h-6 w-6 text-[#3B6FF0]" />
-                  <span className="text-sm font-medium">Voice</span>
-                  <span className="text-xs text-muted-foreground">Speech conversation</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={isStarting}
-                  onClick={() => setMode("chat")}
-                  className={cn(
-                    "flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors",
-                    mode === "chat"
-                      ? "border-[#3B6FF0] bg-[#EEF2FF]"
-                      : "border-border hover:border-[#3B6FF0]/40",
-                  )}
-                >
-                  <MessageSquare className="h-6 w-6 text-[#3B6FF0]" />
-                  <span className="text-sm font-medium">Chat</span>
-                  <span className="text-xs text-muted-foreground">Text messaging</span>
-                </button>
               </div>
+
+            <div className="flex items-start gap-3 rounded-lg border border-[#3B6FF0]/20 bg-[#EEF2FF] px-4 py-3 text-sm text-[#1e3a8a]">
+              <Mic className="mt-0.5 h-5 w-5 shrink-0 text-[#3B6FF0]" />
+              <p>
+                Voice practice only — you&apos;ll speak with Parker out loud. Microphone permission
+                may be requested before your session begins.
+              </p>
             </div>
 
             <Button
@@ -266,10 +236,10 @@ export default function PracticePage() {
               {isStarting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Parker is preparing your interview...
+                  Parker is preparing your voice interview…
                 </>
               ) : (
-                <>Start Practice →</>
+                <>Start Voice Practice →</>
               )}
             </Button>
           </form>

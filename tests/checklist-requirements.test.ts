@@ -37,14 +37,14 @@ describe("resolveChecklistRequirements", () => {
     assert.equal(isChecklistItemRequired("camera", req, false, true), false);
   });
 
-  it("practice chat skips checklist entirely", () => {
+  it("practice voice-first requires mic only when chat is enabled internally", () => {
     const req = resolveChecklistRequirements({
       antiCheatingEnabled: false,
       isPractice: true,
-      voiceEnabled: false,
+      voiceEnabled: true,
       chatEnabled: true,
     });
-    assert.deepEqual(req, { camera: false, microphone: false, screen: false });
-    assert.equal(hasChecklistStep(req), false);
+    assert.deepEqual(req, { camera: false, microphone: true, screen: false });
+    assert.equal(hasChecklistStep(req), true);
   });
 });

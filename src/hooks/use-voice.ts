@@ -712,8 +712,8 @@ export function useVoice({
   );
 
   /** Start capturing microphone audio and sending to relay */
-  const startListening = useCallback(async () => {
-    if (isListeningRef.current) return;
+  const startListening = useCallback(async (): Promise<boolean> => {
+    if (isListeningRef.current) return true;
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -784,10 +784,12 @@ export function useVoice({
       processorRef.current = { processor, source, ctx };
       isListeningRef.current = true;
       setState((s) => ({ ...s, isListening: true, userTranscript: "" }));
+      return true;
     } catch (error) {
       const msg =
         error instanceof Error ? error.message : "Microphone access failed";
       onError?.(msg);
+      return false;
     }
   }, [onError]);
 
@@ -850,7 +852,7 @@ export function useVoice({
   }, []);
 
   /** Save remaining tracked messages and complete the session */
-  const saveAndComplete = useCallback(async () => {
+  const saveAndComplete = useCallback(async (): Promise<boolean> => {
     // Flush any pending buffers before saving
     const pendingAsrText = asrBufferRef.current.trim();
     if (pendingAsrText) {
@@ -867,14 +869,14 @@ export function useVoice({
     }
 
     const messages = trackedMessagesRef.current;
-    if (messages.length === 0 && !sessionId) return;
+    if (!sessionId) return false;
 
     log.info(
       `Saving ${messages.length} remaining messages and completing session`
     );
 
     try {
-      await fetch("/api/voice/save", {
+      const res = await fetch("/api/voice/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -883,16 +885,18 @@ export function useVoice({
           complete: true,
         }),
       });
+      return res.ok;
     } catch (err) {
       log.error("Failed to save voice data:", err);
+      return false;
     }
   }, [sessionId]);
 
   /** Disconnect, save messages, and clean up everything */
-  const disconnect = useCallback(async () => {
+  const disconnect = useCallback(async (): Promise<boolean> => {
     setState((s) => ({ ...s, isSaving: true }));
     try {
-      await saveAndComplete();
+      return await saveAndComplete();
     } finally {
       cleanup();
       // isSaving is reset by cleanup

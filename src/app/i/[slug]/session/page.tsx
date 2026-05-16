@@ -7,11 +7,11 @@ import { IntervieweeOnboarding, PreviewWrapper } from "@/components/session/inte
 import { IntervieweeTourOverlay } from "@/components/session/interviewee-tour-overlay";
 import { IntervieweeTourProvider } from "@/components/session/interviewee-tour-provider";
 import { PreparingScreen } from "@/components/session/preparing-screen";
-import { Card, CardContent } from "@/components/ui/card";
+import { SessionCompletionScreen } from "@/components/session/session-completion-screen";
 import type { InterviewContext } from "@/hooks/use-voice";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
+import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
 import { trpc } from "@/lib/trpc/client";
-import { CheckCircle2 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -36,12 +36,15 @@ export default function SlugSessionPage() {
   const isPreview = searchParams.get("preview") === "true";
 
   const [completed, setCompleted] = useState(false);
+  const [completionPayload, setCompletionPayload] =
+    useState<SessionCompletionPayload | null>(null);
   const [completionReason, setCompletionReason] = useState<string | undefined>();
   const [onboardingDone, setOnboardingDone] = useState(isPreview);
   const [previewTourDone, setPreviewTourDone] = useState(false);
 
-  const handleComplete = (reason?: string) => {
-    setCompletionReason(reason);
+  const handleComplete = (payload: SessionCompletionPayload) => {
+    setCompletionPayload(payload);
+    setCompletionReason(payload.reason);
     setCompleted(true);
   };
 
@@ -71,31 +74,25 @@ export default function SlugSessionPage() {
     return <PreparingScreen />;
   }
 
+  const antiCheatingEnabled = !isPreview && !!interview.data.antiCheatingEnabled;
+  const isPractice = isPracticeInterview(interview.data);
+
   if (session.data.status === "COMPLETED" || completed) {
     try { localStorage.removeItem(STORAGE_PREFIX + slug); } catch { /* noop */ }
     return (
-      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="py-12 text-center">
-            <CheckCircle2 className="mx-auto h-16 w-16 text-secondary-500" />
-            <h2 className="mt-4 text-2xl font-bold">Thank you!</h2>
-            {completionReason === "TIME_LIMIT_EXCEEDED" && (
-              <p className="mt-2 text-sm text-amber-600">
-                The session time limit has been reached and the interview was ended automatically.
-              </p>
-            )}
-            <p className="mt-2 text-muted-foreground">
-              Your interview has been completed successfully. We appreciate your
-              time and thoughtful responses.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <SessionCompletionScreen
+        sessionId={sessionId!}
+        interviewId={interview.data.id}
+        isPractice={isPractice}
+        isPreview={isPreview}
+        isInviteFlow={false}
+        completionReason={completionReason}
+        saveSucceeded={
+          completionPayload?.saveSucceeded ?? session.data.status === "COMPLETED"
+        }
+      />
     );
   }
-
-  const antiCheatingEnabled = !isPreview && !!interview.data.antiCheatingEnabled;
-  const isPractice = isPracticeInterview(interview.data);
 
   if (!onboardingDone) {
     return (
@@ -234,6 +231,7 @@ export default function SlugSessionPage() {
           initialMessages={isResuming ? resumeTextMessages : undefined}
           initialDrawings={isResuming && resumeDrawings?.length ? resumeDrawings : undefined}
           chatEnabled={!!interview.data.chatEnabled}
+          autoStartMicrophone={isPractice && !isPreview}
           onComplete={handleComplete}
           videoMode={isPreview ? false : !!interview.data.videoEnabled}
         />

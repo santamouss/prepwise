@@ -1352,18 +1352,10 @@ export function IntervieweeOnboarding({
                     Stay on this page until you finish. You can pause between
                     questions, but closing the tab may end your session.
                   </li>
-                  {voiceEnabled && (
-                    <li>
-                      Voice practice uses your microphone only. No photo or screen
-                      sharing is required.
-                    </li>
-                  )}
-                  {chatEnabled && !voiceEnabled && (
-                    <li>
-                      Chat practice uses text only — no camera, microphone, or screen
-                      sharing is required.
-                    </li>
-                  )}
+                  <li>
+                    Voice practice uses your microphone only. No photo or screen sharing
+                    is required.
+                  </li>
                 </ol>
               ) : (
                 <ol className="list-inside list-decimal space-y-2 text-sm text-muted-foreground">

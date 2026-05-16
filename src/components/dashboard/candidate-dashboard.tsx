@@ -68,10 +68,10 @@ export function CandidateDashboard() {
               <span className="text-sm font-medium">Practice</span>
             </div>
             <h2 className="text-xl font-semibold sm:text-2xl">
-              Start a Practice Interview
+              Start Voice Practice
             </h2>
             <p className="max-w-md text-sm text-white/90">
-              Mock interviews tailored to your role — guided by Parker
+              Speak through mock interviews tailored to your role — guided by Parker
             </p>
           </div>
           <Button
@@ -80,7 +80,7 @@ export function CandidateDashboard() {
             className="shrink-0 bg-white text-[#3B6FF0] hover:bg-white/90"
           >
             <Link href="/practice">
-              Start Practicing
+              Start Voice Practice
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

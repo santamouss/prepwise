@@ -17,11 +17,9 @@ export function resolveChecklistRequirements(params: {
   }
 
   if (isPractice) {
+    // Candidate practice is voice-first; mic check only when voice is enabled.
     if (voiceEnabled) {
       return { camera: false, microphone: true, screen: false };
-    }
-    if (chatEnabled) {
-      return { camera: false, microphone: false, screen: false };
     }
     return { camera: false, microphone: false, screen: false };
   }
