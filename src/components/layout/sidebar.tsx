@@ -23,11 +23,13 @@ import {
     FolderKanban,
     Gauge,
     HelpCircle,
+    History,
     LayoutDashboard,
     LifeBuoy,
     Loader2,
     LogOut,
     MessageSquare,
+    Mic,
     Monitor,
     Moon,
     Palette,
@@ -35,7 +37,9 @@ import {
     PanelLeftOpen,
     PlayCircle,
     Settings,
-    Sun
+    Sun,
+    TrendingUp,
+    User,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
@@ -172,6 +176,8 @@ export function Sidebar({
     pathname.startsWith("/usage");
 
   const isSettingsActive = pathname.startsWith("/settings");
+  const isCandidate = profile?.user_type === "candidate";
+  const homeHref = isCandidate ? "/dashboard" : "/organizations";
 
   return (
     <aside
@@ -188,7 +194,7 @@ export function Sidebar({
         )}
       >
         <Link
-          href="/organizations"
+          href={homeHref}
           className="flex items-center overflow-hidden"
           aria-label="Parker home"
         >
@@ -211,7 +217,60 @@ export function Sidebar({
         </Link>
       </div>
 
-      {isOrgLevelPage ? (
+      {isCandidate ? (
+        <>
+          <nav className="flex-1 space-y-0.5 px-3 pb-3 pt-2">
+            <SidebarLink
+              href="/dashboard"
+              icon={LayoutDashboard}
+              label="Dashboard"
+              active={pathname === "/dashboard"}
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/practice"
+              icon={Mic}
+              label="Practice"
+              active={pathname.startsWith("/practice")}
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/my-sessions"
+              icon={History}
+              label="My Sessions"
+              active={pathname.startsWith("/my-sessions")}
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/progress"
+              icon={TrendingUp}
+              label="Progress"
+              active={pathname.startsWith("/progress")}
+              collapsed={collapsed}
+            />
+            <SidebarLink
+              href="/account"
+              icon={User}
+              label="Account"
+              active={pathname.startsWith("/account")}
+              collapsed={collapsed}
+            />
+          </nav>
+
+          <div className="space-y-0.5 px-3 pb-2 pt-2">
+            <button
+              onClick={() => setSupportOpen(true)}
+              className={cn(
+                "flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-normal transition-colors",
+                "text-muted-foreground hover:bg-black/[0.04] hover:text-foreground dark:hover:bg-white/10",
+              )}
+            >
+              <LifeBuoy className="h-4 w-4 shrink-0" />
+              {!collapsed && t("sidebar.support")}
+            </button>
+          </div>
+        </>
+      ) : isOrgLevelPage ? (
         <>
           {/* Org-level nav */}
           <nav className="flex-1 space-y-0.5 px-3 pb-3 pt-2">

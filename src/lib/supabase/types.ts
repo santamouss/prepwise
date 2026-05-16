@@ -25,6 +25,7 @@ export type Database = {
           avatar: string | null;
           organization: string | null;
           role: Database["public"]["Enums"]["UserRole"];
+          user_type: "candidate" | "recruiter" | null;
           createdAt: string;
           updatedAt: string;
         };
@@ -35,6 +36,7 @@ export type Database = {
           avatar?: string | null;
           organization?: string | null;
           role?: Database["public"]["Enums"]["UserRole"];
+          user_type?: "candidate" | "recruiter" | null;
           createdAt?: string;
           updatedAt?: string;
         };
@@ -45,6 +47,7 @@ export type Database = {
           avatar?: string | null;
           organization?: string | null;
           role?: Database["public"]["Enums"]["UserRole"];
+          user_type?: "candidate" | "recruiter" | null;
           createdAt?: string;
           updatedAt?: string;
         };
