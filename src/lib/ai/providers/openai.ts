@@ -13,6 +13,10 @@ export function usesMaxCompletionTokens(model: string): boolean {
   );
 }
 
+export function isGpt5Model(model: string): boolean {
+  return model.toLowerCase().startsWith("gpt-5");
+}
+
 function buildTokenLimitParams(
   model: string,
   maxTokens: number,
@@ -21,6 +25,34 @@ function buildTokenLimitParams(
     return { max_completion_tokens: maxTokens };
   }
   return { max_tokens: maxTokens };
+}
+
+export function buildTemperatureParams(
+  model: string,
+  temperature?: number,
+): Pick<ChatCompletionCreateParamsNonStreaming, "temperature"> | Record<string, never> {
+  if (isGpt5Model(model)) {
+    if (temperature === 1) {
+      return { temperature: 1 };
+    }
+    return {};
+  }
+
+  if (temperature === undefined) {
+    return { temperature: 0.7 };
+  }
+
+  return { temperature };
+}
+
+function buildCompatibilityParams(
+  model: string,
+  options: { maxTokens: number; temperature?: number },
+): Pick<ChatCompletionCreateParamsNonStreaming, "max_tokens" | "max_completion_tokens" | "temperature"> {
+  return {
+    ...buildTokenLimitParams(model, options.maxTokens),
+    ...buildTemperatureParams(model, options.temperature),
+  };
 }
 
 export class OpenAIProvider implements LLMProvider {
@@ -63,8 +95,10 @@ export class OpenAIProvider implements LLMProvider {
     const response = await this.client.chat.completions.create({
       model,
       messages: this.toOpenAIMessages(params.messages),
-      temperature: params.temperature ?? 0.7,
-      ...buildTokenLimitParams(model, maxTokens),
+      ...buildCompatibilityParams(model, {
+        maxTokens,
+        temperature: params.temperature,
+      }),
     });
 
     const choice = response.choices[0];
@@ -89,8 +123,10 @@ export class OpenAIProvider implements LLMProvider {
     const stream = await this.client.chat.completions.create({
       model,
       messages: this.toOpenAIMessages(params.messages),
-      temperature: params.temperature ?? 0.7,
-      ...buildTokenLimitParams(model, maxTokens),
+      ...buildCompatibilityParams(model, {
+        maxTokens,
+        temperature: params.temperature,
+      }),
       stream: true,
     });
 
