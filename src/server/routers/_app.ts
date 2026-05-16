@@ -12,6 +12,7 @@ import { userRouter } from "./user";
 import { webhookRouter } from "./webhook";
 import { candidateRouter } from "./candidate";
 import { usageRouter } from "./usage";
+import { practiceRouter } from "./practice";
 
 export const appRouter = router({
   auth: authRouter,
@@ -27,6 +28,7 @@ export const appRouter = router({
   user: userRouter,
   candidate: candidateRouter,
   usage: usageRouter,
+  practice: practiceRouter,
 });
 
 export type AppRouter = typeof appRouter;

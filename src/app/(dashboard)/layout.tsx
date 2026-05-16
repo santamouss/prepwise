@@ -1,4 +1,8 @@
 import { DashboardShell } from "@/components/layout/sidebar";
+import {
+  isCandidateOnlyPath,
+  isRecruiterOnlyPath,
+} from "@/lib/auth/user-type-routes";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -33,6 +37,15 @@ export default async function DashboardLayout({
 
   if (profile?.user_type && onOnboarding) {
     redirect("/dashboard");
+  }
+
+  if (profile?.user_type && pathname) {
+    if (profile.user_type === "candidate" && isRecruiterOnlyPath(pathname)) {
+      redirect("/dashboard");
+    }
+    if (profile.user_type === "recruiter" && isCandidateOnlyPath(pathname)) {
+      redirect("/dashboard");
+    }
   }
 
   if (onOnboarding) {

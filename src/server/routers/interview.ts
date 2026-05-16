@@ -328,6 +328,7 @@ export const interviewRouter = router({
         llmProvider: z.string().optional(),
         llmModel: z.string().optional(),
         antiCheatingEnabled: z.boolean().default(false),
+        requireInvite: z.boolean().optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -415,13 +416,14 @@ export const interviewRouter = router({
 
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { projectId: _pid, ...rest } = input;
+      const { requireInvite, ...createFields } = rest;
       const { data: interview, error } = await ctx.supabase
         .from("interviews")
         .insert({
-          ...rest,
+          ...createFields,
           projectId,
           userId: ctx.user.id,
-          requireInvite: true,
+          requireInvite: requireInvite ?? true,
         })
         .select()
         .single();
