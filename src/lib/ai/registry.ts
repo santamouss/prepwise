@@ -9,6 +9,10 @@ function registerProvider(provider: LLMProvider) {
   providers.set(provider.id, provider);
 }
 
+function openAiModel(envKey: string, fallback: string): string {
+  return process.env[envKey]?.trim() || fallback;
+}
+
 registerProvider(new OpenAIProvider());
 registerProvider(new KimiProvider());
 registerProvider(new MinimaxProvider());
@@ -40,16 +44,29 @@ export function listProviders(): LLMProvider[] {
  * Falls back through available providers.
  */
 export const REPORT_MODEL = process.env.OPENAI_API_KEY
-  ? "gpt-4o"
+  ? openAiModel("OPENAI_REPORT_ANALYSIS_MODEL", "gpt-4o")
   : process.env.KIMI_API_KEY
     ? "kimi-k2.5"
     : "MiniMax-M2.1-lightning";
 
-/**
- * Model used for interview question generation and refinement.
- */
-export const GENERATOR_MODEL = process.env.OPENAI_API_KEY
-  ? "gpt-4o-mini"
+/** Model used for interview generation from a description. */
+export const INTERVIEW_GENERATION_MODEL = process.env.OPENAI_API_KEY
+  ? openAiModel("OPENAI_INTERVIEW_GENERATION_MODEL", "gpt-4o-mini")
   : process.env.KIMI_API_KEY
     ? "moonshot-v1-8k"
     : "MiniMax-M2.1-lightning";
+
+/** Model used for question refinement. */
+export const QUESTION_REFINEMENT_MODEL = process.env.OPENAI_API_KEY
+  ? openAiModel("OPENAI_QUESTION_REFINEMENT_MODEL", "gpt-4o-mini")
+  : process.env.KIMI_API_KEY
+    ? "moonshot-v1-8k"
+    : "MiniMax-M2.1-lightning";
+
+/** Default OpenAI model for live chat interviewing when interview.llmModel is unset. */
+export const CHAT_INTERVIEW_MODEL = process.env.OPENAI_API_KEY
+  ? openAiModel("OPENAI_CHAT_INTERVIEW_MODEL", "gpt-4o-mini")
+  : undefined;
+
+/** @deprecated Use INTERVIEW_GENERATION_MODEL */
+export const GENERATOR_MODEL = INTERVIEW_GENERATION_MODEL;

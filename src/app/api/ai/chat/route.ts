@@ -1,5 +1,5 @@
 import { buildInterviewerPrompt } from "@/lib/ai/prompts/interviewer";
-import { getProvider } from "@/lib/ai/registry";
+import { CHAT_INTERVIEW_MODEL, getProvider } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/ai/chat");
@@ -27,6 +27,9 @@ export async function POST(req: Request) {
     }
 
     const provider = getProvider(interview.llmProvider);
+    const model =
+      interview.llmModel ??
+      (provider.id === "openai" ? CHAT_INTERVIEW_MODEL : undefined);
 
     const conversationHistory: LLMMessage[] = messages.map(
       (m: { role: "user" | "assistant"; content: string }) => ({
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
       messages: promptMessages,
       temperature: 0.7,
       maxTokens: 1024,
-      model: interview.llmModel ?? undefined,
+      model: model ?? undefined,
     });
 
     const isComplete = response.content.includes("[INTERVIEW_COMPLETE]");

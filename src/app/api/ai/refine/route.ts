@@ -1,5 +1,5 @@
 import { getAuthUser } from "@/lib/auth";
-import { getProvider, GENERATOR_MODEL } from "@/lib/ai/registry";
+import { getProvider, QUESTION_REFINEMENT_MODEL } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
 
 const log = createLogger("api/ai/refine");
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "Interview and feedback are required" }), { status: 400 });
   }
 
-  const provider = getProvider(GENERATOR_MODEL);
+  const provider = getProvider(QUESTION_REFINEMENT_MODEL);
   const messages = buildImprovePrompt(interview, feedback, language, jobDescription, resumeText);
 
   const encoder = new TextEncoder();
@@ -65,7 +65,7 @@ export async function POST(req: Request) {
           messages,
           temperature: 0.7,
           maxTokens: 8192,
-          model: GENERATOR_MODEL,
+          model: QUESTION_REFINEMENT_MODEL,
         })) {
           let remaining = chunk;
           while (remaining.length > 0) {

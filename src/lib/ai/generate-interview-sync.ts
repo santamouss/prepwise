@@ -1,4 +1,4 @@
-import { getProvider, GENERATOR_MODEL } from "@/lib/ai/registry";
+import { getProvider, INTERVIEW_GENERATION_MODEL } from "@/lib/ai/registry";
 import { buildGeneratorPrompt } from "@/lib/ai/prompts/generator";
 import type { GeneratedInterview } from "@/lib/ai/types";
 
@@ -27,7 +27,7 @@ export async function generateInterviewFromDescription(
     jobDescription?: string;
   },
 ): Promise<GeneratedInterview> {
-  const provider = getProvider(GENERATOR_MODEL);
+  const provider = getProvider(INTERVIEW_GENERATION_MODEL);
   const messages = buildGeneratorPrompt(
     description,
     options.durationMinutes,
@@ -45,7 +45,7 @@ export async function generateInterviewFromDescription(
         messages,
         temperature: 0.7,
         maxTokens: 8192,
-        model: GENERATOR_MODEL,
+        model: INTERVIEW_GENERATION_MODEL,
       })) {
         fullContent += chunk;
       }
