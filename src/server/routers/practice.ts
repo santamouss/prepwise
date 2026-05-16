@@ -317,17 +317,29 @@ export const practiceRouter = router({
       allowedFileTypes: [],
     }));
 
-    const { data: insertedQuestions, error: questionsError } = await ctx.supabase
+    const { error: questionsError } = await ctx.supabase
       .from("questions")
-      .insert(questionRows)
-      .select("id")
-      .order("order", { ascending: true });
+      .insert(questionRows);
 
     if (questionsError) {
       await ctx.supabase.from("interviews").delete().eq("id", interview.id);
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: questionsError.message,
+      });
+    }
+
+    const { data: insertedQuestions, error: fetchQuestionsError } = await ctx.supabase
+      .from("questions")
+      .select("id")
+      .eq("interviewId", interview.id)
+      .order("order", { ascending: true });
+
+    if (fetchQuestionsError) {
+      await ctx.supabase.from("interviews").delete().eq("id", interview.id);
+      throw new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: fetchQuestionsError.message,
       });
     }
 
