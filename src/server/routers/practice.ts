@@ -283,6 +283,8 @@ export const practiceRouter = router({
         voiceEnabled: mode === "voice",
         videoEnabled: false,
         antiCheatingEnabled: false,
+        isPractice: true,
+        customBranding: { isPractice: true, source: "practice" },
         requireInvite: false,
         aiName: "Parker",
         aiTone: "FRIENDLY",

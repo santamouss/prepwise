@@ -6,6 +6,7 @@ import { AntiCheatingGuard } from "@/components/session/anti-cheating-banner";
 import { IntervieweeOnboarding } from "@/components/session/interviewee-onboarding";
 import { PreparingScreen } from "@/components/session/preparing-screen";
 import { Card, CardContent } from "@/components/ui/card";
+import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -94,6 +95,7 @@ export default function InviteSessionPage() {
         timeLimitMinutes={interview.timeLimitMinutes}
         language={interview.language}
         antiCheatingEnabled={!!interview.antiCheatingEnabled}
+        isPractice={isPracticeInterview(interview)}
         voiceEnabled={!!interview.voiceEnabled}
         chatEnabled={!!interview.chatEnabled}
         aiName={interview.aiName}

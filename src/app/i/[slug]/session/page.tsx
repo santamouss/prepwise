@@ -9,6 +9,7 @@ import { IntervieweeTourProvider } from "@/components/session/interviewee-tour-p
 import { PreparingScreen } from "@/components/session/preparing-screen";
 import { Card, CardContent } from "@/components/ui/card";
 import type { InterviewContext } from "@/hooks/use-voice";
+import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -94,6 +95,7 @@ export default function SlugSessionPage() {
   }
 
   const antiCheatingEnabled = !isPreview && !!interview.data.antiCheatingEnabled;
+  const isPractice = isPracticeInterview(interview.data);
 
   if (!onboardingDone) {
     return (
@@ -104,6 +106,7 @@ export default function SlugSessionPage() {
         timeLimitMinutes={interview.data.timeLimitMinutes}
         language={interview.data.language}
         antiCheatingEnabled={antiCheatingEnabled}
+        isPractice={isPractice}
         voiceEnabled={!!interview.data.voiceEnabled}
         chatEnabled={!!interview.data.chatEnabled}
         aiName={interview.data.aiName}

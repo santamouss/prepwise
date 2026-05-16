@@ -28,6 +28,11 @@ import {
   RelayConnector,
   resolveRelayPrimaryPreference,
 } from "@/lib/voice/relay-routing";
+import {
+  hasChecklistStep,
+  isChecklistItemRequired,
+  resolveChecklistRequirements,
+} from "@/lib/session/checklist-requirements";
 import { cn } from "@/lib/utils";
 import {
     AlertCircle,
@@ -55,6 +60,7 @@ interface IntervieweeOnboardingProps {
   timeLimitMinutes?: number | null;
   language?: string;
   antiCheatingEnabled?: boolean;
+  isPractice?: boolean;
   voiceEnabled?: boolean;
   chatEnabled?: boolean;
   aiName?: string;
@@ -1170,26 +1176,84 @@ export function IntervieweeOnboarding({
   timeLimitMinutes,
   language,
   antiCheatingEnabled = false,
+  isPractice: isPracticeProp = false,
   voiceEnabled = false,
   chatEnabled = false,
   aiName = "AI Interviewer",
   questionTypes = [],
   onComplete,
 }: IntervieweeOnboardingProps) {
+  const isPractice = isPracticeProp;
+  const requirements = resolveChecklistRequirements({
+    antiCheatingEnabled,
+    isPractice,
+    voiceEnabled,
+    chatEnabled,
+  });
+  const showChecklist = hasChecklistStep(requirements);
+
   const [step, setStep] = useState<OnboardingStep>("info");
   const [agreed, setAgreed] = useState(false);
 
-  const [cameraDone, setCameraDone] = useState(false);
-  const [micDone, setMicDone] = useState(false);
-  const [screenDone, setScreenDone] = useState(false);
+  const [cameraDone, setCameraDone] = useState(!requirements.camera);
+  const [micDone, setMicDone] = useState(!requirements.microphone);
+  const [screenDone, setScreenDone] = useState(!requirements.screen);
   const [starting, setStarting] = useState(false);
 
-  const allChecksDone = cameraDone && micDone && screenDone;
+  useEffect(() => {
+    if (!requirements.camera) setCameraDone(true);
+    if (!requirements.microphone) setMicDone(true);
+    if (!requirements.screen) setScreenDone(true);
+  }, [requirements.camera, requirements.microphone, requirements.screen]);
+
+  const allChecksDone =
+    (!requirements.camera || cameraDone) &&
+    (!requirements.microphone || micDone) &&
+    (!requirements.screen || screenDone);
+
+  const allowSkipCamera = !isChecklistItemRequired(
+    "camera",
+    requirements,
+    antiCheatingEnabled,
+    isPractice,
+  );
+  const allowSkipMic = !isChecklistItemRequired(
+    "microphone",
+    requirements,
+    antiCheatingEnabled,
+    isPractice,
+  );
+  const allowSkipScreen = !isChecklistItemRequired(
+    "screen",
+    requirements,
+    antiCheatingEnabled,
+    isPractice,
+  );
 
   const handleComplete = useCallback(() => {
     setStarting(true);
     onComplete();
   }, [onComplete]);
+
+  const proceedAfterInfo = useCallback(() => {
+    if (showChecklist) {
+      setStep("checklist");
+      return;
+    }
+    if (isPractice) {
+      handleComplete();
+      return;
+    }
+    setStep("howItWorks");
+  }, [showChecklist, isPractice, handleComplete]);
+
+  const proceedAfterChecklist = useCallback(() => {
+    if (isPractice) {
+      handleComplete();
+      return;
+    }
+    setStep("howItWorks");
+  }, [isPractice, handleComplete]);
 
   const header = (
     <header className="sticky top-0 z-50 flex h-14 items-center border-b bg-card px-4 sm:px-6">
@@ -1275,6 +1339,32 @@ export function IntervieweeOnboarding({
                     </li>
                   </ol>
                 </>
+              ) : isPractice ? (
+                <ol className="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
+                  <li>
+                    Use the latest version of Chrome for the best experience.
+                  </li>
+                  <li>
+                    Answer each question thoughtfully — Parker will guide you through
+                    the practice session.
+                  </li>
+                  <li>
+                    Stay on this page until you finish. You can pause between
+                    questions, but closing the tab may end your session.
+                  </li>
+                  {voiceEnabled && (
+                    <li>
+                      Voice practice uses your microphone only. No photo or screen
+                      sharing is required.
+                    </li>
+                  )}
+                  {chatEnabled && !voiceEnabled && (
+                    <li>
+                      Chat practice uses text only — no camera, microphone, or screen
+                      sharing is required.
+                    </li>
+                  )}
+                </ol>
               ) : (
                 <ol className="list-inside list-decimal space-y-2 text-sm text-muted-foreground">
                   <li>
@@ -1315,10 +1405,10 @@ export function IntervieweeOnboarding({
             </label>
             <Button
               disabled={!agreed}
-              onClick={() => setStep("checklist")}
+              onClick={proceedAfterInfo}
               className="w-40"
             >
-              Next
+              {isPractice && !showChecklist ? "Start Practice" : "Next"}
             </Button>
           </div>
         </div>
@@ -1392,16 +1482,35 @@ export function IntervieweeOnboarding({
       {header}
       <StepIndicator current="checklist" />
       <div className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 pb-8">
-        <CameraCheck done={cameraDone} onDone={() => setCameraDone(true)} allowSkip={!antiCheatingEnabled} />
-        <MicCheck done={micDone} onDone={() => setMicDone(true)} language={language} allowSkip={!antiCheatingEnabled} />
-        <ScreenCheck done={screenDone} onDone={() => setScreenDone(true)} allowSkip={!antiCheatingEnabled} />
+        {requirements.camera && (
+          <CameraCheck
+            done={cameraDone}
+            onDone={() => setCameraDone(true)}
+            allowSkip={allowSkipCamera}
+          />
+        )}
+        {requirements.microphone && (
+          <MicCheck
+            done={micDone}
+            onDone={() => setMicDone(true)}
+            language={language}
+            allowSkip={allowSkipMic}
+          />
+        )}
+        {requirements.screen && (
+          <ScreenCheck
+            done={screenDone}
+            onDone={() => setScreenDone(true)}
+            allowSkip={allowSkipScreen}
+          />
+        )}
 
         <div className="flex items-center justify-center gap-3 pt-4">
           <Button variant="outline" onClick={() => setStep("info")}>
             Back
           </Button>
-          <Button disabled={!allChecksDone} onClick={() => setStep("howItWorks")}>
-            Next
+          <Button disabled={!allChecksDone} onClick={proceedAfterChecklist}>
+            {isPractice ? "Start Practice" : "Next"}
           </Button>
         </div>
         <p className="text-center text-xs text-muted-foreground">

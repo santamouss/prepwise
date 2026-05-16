@@ -131,6 +131,8 @@ export type Database = {
           chatEnabled: boolean;
           voiceEnabled: boolean;
           videoEnabled: boolean;
+          antiCheatingEnabled: boolean;
+          isPractice: boolean;
           createdAt: string;
           updatedAt: string;
         };
@@ -160,6 +162,8 @@ export type Database = {
           chatEnabled?: boolean;
           voiceEnabled?: boolean;
           videoEnabled?: boolean;
+          antiCheatingEnabled?: boolean;
+          isPractice?: boolean;
           createdAt?: string;
           updatedAt?: string;
         };
@@ -189,6 +193,8 @@ export type Database = {
           chatEnabled?: boolean;
           voiceEnabled?: boolean;
           videoEnabled?: boolean;
+          antiCheatingEnabled?: boolean;
+          isPractice?: boolean;
           createdAt?: string;
           updatedAt?: string;
         };
