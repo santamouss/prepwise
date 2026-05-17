@@ -4,20 +4,28 @@ import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { hasSessionFeedback } from "@/lib/session/session-has-feedback";
+import {
+  applyThankYouLockToPlan,
+  buildCompletionRunKey,
+  coerceCompletionPhase,
+  lockCompletionFlowBranch,
+  persistCompletionPhase,
+  readPersistedCompletionPhase,
+  type CompletionFlowBranch,
+  type CompletionPhase,
+} from "@/lib/session/session-completion-flow";
 import { resolvePostInterviewRedirect } from "@/lib/session/post-interview-redirect";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_DISPLAY_MS = 2500;
 const MAX_FEEDBACK_WAIT_MS = 60_000;
 const INVITE_SAVE_WAIT_MS = 12_000;
 const POLL_INTERVAL_MS = 1500;
 const AUTH_WAIT_MS = 4000;
-
-type Phase = "processing" | "feedback-pending" | "thank-you";
 
 function completionLog(message: string, detail?: unknown) {
   if (detail !== undefined) {
@@ -51,12 +59,16 @@ export function SessionCompletionScreen({
   const utils = trpc.useUtils();
   const completeSession = trpc.session.complete.useMutation();
 
-  const [phase, setPhase] = useState<Phase>("processing");
-  const startedForSessionRef = useRef<string | null>(null);
+  const [phase, setPhase] = useState<CompletionPhase>(() => {
+    return readPersistedCompletionPhase(sessionId) ?? "processing";
+  });
+
+  const flowBranchRef = useRef<CompletionFlowBranch | null>(null);
+  const runStartedRef = useRef<string | null>(null);
   const authWaitStartedRef = useRef(Date.now());
   const [authTimedOut, setAuthTimedOut] = useState(false);
 
-  const plan = useMemo(
+  const livePlan = useMemo(
     () =>
       resolvePostInterviewRedirect({
         sessionId,
@@ -78,6 +90,40 @@ export function SessionCompletionScreen({
     ],
   );
 
+  const branch = lockCompletionFlowBranch(
+    flowBranchRef.current,
+    livePlan.thankYouOnly,
+  );
+  flowBranchRef.current = branch;
+
+  const plan =
+    branch === "thank-you" ? applyThankYouLockToPlan(livePlan) : livePlan;
+
+  const setPhaseSafe = useCallback(
+    (next: CompletionPhase) => {
+      setPhase((current) => {
+        const resolved = coerceCompletionPhase(current, next);
+        if (resolved !== current) {
+          completionLog("phase transition", { from: current, to: resolved });
+        }
+        persistCompletionPhase(sessionId, resolved);
+        return resolved;
+      });
+    },
+    [sessionId],
+  );
+
+  useEffect(() => {
+    completionLog("computed completion plan", {
+      sessionId,
+      branch,
+      livePlan,
+      effectivePlan: plan,
+      isAuthenticated: !!user,
+      userType: profile?.user_type ?? null,
+    });
+  }, [branch, livePlan, plan, profile?.user_type, sessionId, user]);
+
   useEffect(() => {
     if (authLoading && !authTimedOut) {
       if (Date.now() - authWaitStartedRef.current > AUTH_WAIT_MS) {
@@ -91,8 +137,20 @@ export function SessionCompletionScreen({
   useEffect(() => {
     const authReady = !authLoading || authTimedOut;
     if (!authReady) return;
-    if (startedForSessionRef.current === sessionId) return;
-    startedForSessionRef.current = sessionId;
+
+    const persisted = readPersistedCompletionPhase(sessionId);
+    if (persisted === "thank-you" || persisted === "feedback-pending") {
+      completionLog("restored terminal phase from storage", {
+        sessionId,
+        persisted,
+      });
+      setPhaseSafe(persisted);
+      return;
+    }
+
+    const runKey = buildCompletionRunKey(sessionId, branch);
+    if (runStartedRef.current === runKey) return;
+    runStartedRef.current = runKey;
 
     let cancelled = false;
 
@@ -109,15 +167,11 @@ export function SessionCompletionScreen({
     };
 
     const pollSession = async () => {
-      const session = await utils.session.getById.fetch(
-        { id: sessionId },
-        { staleTime: 0 },
-      );
-      return session;
+      return utils.session.getById.fetch({ id: sessionId }, { staleTime: 0 });
     };
 
     const maybeTriggerOwnerSummarize = async () => {
-      if (plan.thankYouOnly || !user || profile?.user_type !== "recruiter") {
+      if (branch === "thank-you" || !user || profile?.user_type !== "recruiter") {
         return;
       }
       try {
@@ -166,14 +220,15 @@ export function SessionCompletionScreen({
         }
       }
 
-      if (plan.thankYouOnly) {
-        const inviteDeadline = startedAt + INVITE_SAVE_WAIT_MS;
-        while (!cancelled && Date.now() < inviteDeadline) {
+      if (branch === "thank-you") {
+        completionLog("entering thank-you flow", { sessionId, branch });
+        const saveDeadline = startedAt + INVITE_SAVE_WAIT_MS;
+        while (!cancelled && Date.now() < saveDeadline) {
           try {
             const session = await pollSession();
             if (session.status === "COMPLETED") saveOk = true;
           } catch (pollErr) {
-            completionLog("invite save poll error", {
+            completionLog("thank-you save poll error", {
               sessionId,
               error: pollErr instanceof Error ? pollErr.message : String(pollErr),
             });
@@ -186,11 +241,12 @@ export function SessionCompletionScreen({
         await ensureMinDisplay(startedAt);
         if (cancelled) return;
 
-        completionLog("showing thank-you (public participant)", { sessionId, saveOk });
-        setPhase("thank-you");
+        completionLog("thank-you flow complete", { sessionId, saveOk });
+        setPhaseSafe("thank-you");
         return;
       }
 
+      completionLog("entering feedback-poll flow", { sessionId, branch });
       await maybeTriggerOwnerSummarize();
 
       let feedbackReady = false;
@@ -226,7 +282,7 @@ export function SessionCompletionScreen({
 
       if (!saveOk) {
         completionLog("save not confirmed; showing fallback", { sessionId });
-        setPhase("feedback-pending");
+        setPhaseSafe("feedback-pending");
         return;
       }
 
@@ -235,7 +291,7 @@ export function SessionCompletionScreen({
           sessionId,
           waitedMs: Date.now() - startedAt,
         });
-        setPhase("feedback-pending");
+        setPhaseSafe("feedback-pending");
         return;
       }
 
@@ -244,31 +300,34 @@ export function SessionCompletionScreen({
           sessionId,
           path: plan.redirectPath,
         });
+        setPhaseSafe("redirecting");
         router.push(plan.redirectPath);
         return;
       }
 
-      setPhase("thank-you");
+      setPhaseSafe("thank-you");
     })();
 
     return () => {
-      cancelled = true;
+      if (branch === "feedback-poll") {
+        cancelled = true;
+      }
     };
   }, [
     authLoading,
     authTimedOut,
+    branch,
     completeSession,
     interviewId,
     isPractice,
     isPreview,
     isInviteFlow,
-    plan.fallbackPath,
     plan.redirectPath,
-    plan.thankYouOnly,
     profile?.user_type,
     router,
     saveSucceeded,
     sessionId,
+    setPhaseSafe,
     user,
     utils.session.getById,
   ]);
@@ -289,6 +348,14 @@ export function SessionCompletionScreen({
             <p className="mt-2 text-muted-foreground">
               Thank you — your responses have been submitted.
             </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-6"
+              onClick={() => window.close()}
+            >
+              Close this tab
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -315,6 +382,19 @@ export function SessionCompletionScreen({
             <Button asChild className="mt-6">
               <Link href={plan.fallbackPath}>{fallbackButtonLabel}</Link>
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (phase === "redirecting") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="py-12 text-center">
+            <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
+            <h2 className="mt-6 text-xl font-semibold">Opening your results…</h2>
           </CardContent>
         </Card>
       </div>
