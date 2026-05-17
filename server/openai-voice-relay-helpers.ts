@@ -69,6 +69,7 @@ export const MOCK_ANSWER_COMPLETION_REASON = "mock answer completion";
 export const DEFAULT_SPEECH_STARTED_RECENT_MS = 3000;
 export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 3000;
 export const DEFAULT_STRICT_NAV_MAX_WORDS = 6;
+export const DEFAULT_CLEAR_NEXT_COMMAND_MAX_WORDS = 10;
 
 export interface TranscriptCommitThresholds {
   minWords: number;
@@ -180,6 +181,48 @@ export function normalizeNavigationPhrase(text: string): string {
     .trim();
 }
 
+const LEADING_NAVIGATION_FILLERS = new Set([
+  "hello",
+  "hey",
+  "hi",
+  "um",
+  "uh",
+  "yeah",
+  "yes",
+  "ok",
+  "okay",
+  "well",
+  "so",
+]);
+
+const CLEAR_NEXT_EXACT = new Set([
+  "next question",
+  "move on",
+  "skip",
+  "skip this",
+  "skip this one",
+  "go next",
+  "can we move on",
+  "can we go to the next question",
+  "lets move on",
+  "let s move on",
+  "下一个问题",
+  "下一题",
+  "跳过",
+]);
+
+const CLEAR_NEXT_PATTERNS: RegExp[] = [
+  /^next\s+question$/,
+  /^move\s+on$/,
+  /^skip(?:\s+this(?:\s+one)?)?$/,
+  /^go\s+next$/,
+  /^can\s+we\s+move\s+on$/,
+  /^can\s+we\s+go\s+to\s+the\s+next\s+question$/,
+  /^let'?s\s+move\s+on$/,
+  /^please\s+move\s+on$/,
+  /^could\s+we\s+move\s+on$/,
+];
+
 const STRICT_FAST_NEXT_EXACT = new Set([
   "next question",
   "move on",
@@ -197,18 +240,72 @@ const STRICT_FAST_PREV_EXACT = new Set([
   "上一题",
 ]);
 
+export function stripLeadingNavigationFillers(normalized: string): string {
+  const words = normalized.split(/\s+/).filter(Boolean);
+  while (words.length > 0 && LEADING_NAVIGATION_FILLERS.has(words[0])) {
+    words.shift();
+  }
+  return words.join(" ").trim();
+}
+
+export type ClearNextCommandResult = {
+  detected: boolean;
+  normalized: string;
+  commandPhrase: string;
+};
+
+/** Detect short, clear skip/next commands (with optional leading filler like "hello"). */
+export function isClearNextQuestionCommand(
+  text: string,
+  maxWords = DEFAULT_CLEAR_NEXT_COMMAND_MAX_WORDS,
+): ClearNextCommandResult {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { detected: false, normalized: "", commandPhrase: "" };
+  }
+
+  const normalized = normalizeNavigationPhrase(trimmed);
+  const words = countTranscriptWords(normalized);
+  if (words > maxWords) {
+    return { detected: false, normalized, commandPhrase: "" };
+  }
+
+  const commandPhrase = stripLeadingNavigationFillers(normalized);
+  if (!commandPhrase) {
+    return { detected: false, normalized, commandPhrase: "" };
+  }
+
+  if (CLEAR_NEXT_EXACT.has(commandPhrase)) {
+    return { detected: true, normalized, commandPhrase };
+  }
+
+  if (CLEAR_NEXT_PATTERNS.some((pattern) => pattern.test(commandPhrase))) {
+    return { detected: true, normalized, commandPhrase };
+  }
+
+  return { detected: false, normalized, commandPhrase };
+}
+
+export function isNoisyEmbeddedNextCommandCandidate(
+  text: string,
+  maxWords = DEFAULT_CLEAR_NEXT_COMMAND_MAX_WORDS,
+): boolean {
+  const normalized = normalizeNavigationPhrase(text.trim());
+  if (!normalized) return false;
+  if (countTranscriptWords(normalized) <= maxWords) return false;
+  return (
+    /\bnext\s+question\b/.test(normalized) ||
+    /\bmove\s+on\b/.test(normalized) ||
+    /\bcan\s+we\s+move\s+on\b/.test(normalized)
+  );
+}
+
 /** Short, unambiguous skip/next commands only — not embedded in long utterances. */
 export function isStrictFastNextRequest(
   text: string,
   maxWords = DEFAULT_STRICT_NAV_MAX_WORDS,
 ): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  const words = countTranscriptWords(trimmed);
-  if (words > maxWords) return false;
-  const normalized = normalizeNavigationPhrase(trimmed);
-  if (STRICT_FAST_NEXT_EXACT.has(normalized)) return true;
-  return /^(?:next\s*question|move\s+on|skip|go\s+next)\.?$/i.test(normalized);
+  return isClearNextQuestionCommand(text, maxWords).detected;
 }
 
 export function isStrictFastPrevRequest(
@@ -314,6 +411,9 @@ export function shouldBlockMockTranscriptCommit(
 ): boolean {
   if (reason === "flush" || reason === "response pre-flush") {
     return true;
+  }
+  if (reason === "voice command") {
+    return input.userSpeaking;
   }
   if (input.userSpeaking) {
     return true;

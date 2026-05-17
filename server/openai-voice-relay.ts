@@ -36,7 +36,6 @@ import {
   DEFAULT_SPEECH_STARTED_RECENT_MS,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_BYTES,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_MS,
-  isStrictFastNextRequest,
   isStrictFastPrevRequest,
   isSubstantiveTranscript,
   isWithinFragmentMergeWindow,
@@ -45,6 +44,8 @@ import {
   readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
   isAllowedMockResponseCreateReason,
+  isClearNextQuestionCommand,
+  isNoisyEmbeddedNextCommandCandidate,
   MOCK_ANSWER_COMPLETION_REASON,
   shouldBlockMockAutoResponse,
   shouldBlockMockTranscriptCommit,
@@ -1342,6 +1343,27 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     log.info(`[coach-mode] coach_retry_question (${source})`);
   }
 
+  function tryHandlePendingNavigationCommand(pending: string): boolean {
+    const command = isClearNextQuestionCommand(pending);
+    if (!command.detected) {
+      if (isNoisyEmbeddedNextCommandCandidate(pending)) {
+        log.info("[voice-command] ignored noisy next command candidate");
+      }
+      return false;
+    }
+
+    log.info(`[voice-command] next command detected: ${command.commandPhrase}`);
+    if (!speechTranscriptCommitted) {
+      commitUserTranscript("voice command");
+    }
+    if (tryHandleExplicitUserNavigation(pending)) {
+      log.info("[voice-command] advancing to next question from short command");
+      clearMockAutoResponseTimer("navigation command");
+      return true;
+    }
+    return false;
+  }
+
   function handleCommittedUserText(committedText: string, reason: string): boolean {
     if (tryHandleExplicitUserNavigation(committedText)) {
       return true;
@@ -1429,6 +1451,10 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         return;
       }
 
+      if (tryHandlePendingNavigationCommand(pending)) {
+        return;
+      }
+
       log.info(
         `[voice-pipeline] mock timer fired with userSpeaking=false (${MOCK_ANSWER_COMPLETION_REASON})`,
       );
@@ -1500,7 +1526,10 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const committedText = bestAvailableTranscript();
     if (!committedText) return "";
 
-    if (!isSubstantiveTranscript(committedText, transcriptThresholds)) {
+    if (
+      !isSubstantiveTranscript(committedText, transcriptThresholds) &&
+      reason !== "voice command"
+    ) {
       log.info("[voice-pipeline] pending fragment too short; buffering");
       return "";
     }
@@ -1544,6 +1573,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const wantsResponse =
       requestResponse ?? (ctx.practiceMode !== "coach");
     const pending = bestAvailableTranscript();
+    if (pending && tryHandlePendingNavigationCommand(pending)) {
+      return "";
+    }
     if (pending && !isSubstantiveTranscript(pending, transcriptThresholds)) {
       if (wantsResponse) {
         log.info("[voice-pipeline] response.create skipped for short fragment");
@@ -2640,7 +2672,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return true;
     }
 
-    if (isStrictFastNextRequest(userText)) {
+    if (isClearNextQuestionCommand(userText).detected) {
       const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
       if (nextIdx === currentQuestionIndex) return false;
       log.info(`Fast-path NEXT transition from user: "${userText}"`);

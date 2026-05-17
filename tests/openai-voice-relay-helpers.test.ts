@@ -6,7 +6,9 @@ import {
   buildRealtimeTextContent,
   DEFAULT_MOCK_ANSWER_COMPLETION_MS,
   isAllowedMockResponseCreateReason,
+  isClearNextQuestionCommand,
   isFillerOnlyTranscript,
+  isNoisyEmbeddedNextCommandCandidate,
   MOCK_ANSWER_COMPLETION_REASON,
   isStrictFastNextRequest,
   shouldBlockMockTranscriptCommit,
@@ -116,9 +118,25 @@ test("does not allow TTS barge-in until enough assistant audio has been delivere
   );
 });
 
-test("isStrictFastNextRequest rejects long noisy utterances with embedded next question", () => {
+test("isClearNextQuestionCommand detects short navigation commands", () => {
+  assert.equal(isClearNextQuestionCommand("next question").detected, true);
+  assert.equal(isClearNextQuestionCommand("can we move on").detected, true);
+  assert.equal(isClearNextQuestionCommand("Hello, can we move on?").detected, true);
+  assert.equal(
+    isClearNextQuestionCommand("hello can we move on").commandPhrase,
+    "can we move on",
+  );
+  assert.equal(isClearNextQuestionCommand("let's move on").detected, true);
+  assert.equal(isClearNextQuestionCommand("skip this one").detected, true);
+  assert.equal(isClearNextQuestionCommand("can we go to the next question").detected, true);
+});
+
+test("isClearNextQuestionCommand rejects long noisy or filler-only utterances", () => {
   const noisy =
     "Bye.IIHello?Yeah, can you hear me?I'm hello I'm done hello next question";
+  assert.equal(isClearNextQuestionCommand(noisy).detected, false);
+  assert.equal(isNoisyEmbeddedNextCommandCandidate(noisy), true);
+  assert.equal(isClearNextQuestionCommand("hello").detected, false);
   assert.equal(isStrictFastNextRequest(noisy), false);
   assert.equal(isStrictFastNextRequest("next question"), true);
   assert.equal(isStrictFastNextRequest("move on"), true);
