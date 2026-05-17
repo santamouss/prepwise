@@ -373,6 +373,13 @@ export function useVoice({
           typeof window !== "undefined" ? window.location.host : undefined,
       });
 
+      const initPracticeMode = interviewContext.practiceMode ?? "unset";
+      log.info(
+        `[coach-mode] Voice connect practiceMode=${initPracticeMode} targets=${targets
+          .map((t) => `${t.kind}@${t.url}`)
+          .join(", ")}`,
+      );
+
       const connector = new RelayConnector<Record<string, unknown>>({
         targets,
         binaryType: "arraybuffer",
@@ -392,9 +399,9 @@ export function useVoice({
         },
         onConnected: ({ target, isFailover, connector: activeConnector }) => {
           log.info(
-            `${isFailover ? "Failed over to" : "Connected to"} ${relayDisplayName(
-              target.kind
-            )} @ ${target.url}`
+            `[coach-mode] ${isFailover ? "Failed over to" : "Connected to"} ${relayDisplayName(
+              target.kind,
+            )} (kind=${target.kind}) @ ${target.url} init practiceMode=${initPracticeMode}`,
           );
           if (isFailover) {
             replayLatestRelayContext(activeConnector);

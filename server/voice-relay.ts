@@ -77,6 +77,7 @@ interface InterviewContext {
   aiTone: string;
   language: string;
   followUpDepth: string;
+  practiceMode?: "mock" | "coach";
   startQuestionIndex?: number;
   questions: Array<{
     text: string;
@@ -650,6 +651,12 @@ async function handleMicTestConnection(browserWs: WebSocket) {
 // ── Interview handler ───────────────────────────────────────────────
 
 async function handleBrowserConnection(browserWs: WebSocket, ctx: InterviewContext) {
+  if (ctx.practiceMode) {
+    log.warn(
+      `[coach-mode] WARNING practiceMode=${ctx.practiceMode} received but legacy voice relay ignores it`,
+    );
+  }
+
   let volcSessionId = randomUUID();
   let volcWs: WebSocket | null = null;
   let isAlive = false;

@@ -883,6 +883,9 @@ async function handleMicTest(browserWs: WebSocket) {
 // ── Interview handler ───────────────────────────────────────────────
 
 async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
+  const receivedPracticeMode = ctx.practiceMode ?? "unset";
+  log.info(`[coach-mode] received practiceMode=${receivedPracticeMode}`);
+
   const sortedQuestions = ctx.questions.sort((a, b) => a.order - b.order);
   const isZh = isChineseInterview(ctx);
   let currentQuestionIndex = ctx.startQuestionIndex ?? 0;
@@ -1954,6 +1957,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     await waitForOpenAiSessionCreated(ws, "interview");
 
     const systemPrompt = buildSystemPrompt(ctx, currentQuestionIndex);
+    const coachPromptApplied = ctx.practiceMode === "coach";
+    log.info(`[coach-mode] coach prompt applied=${coachPromptApplied}`);
 
     ws.send(JSON.stringify({
       type: "session.update",
