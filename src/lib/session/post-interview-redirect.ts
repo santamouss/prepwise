@@ -13,8 +13,10 @@ export type PostInterviewRedirectPlan = {
   redirectPath: string | null;
   /** Thank-you only (no dashboard); stay on completion UI. */
   thankYouOnly: boolean;
-  /** Target for “view sessions” when feedback is still processing. */
-  sessionsListPath: string;
+  /** Primary CTA when feedback is still processing. */
+  fallbackPath: string;
+  isRecruiter: boolean;
+  isCandidatePractice: boolean;
 };
 
 export function resolvePostInterviewRedirect(
@@ -33,6 +35,7 @@ export function resolvePostInterviewRedirect(
   const resultsPath = `/interviews/${interviewId}/results?session=${sessionId}`;
   const practiceReportPath = `/my-sessions/${sessionId}`;
   const mySessionsPath = "/my-sessions";
+  const isRecruiter = isAuthenticated && userType === "recruiter";
 
   if (
     isInviteFlow &&
@@ -41,15 +44,19 @@ export function resolvePostInterviewRedirect(
     return {
       redirectPath: null,
       thankYouOnly: true,
-      sessionsListPath: mySessionsPath,
+      fallbackPath: mySessionsPath,
+      isRecruiter: false,
+      isCandidatePractice: false,
     };
   }
 
-  if (isPractice && isAuthenticated && userType === "candidate") {
+  if (!isAuthenticated && !isPractice && !isPreview) {
     return {
-      redirectPath: practiceReportPath,
-      thankYouOnly: false,
-      sessionsListPath: mySessionsPath,
+      redirectPath: null,
+      thankYouOnly: true,
+      fallbackPath: mySessionsPath,
+      isRecruiter: false,
+      isCandidatePractice: false,
     };
   }
 
@@ -57,15 +64,19 @@ export function resolvePostInterviewRedirect(
     return {
       redirectPath: practiceReportPath,
       thankYouOnly: false,
-      sessionsListPath: mySessionsPath,
+      fallbackPath: practiceReportPath,
+      isRecruiter: false,
+      isCandidatePractice: true,
     };
   }
 
-  if (isPreview || (isAuthenticated && userType === "recruiter")) {
+  if (isPreview || isRecruiter) {
     return {
       redirectPath: resultsPath,
       thankYouOnly: false,
-      sessionsListPath: resultsPath,
+      fallbackPath: resultsPath,
+      isRecruiter: true,
+      isCandidatePractice: false,
     };
   }
 
@@ -73,13 +84,17 @@ export function resolvePostInterviewRedirect(
     return {
       redirectPath: practiceReportPath,
       thankYouOnly: false,
-      sessionsListPath: mySessionsPath,
+      fallbackPath: practiceReportPath,
+      isRecruiter: false,
+      isCandidatePractice: true,
     };
   }
 
   return {
     redirectPath: "/dashboard",
     thankYouOnly: false,
-    sessionsListPath: "/dashboard",
+    fallbackPath: "/dashboard",
+    isRecruiter: false,
+    isCandidatePractice: false,
   };
 }

@@ -13,9 +13,19 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_DISPLAY_MS = 2500;
 const MAX_FEEDBACK_WAIT_MS = 60_000;
+const INVITE_SAVE_WAIT_MS = 12_000;
 const POLL_INTERVAL_MS = 1500;
+const AUTH_WAIT_MS = 4000;
 
 type Phase = "processing" | "feedback-pending" | "thank-you";
+
+function completionLog(message: string, detail?: unknown) {
+  if (detail !== undefined) {
+    console.info("[session-completion]", message, detail);
+  } else {
+    console.info("[session-completion]", message);
+  }
+}
 
 export type SessionCompletionScreenProps = {
   sessionId: string;
@@ -42,7 +52,9 @@ export function SessionCompletionScreen({
   const completeSession = trpc.session.complete.useMutation();
 
   const [phase, setPhase] = useState<Phase>("processing");
-  const ranRef = useRef(false);
+  const startedForSessionRef = useRef<string | null>(null);
+  const authWaitStartedRef = useRef(Date.now());
+  const [authTimedOut, setAuthTimedOut] = useState(false);
 
   const plan = useMemo(
     () =>
@@ -67,8 +79,20 @@ export function SessionCompletionScreen({
   );
 
   useEffect(() => {
-    if (authLoading || ranRef.current) return;
-    ranRef.current = true;
+    if (authLoading && !authTimedOut) {
+      if (Date.now() - authWaitStartedRef.current > AUTH_WAIT_MS) {
+        completionLog("auth wait timed out; proceeding without profile");
+        setAuthTimedOut(true);
+      }
+      return;
+    }
+  }, [authLoading, authTimedOut]);
+
+  useEffect(() => {
+    const authReady = !authLoading || authTimedOut;
+    if (!authReady) return;
+    if (startedForSessionRef.current === sessionId) return;
+    startedForSessionRef.current = sessionId;
 
     let cancelled = false;
 
@@ -77,23 +101,41 @@ export function SessionCompletionScreen({
         setTimeout(resolve, ms);
       });
 
-    const maybeTriggerRecruiterSummary = async () => {
-      if (
-        isPractice ||
-        plan.thankYouOnly ||
-        !user ||
-        profile?.user_type !== "recruiter"
-      ) {
+    const ensureMinDisplay = async (startedAt: number) => {
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < MIN_DISPLAY_MS) {
+        await sleep(MIN_DISPLAY_MS - elapsed);
+      }
+    };
+
+    const pollSession = async () => {
+      const session = await utils.session.getById.fetch(
+        { id: sessionId },
+        { staleTime: 0 },
+      );
+      return session;
+    };
+
+    const maybeTriggerOwnerSummarize = async () => {
+      if (plan.thankYouOnly || !user || profile?.user_type !== "recruiter") {
         return;
       }
       try {
-        await fetch("/api/ai/summarize", {
+        const res = await fetch("/api/ai/summarize", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId }),
         });
-      } catch {
-        // Background summary may already be running from voice save.
+        completionLog("recruiter summarize trigger", {
+          sessionId,
+          ok: res.ok,
+          status: res.status,
+        });
+      } catch (err) {
+        completionLog("recruiter summarize trigger failed", {
+          sessionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
       }
     };
 
@@ -105,55 +147,72 @@ export function SessionCompletionScreen({
         if (!saveOk) {
           await completeSession.mutateAsync({ id: sessionId });
           saveOk = true;
+          completionLog("session.complete succeeded", { sessionId });
+        } else {
+          completionLog("session already saved before completion screen", {
+            sessionId,
+          });
         }
-      } catch {
-        // Session may already be completed via voice save.
+      } catch (err) {
+        completionLog("session.complete failed or skipped", {
+          sessionId,
+          error: err instanceof Error ? err.message : String(err),
+        });
+        try {
+          const session = await pollSession();
+          if (session.status === "COMPLETED") saveOk = true;
+        } catch {
+          // handled by timeout fallback
+        }
       }
 
-      await maybeTriggerRecruiterSummary();
-
       if (plan.thankYouOnly) {
-        while (!cancelled && Date.now() - startedAt < MAX_FEEDBACK_WAIT_MS) {
+        const inviteDeadline = startedAt + INVITE_SAVE_WAIT_MS;
+        while (!cancelled && Date.now() < inviteDeadline) {
           try {
-            const session = await utils.session.getById.fetch({ id: sessionId });
+            const session = await pollSession();
             if (session.status === "COMPLETED") saveOk = true;
-          } catch {
-            // Keep polling until timeout.
+          } catch (pollErr) {
+            completionLog("invite save poll error", {
+              sessionId,
+              error: pollErr instanceof Error ? pollErr.message : String(pollErr),
+            });
           }
           if (saveOk && Date.now() - startedAt >= MIN_DISPLAY_MS) break;
           await sleep(POLL_INTERVAL_MS);
         }
+
         if (cancelled) return;
-        const elapsedInvite = Date.now() - startedAt;
-        if (elapsedInvite < MIN_DISPLAY_MS) {
-          await sleep(MIN_DISPLAY_MS - elapsedInvite);
-        }
+        await ensureMinDisplay(startedAt);
         if (cancelled) return;
+
+        completionLog("showing thank-you (public participant)", { sessionId, saveOk });
         setPhase("thank-you");
         return;
       }
 
-      let feedbackReady = false;
+      await maybeTriggerOwnerSummarize();
 
-      while (!cancelled && Date.now() - startedAt < MAX_FEEDBACK_WAIT_MS) {
+      let feedbackReady = false;
+      const feedbackDeadline = startedAt + MAX_FEEDBACK_WAIT_MS;
+
+      while (!cancelled && Date.now() < feedbackDeadline) {
         try {
-          const session = await utils.session.getById.fetch({ id: sessionId });
+          const session = await pollSession();
           if (session.status === "COMPLETED") saveOk = true;
-          if (hasSessionFeedback(session)) feedbackReady = true;
-        } catch {
-          // Keep polling until timeout.
+          if (hasSessionFeedback(session)) {
+            feedbackReady = true;
+            completionLog("feedback ready", { sessionId });
+          }
+        } catch (pollErr) {
+          completionLog("feedback poll error", {
+            sessionId,
+            error: pollErr instanceof Error ? pollErr.message : String(pollErr),
+          });
         }
 
         const elapsed = Date.now() - startedAt;
-        if (
-          saveOk &&
-          feedbackReady &&
-          elapsed >= MIN_DISPLAY_MS
-        ) {
-          break;
-        }
-
-        if (saveOk && elapsed >= MIN_DISPLAY_MS && feedbackReady) {
+        if (saveOk && feedbackReady && elapsed >= MIN_DISPLAY_MS) {
           break;
         }
 
@@ -162,29 +221,29 @@ export function SessionCompletionScreen({
 
       if (cancelled) return;
 
-      const elapsed = Date.now() - startedAt;
-      if (elapsed < MIN_DISPLAY_MS) {
-        await sleep(MIN_DISPLAY_MS - elapsed);
-      }
-
+      await ensureMinDisplay(startedAt);
       if (cancelled) return;
 
       if (!saveOk) {
+        completionLog("save not confirmed; showing fallback", { sessionId });
         setPhase("feedback-pending");
         return;
       }
 
       if (!feedbackReady) {
+        completionLog("feedback polling timed out; showing fallback", {
+          sessionId,
+          waitedMs: Date.now() - startedAt,
+        });
         setPhase("feedback-pending");
         return;
       }
 
-      if (plan.thankYouOnly) {
-        setPhase("thank-you");
-        return;
-      }
-
       if (plan.redirectPath) {
+        completionLog("redirecting after feedback ready", {
+          sessionId,
+          path: plan.redirectPath,
+        });
         router.push(plan.redirectPath);
         return;
       }
@@ -197,11 +256,13 @@ export function SessionCompletionScreen({
     };
   }, [
     authLoading,
+    authTimedOut,
     completeSession,
     interviewId,
     isPractice,
     isPreview,
     isInviteFlow,
+    plan.fallbackPath,
     plan.redirectPath,
     plan.thankYouOnly,
     profile?.user_type,
@@ -218,7 +279,7 @@ export function SessionCompletionScreen({
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="mx-auto h-16 w-16 text-secondary-500" />
-            <h2 className="mt-4 text-2xl font-bold">Thank you!</h2>
+            <h2 className="mt-4 text-2xl font-bold">Interview complete</h2>
             {completionReason === "TIME_LIMIT_EXCEEDED" && (
               <p className="mt-2 text-sm text-amber-600">
                 The session time limit has been reached and the interview was
@@ -226,8 +287,7 @@ export function SessionCompletionScreen({
               </p>
             )}
             <p className="mt-2 text-muted-foreground">
-              Your interview has been completed successfully. We appreciate your
-              time and thoughtful responses.
+              Thank you — your responses have been submitted.
             </p>
           </CardContent>
         </Card>
@@ -236,24 +296,24 @@ export function SessionCompletionScreen({
   }
 
   if (phase === "feedback-pending") {
+    const fallbackMessage = plan.isRecruiter
+      ? "Interview saved. Results are still processing."
+      : "Interview saved. Your feedback is still processing.";
+    const fallbackButtonLabel = plan.isRecruiter
+      ? "View results"
+      : plan.isCandidatePractice
+        ? "View session"
+        : "View My Sessions";
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
         <Card className="w-full max-w-md">
           <CardContent className="py-12 text-center">
             <CheckCircle2 className="mx-auto h-12 w-12 text-secondary-500" />
             <h2 className="mt-4 text-xl font-semibold">Interview saved</h2>
-            <p className="mt-3 text-muted-foreground">
-              Interview saved, but feedback is still processing. You can find it
-              in{" "}
-              {profile?.user_type === "recruiter" ? "your session results" : "My Sessions"}
-              .
-            </p>
+            <p className="mt-3 text-muted-foreground">{fallbackMessage}</p>
             <Button asChild className="mt-6">
-              <Link href={plan.sessionsListPath}>
-                {profile?.user_type === "recruiter"
-                  ? "View session results"
-                  : "Go to My Sessions"}
-              </Link>
+              <Link href={plan.fallbackPath}>{fallbackButtonLabel}</Link>
             </Button>
           </CardContent>
         </Card>

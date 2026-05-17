@@ -1,3 +1,4 @@
+import { triggerSessionSummaryIfNeeded } from "@/lib/ai/generate-session-summary";
 import { createLogger } from "@/lib/logger";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -511,6 +512,10 @@ export const sessionRouter = router({
           totalDurationSeconds: duration,
         })
         .eq("id", input.id);
+
+      void triggerSessionSummaryIfNeeded(input.id).catch((err) => {
+        log.error("Background summary after session.complete failed:", err);
+      });
 
       return { success: true };
     }),
