@@ -2,6 +2,14 @@ import type { PracticeMode } from "@/lib/practice/practice-mode";
 
 export type CoachUiPhase = "answering" | "coaching" | "waiting_for_choice";
 
+export const COACH_UI_TITLE = "Coach Mode";
+export const COACH_UI_SUBTITLE =
+  "Answer one question at a time. Parker will coach you after each answer.";
+export const COACH_UI_DONE_ANSWERING = "I'm done answering";
+export const COACH_UI_TRY_AGAIN = "Try again";
+export const COACH_UI_NEXT_QUESTION = "Next question";
+export const COACH_UI_COACHING_STATUS = "Parker is coaching you…";
+
 export const COACH_ANSWER_REQUIRED_MESSAGE =
   "Say your answer first, then click I'm done answering.";
 
@@ -76,5 +84,5 @@ export function shouldShowCoachControls(
   practiceMode: PracticeMode | undefined,
   preview: boolean,
 ): boolean {
-  return isCoachModePractice(practiceMode) && !preview;
+  return practiceMode === "coach" && !preview;
 }

@@ -3,6 +3,10 @@ import { describe, it } from "node:test";
 
 import {
   COACH_ANSWER_REQUIRED_MESSAGE,
+  COACH_UI_DONE_ANSWERING,
+  COACH_UI_NEXT_QUESTION,
+  COACH_UI_TITLE,
+  COACH_UI_TRY_AGAIN,
   getLatestUserAnswerText,
   hasCoachAnswerContent,
   isCoachModePractice,
@@ -47,6 +51,13 @@ describe("coach mode UI helpers", () => {
 
   it("exposes the answer required message", () => {
     assert.match(COACH_ANSWER_REQUIRED_MESSAGE, /Say your answer first/i);
+  });
+
+  it("uses exact coach control copy for production bundle searchability", () => {
+    assert.equal(COACH_UI_TITLE, "Coach Mode");
+    assert.equal(COACH_UI_DONE_ANSWERING, "I'm done answering");
+    assert.equal(COACH_UI_TRY_AGAIN, "Try again");
+    assert.equal(COACH_UI_NEXT_QUESTION, "Next question");
   });
 });
 

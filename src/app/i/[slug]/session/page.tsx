@@ -208,7 +208,7 @@ export default function SlugSessionPage() {
       aiTone: interview.data.aiTone,
       language: interview.data.language,
       followUpDepth: interview.data.followUpDepth,
-      ...(practiceMode ? { practiceMode } : {}),
+      ...(isPractice && practiceMode ? { practiceMode } : {}),
       startQuestionIndex: isResuming ? resumeQuestionIndex : undefined,
       questions: interview.data.questions.map((q: any) => ({
         text: q.text,

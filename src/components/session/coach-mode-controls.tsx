@@ -1,6 +1,14 @@
 "use client";
 
 import type { CoachUiPhase } from "@/lib/practice/coach-mode-ui";
+import {
+  COACH_UI_COACHING_STATUS,
+  COACH_UI_DONE_ANSWERING,
+  COACH_UI_NEXT_QUESTION,
+  COACH_UI_SUBTITLE,
+  COACH_UI_TITLE,
+  COACH_UI_TRY_AGAIN,
+} from "@/lib/practice/coach-mode-ui";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -33,10 +41,8 @@ export function CoachModeControls({
   return (
     <div className="mx-4 mt-3 space-y-3 rounded-lg border border-[#3B6FF0]/25 bg-[#EEF2FF] px-4 py-3 text-[#1e3a8a]">
       <div>
-        <p className="text-sm font-semibold">Coach Mode</p>
-        <p className="mt-0.5 text-xs text-[#1e3a8a]/80">
-          Answer one question at a time. Parker will coach you after each answer.
-        </p>
+        <p className="text-sm font-semibold">{COACH_UI_TITLE}</p>
+        <p className="mt-0.5 text-xs text-[#1e3a8a]/80">{COACH_UI_SUBTITLE}</p>
         {attempt > 1 && (
           <p className="mt-1 text-xs font-medium">Attempt {attempt}</p>
         )}
@@ -53,14 +59,14 @@ export function CoachModeControls({
           disabled={disabled}
           onClick={onDoneAnswering}
         >
-          I&apos;m done answering
+          {COACH_UI_DONE_ANSWERING}
         </Button>
       )}
 
       {phase === "coaching" && (
         <div className="flex items-center justify-center gap-2 text-sm text-[#1e3a8a]/90">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Parker is coaching you…
+          {COACH_UI_COACHING_STATUS}
         </div>
       )}
 
@@ -73,7 +79,7 @@ export function CoachModeControls({
             disabled={disabled}
             onClick={onTryAgain}
           >
-            Try again
+            {COACH_UI_TRY_AGAIN}
           </Button>
           <Button
             type="button"
@@ -81,7 +87,7 @@ export function CoachModeControls({
             disabled={disabled || !canGoNext}
             onClick={onNextQuestion}
           >
-            Next question
+            {COACH_UI_NEXT_QUESTION}
           </Button>
         </div>
       )}

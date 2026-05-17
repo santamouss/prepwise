@@ -10,7 +10,6 @@ import { IntervieweeHelpPopover } from "@/components/session/interviewee-help-po
 import {
   COACH_ANSWER_REQUIRED_MESSAGE,
   hasCoachAnswerContent,
-  shouldShowCoachControls,
   type CoachUiPhase,
 } from "@/lib/practice/coach-mode-ui";
 import {
@@ -434,7 +433,8 @@ export function VoiceInterface({
   const [whiteboardActive, setWhiteboardActive] = useState(false);
   const [codeEditorActive, setCodeEditorActive] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
-  const showCoachControls = shouldShowCoachControls(interviewContext.practiceMode, preview);
+  const showCoachControls =
+    interviewContext.practiceMode === "coach" && !preview;
   const [coachPhase, setCoachPhase] = useState<CoachUiPhase>("answering");
   const [coachAttempt, setCoachAttempt] = useState(1);
   const [coachError, setCoachError] = useState("");
@@ -693,6 +693,20 @@ export function VoiceInterface({
       setCoachPhase("answering");
     },
   });
+
+  useEffect(() => {
+    console.info("[coach-ui] practiceMode", interviewContext.practiceMode);
+    console.info("[coach-ui] preview", preview);
+    console.info("[coach-ui] voice.isConnected", voice.isConnected);
+    console.info("[coach-ui] showCoachControls", showCoachControls);
+    console.info("[coach-ui] coachPhase", coachPhase);
+  }, [
+    interviewContext.practiceMode,
+    preview,
+    voice.isConnected,
+    showCoachControls,
+    coachPhase,
+  ]);
 
   useEffect(() => {
     if (!showCoachControls) return;
@@ -1660,7 +1674,7 @@ export function VoiceInterface({
         )}
       </div>
 
-      {showCoachControls && voice.isConnected && (
+      {showCoachControls && (
         <CoachModeControls
           phase={coachPhase}
           attempt={coachAttempt}
