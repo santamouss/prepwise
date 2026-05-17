@@ -47,6 +47,7 @@ interface UseVoiceOptions {
   onQuestionChange?: (index: number, total: number) => void;
   onTtsChunk?: (pcmData: ArrayBuffer) => void;
   onInterrupt?: () => void;
+  onCoachControlError?: (message: string) => void;
 }
 
 interface VoiceState {
@@ -94,6 +95,7 @@ export function useVoice({
   onQuestionChange,
   onTtsChunk,
   onInterrupt,
+  onCoachControlError,
 }: UseVoiceOptions) {
   const [state, setState] = useState<VoiceState>({
     isConnected: false,
@@ -714,9 +716,25 @@ export function useVoice({
             void relayConnectorRef.current.failover("relay disconnected message");
           }
           break;
+
+        case "coach_control_error":
+          onCoachControlError?.(
+            (typeof msg.message === "string" && msg.message) ||
+              "Could not continue Coach Mode.",
+          );
+          break;
       }
     },
-    [interruptPlayback, extractText, onTranscript, onAIResponse, onError, onQuestionChange, saveProgress]
+    [
+      interruptPlayback,
+      extractText,
+      onTranscript,
+      onAIResponse,
+      onError,
+      onQuestionChange,
+      onCoachControlError,
+      saveProgress,
+    ]
   );
 
   /** Start capturing microphone audio and sending to relay */
@@ -859,6 +877,14 @@ export function useVoice({
     relayConnectorRef.current?.sendJson({ type: "whiteboard_update", imageDataUrl });
   }, []);
 
+  const sendCoachAnswerDone = useCallback(() => {
+    relayConnectorRef.current?.sendJson({ type: "coach_answer_done" });
+  }, []);
+
+  const sendCoachRetryQuestion = useCallback(() => {
+    relayConnectorRef.current?.sendJson({ type: "coach_retry_question" });
+  }, []);
+
   /** Save remaining tracked messages and complete the session */
   const saveAndComplete = useCallback(async (): Promise<boolean> => {
     // Flush any pending buffers before saving
@@ -922,6 +948,8 @@ export function useVoice({
     sendTextMessage,
     sendCodeUpdate,
     sendWhiteboardUpdate,
+    sendCoachAnswerDone,
+    sendCoachRetryQuestion,
     interruptPlayback,
     mediaStreamRef,
   };

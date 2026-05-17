@@ -4,6 +4,10 @@ import test from "node:test";
 import {
   buildRealtimeConversationCreateEvent,
   buildRealtimeTextContent,
+  isFillerOnlyTranscript,
+  isSubstantiveTranscript,
+  isWithinFragmentMergeWindow,
+  readTranscriptCommitThresholds,
   shouldAllowTtsBargeIn,
 } from "../server/openai-voice-relay-helpers";
 
@@ -17,6 +21,42 @@ test("buildRealtimeTextContent uses output_text for assistant and input_text oth
   assert.deepEqual(buildRealtimeTextContent("assistant", "hi there"), [
     { type: "output_text", text: "hi there" },
   ]);
+});
+
+test("isSubstantiveTranscript rejects short filler fragments", () => {
+  const thresholds = { minWords: 8, minChars: 40 };
+  assert.equal(isFillerOnlyTranscript("Well"), true);
+  assert.equal(isFillerOnlyTranscript("Well, I know"), true);
+  assert.equal(isFillerOnlyTranscript("Yeah"), true);
+  assert.equal(isSubstantiveTranscript("Well, I know", thresholds), false);
+  assert.equal(isSubstantiveTranscript("I think", thresholds), false);
+  assert.equal(
+    isSubstantiveTranscript(
+      "Well I led a cross functional team to launch a new billing workflow that reduced churn by twelve percent",
+      thresholds,
+    ),
+    true,
+  );
+});
+
+test("readTranscriptCommitThresholds uses coach merge window and higher minimums", () => {
+  const coach = readTranscriptCommitThresholds(
+    {
+      VOICE_MIN_COMMIT_WORDS: "8",
+      VOICE_MIN_COMMIT_CHARS: "40",
+      VOICE_COACH_FRAGMENT_MERGE_MS: "5000",
+    },
+    "coach",
+  );
+  assert.equal(coach.minWords, 10);
+  assert.equal(coach.minChars, 50);
+  assert.equal(coach.fragmentMergeMs, 5000);
+});
+
+test("isWithinFragmentMergeWindow returns true only inside the merge window", () => {
+  const now = 10_000;
+  assert.equal(isWithinFragmentMergeWindow(now, 8_000, 4_000), true);
+  assert.equal(isWithinFragmentMergeWindow(now, 5_000, 4_000), false);
 });
 
 test("buildRealtimeConversationCreateEvent maps assistant history to output_text", () => {

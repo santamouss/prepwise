@@ -24,10 +24,21 @@ import {
   buildCoachModeInitialSystemGreeting,
 } from "../src/lib/practice/coach-mode-prompt";
 import {
+  COACH_ANSWER_DONE_SYSTEM_PROMPT,
+  COACH_ANSWER_REQUIRED_MESSAGE,
+  COACH_RETRY_SYSTEM_PROMPT,
+  isCoachNextPhrase,
+  isCoachRetryPhrase,
+} from "../src/lib/practice/coach-mode-ui";
+import {
   buildRealtimeConversationCreateEvent,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_BYTES,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_MS,
+  isSubstantiveTranscript,
+  isWithinFragmentMergeWindow,
   type RealtimeMessageRole,
+  readTranscriptCommitThresholds,
+  readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
 } from "./openai-voice-relay-helpers";
 
@@ -996,10 +1007,16 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   let pendingQuestionPrompt: string | null = null;
   let pendingPromptTimer: ReturnType<typeof setTimeout> | null = null;
   let lastTranscriptUpdateAt = 0;
-  const USER_TRANSCRIPT_STABILITY_MS = 900;
-  const USER_TRANSCRIPT_MAX_WAIT_MS = 4500;
-  const USER_TURN_SPLIT_SILENCE_MS = 1200;
-  const USER_SPEECH_STOP_FINALIZE_MS = 1600;
+  let pendingTurnAnchorAt = 0;
+  let lastPendingFragmentUpdateAt = 0;
+  const transcriptThresholds = readTranscriptCommitThresholds(
+    process.env,
+    ctx.practiceMode,
+  );
+  const voiceTiming = readVoiceTranscriptTiming(ctx.practiceMode);
+  const USER_TRANSCRIPT_STABILITY_MS = voiceTiming.transcriptStabilityMs;
+  const USER_TRANSCRIPT_MAX_WAIT_MS = voiceTiming.transcriptMaxWaitMs;
+  const USER_SPEECH_STOP_FINALIZE_MS = voiceTiming.speechStopFinalizeMs;
   const SPEECH_STOP_FORWARD_GRACE_MS = 1400;
   const STALE_ASR_GUARD_MS = 1500;
   let staleAsrGuardText = "";
@@ -1170,18 +1187,79 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     staleAsrGuardUntil = 0;
   }
 
-  function shouldSplitUserTurnOnSpeechStart(now = Date.now()): boolean {
-    return (
-      !speechTranscriptCommitted &&
-      !!bestAvailableTranscript() &&
-      !!lastVadSpeechEnd &&
-      now - lastVadSpeechEnd >= USER_TURN_SPLIT_SILENCE_MS
+  function markPendingTurnActivity(now = Date.now()) {
+    if (!pendingTurnAnchorAt) {
+      pendingTurnAnchorAt = now;
+    }
+    lastPendingFragmentUpdateAt = now;
+  }
+
+  function resetPendingTurnActivity() {
+    pendingTurnAnchorAt = 0;
+    lastPendingFragmentUpdateAt = 0;
+  }
+
+  function pendingFragmentWithinMergeWindow(now = Date.now()): boolean {
+    const anchor = pendingTurnAnchorAt || lastPendingFragmentUpdateAt;
+    return isWithinFragmentMergeWindow(
+      now,
+      anchor,
+      transcriptThresholds.fragmentMergeMs,
     );
+  }
+
+  function lastCommittedUserAnswerText(): string {
+    for (let i = conversationHistory.length - 1; i >= 0; i--) {
+      const entry = conversationHistory[i];
+      if (entry.role === "user" && !entry.text.startsWith("[")) {
+        return entry.text;
+      }
+    }
+    return "";
+  }
+
+  function resetCoachAnswerBuffers() {
+    speechTranscriptCommitted = false;
+    inputTranscriptBuffer = "";
+    volcAsrAccumulator = "";
+    lastTranscriptUpdateAt = 0;
+    resetPendingTurnActivity();
+    clearStaleAsrGuard();
+  }
+
+  function handleCoachAnswerDone() {
+    let answerText = bestAvailableTranscript();
+    if (!answerText && speechTranscriptCommitted) {
+      answerText = lastCommittedUserAnswerText();
+    }
+    if (!answerText || !isSubstantiveTranscript(answerText, transcriptThresholds)) {
+      send({ type: "coach_control_error", message: COACH_ANSWER_REQUIRED_MESSAGE });
+      return;
+    }
+
+    if (!speechTranscriptCommitted) {
+      finalizeUserTurn("coach answer done", false);
+    }
+
+    sendConversationTextMessage(oaiWs!, "system", COACH_ANSWER_DONE_SYSTEM_PROMPT);
+    requestAssistantResponse("coach answer done");
+    log.info("[coach-mode] coach_answer_done — coaching requested");
+  }
+
+  function handleCoachRetryQuestion(source: string) {
+    resetCoachAnswerBuffers();
+    sendConversationTextMessage(oaiWs!, "system", COACH_RETRY_SYSTEM_PROMPT);
+    requestAssistantResponse(`coach retry (${source})`);
+    log.info(`[coach-mode] coach_retry_question (${source})`);
   }
 
   function handleCommittedUserText(committedText: string, reason: string): boolean {
     if (tryHandleExplicitUserNavigation(committedText)) {
       return true;
+    }
+    if (ctx.practiceMode === "coach" && reason !== "coach answer done") {
+      log.info("[coach-mode] substantive answer buffered; waiting for I'm done answering");
+      return false;
     }
     const currentQuestion = sortedQuestions[currentQuestionIndex];
     if (
@@ -1213,8 +1291,23 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function noteTranscriptUpdate() {
-    lastTranscriptUpdateAt = Date.now();
-    if (!vadSpeechActive && !speechTranscriptCommitted && bestAvailableTranscript()) {
+    const now = Date.now();
+    lastTranscriptUpdateAt = now;
+    const pending = bestAvailableTranscript();
+    if (pending) {
+      if (
+        pendingTurnAnchorAt > 0 &&
+        isWithinFragmentMergeWindow(
+          now,
+          lastPendingFragmentUpdateAt || pendingTurnAnchorAt,
+          transcriptThresholds.fragmentMergeMs,
+        )
+      ) {
+        log.info("[voice-pipeline] merged user transcript fragment");
+      }
+      markPendingTurnActivity(now);
+    }
+    if (!vadSpeechActive && !speechTranscriptCommitted && pending) {
       scheduleSpeechFinalize("asr stability", USER_TRANSCRIPT_STABILITY_MS);
     }
   }
@@ -1233,15 +1326,21 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const committedText = bestAvailableTranscript();
     if (!committedText) return "";
 
+    if (!isSubstantiveTranscript(committedText, transcriptThresholds)) {
+      log.info("[voice-pipeline] pending fragment too short; buffering");
+      return "";
+    }
+
     speechTranscriptCommitted = true;
     lastTranscriptCommittedAt = Date.now();
     noteMeaningfulUserActivity(`transcript committed (${reason})`);
     pushHistory("user", committedText);
     send({ type: "asr_ended", text: committedText });
-    log.info(`[voice-pipeline] User transcript committed (${reason})`);
+    log.info(`[voice-pipeline] committed substantive user answer (${reason})`);
     inputTranscriptBuffer = "";
     volcAsrAccumulator = "";
     lastTranscriptUpdateAt = 0;
+    resetPendingTurnActivity();
     armStaleAsrGuard(committedText);
     return committedText;
   }
@@ -1267,9 +1366,19 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     }, delayMs);
   }
 
-  function finalizeUserTurn(reason: string, requestResponse = true): string {
+  function finalizeUserTurn(reason: string, requestResponse?: boolean): string {
+    const wantsResponse =
+      requestResponse ?? (ctx.practiceMode !== "coach");
+    const pending = bestAvailableTranscript();
+    if (pending && !isSubstantiveTranscript(pending, transcriptThresholds)) {
+      if (wantsResponse) {
+        log.info("[voice-pipeline] response.create skipped for short fragment");
+      }
+      return "";
+    }
+
     const committed = commitUserTranscript(reason);
-    if (committed && requestResponse) {
+    if (committed && wantsResponse) {
       handleCommittedUserText(committed, reason);
     }
     return committed;
@@ -1349,19 +1458,26 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     log.info("[voice-pipeline] speech_started");
     speechStopForwardGraceUntil = 0;
     queuedAssistantResponse = null;
-    if (shouldSplitUserTurnOnSpeechStart()) {
-      const splitText = bestAvailableTranscript();
-      log.info(`Splitting pending user turn on new speech start: ${JSON.stringify(splitText)}`);
-      finalizeUserTurn("speech restart", false);
+
+    const pending = bestAvailableTranscript();
+    if (pending && !speechTranscriptCommitted) {
+      if (!isSubstantiveTranscript(pending, transcriptThresholds)) {
+        log.info("[voice-pipeline] pending fragment too short; buffering");
+      } else if (pendingFragmentWithinMergeWindow()) {
+        log.info("[voice-pipeline] speech restart within merge window; keeping buffered answer");
+      }
     }
+
     cancelOngoingResponse();
     clearSpeechFinalizeTimer();
     vadSpeechActive = true;
-    lastTranscriptUpdateAt = 0;
     if (speechTranscriptCommitted) {
       speechTranscriptCommitted = false;
       volcAsrAccumulator = "";
       inputTranscriptBuffer = "";
+      resetPendingTurnActivity();
+    } else if (pending) {
+      markPendingTurnActivity();
     }
     send({ type: "interrupt" });
   }
@@ -1636,7 +1752,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     if (!oaiWs || oaiWs.readyState !== WebSocket.OPEN) return;
     const now = Date.now();
 
+    const pendingForStall = bestAvailableTranscript();
     if (
+      ctx.practiceMode !== "coach" &&
       lastTranscriptCommittedAt > 0 &&
       !responseInFlight &&
       !isTransitioning &&
@@ -1648,6 +1766,25 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       );
       lastTranscriptCommittedAt = 0;
       requestAssistantResponse("stall recovery after commit");
+      return;
+    }
+
+    if (
+      ctx.practiceMode !== "coach" &&
+      !speechTranscriptCommitted &&
+      pendingForStall &&
+      isSubstantiveTranscript(pendingForStall, transcriptThresholds) &&
+      !vadSpeechActive &&
+      lastVadSpeechEnd > 0 &&
+      (now - lastVadSpeechEnd) >= STALL_AFTER_COMMIT_MS &&
+      !responseInFlight &&
+      !isTransitioning &&
+      (now - lastOaiActivity) >= STALL_AFTER_COMMIT_MS
+    ) {
+      log.warn(
+        `[voice-stall] Substantive answer waiting ${Math.round((now - lastVadSpeechEnd) / 1000)}s after speech stopped — requesting response`,
+      );
+      finalizeUserTurn("stall recovery after speech stop");
       return;
     }
 
@@ -2216,6 +2353,20 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const userText = text.trim();
     if (!userText || isTransitioning || interviewDone) return false;
 
+    if (ctx.practiceMode === "coach" && isCoachRetryPhrase(userText)) {
+      log.info(`Coach retry from voice: "${userText}"`);
+      handleCoachRetryQuestion("voice");
+      return true;
+    }
+
+    if (ctx.practiceMode === "coach" && isCoachNextPhrase(userText)) {
+      const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
+      if (nextIdx === currentQuestionIndex) return false;
+      log.info(`Coach next from voice: "${userText}"`);
+      requestTransition(nextIdx, "Next Question", "user_request");
+      return true;
+    }
+
     if (isFastPrevRequest(userText) || isUserPrevRequest(userText)) {
       if (currentQuestionIndex <= 0) return false;
       log.info(`Fast-path PREV transition from user: "${userText}"`);
@@ -2238,10 +2389,26 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     try {
       const msg = JSON.parse(data.toString());
 
+      if (msg.type === "coach_answer_done") {
+        if (ctx.practiceMode !== "coach") return;
+        log.info("Browser requested coach_answer_done");
+        handleCoachAnswerDone();
+        return;
+      }
+      if (msg.type === "coach_retry_question") {
+        if (ctx.practiceMode !== "coach") return;
+        log.info("Browser requested coach_retry_question");
+        handleCoachRetryQuestion("ui");
+        return;
+      }
+
       if (msg.type === "next_question") {
         log.info("Browser requested next question");
         const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
         if (nextIdx !== currentQuestionIndex) {
+          if (ctx.practiceMode === "coach") {
+            resetCoachAnswerBuffers();
+          }
           requestTransition(nextIdx, "Next Question");
         }
         return;

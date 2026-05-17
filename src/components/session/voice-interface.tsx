@@ -5,7 +5,14 @@ import {
     CodeEditorCanvas,
     type CodeEditorCanvasRef,
 } from "@/components/code-editor/code-editor-canvas";
+import { CoachModeControls } from "@/components/session/coach-mode-controls";
 import { IntervieweeHelpPopover } from "@/components/session/interviewee-help-popover";
+import {
+  COACH_ANSWER_REQUIRED_MESSAGE,
+  hasCoachAnswerContent,
+  shouldShowCoachControls,
+  type CoachUiPhase,
+} from "@/lib/practice/coach-mode-ui";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -427,6 +434,10 @@ export function VoiceInterface({
   const [whiteboardActive, setWhiteboardActive] = useState(false);
   const [codeEditorActive, setCodeEditorActive] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
+  const showCoachControls = shouldShowCoachControls(interviewContext.practiceMode, preview);
+  const [coachPhase, setCoachPhase] = useState<CoachUiPhase>("answering");
+  const [coachAttempt, setCoachAttempt] = useState(1);
+  const [coachError, setCoachError] = useState("");
   const [splitPercent, setSplitPercent] = useState(35);
   const splitDragging = useRef(false);
   const splitContainerRef = useRef<HTMLDivElement>(null);
@@ -677,7 +688,34 @@ export function VoiceInterface({
     onError: handleError,
     onTtsChunk: videoMode ? recording.addTtsChunk : undefined,
     onInterrupt: videoMode ? recording.cancelTts : undefined,
+    onCoachControlError: (message) => {
+      setCoachError(message);
+      setCoachPhase("answering");
+    },
   });
+
+  useEffect(() => {
+    if (!showCoachControls) return;
+    setCoachPhase("answering");
+    setCoachAttempt(1);
+    setCoachError("");
+  }, [voice.currentQuestionIndex, showCoachControls]);
+
+  useEffect(() => {
+    if (!showCoachControls || coachPhase !== "coaching") return;
+    if (!voice.isSpeaking && !voice.isProcessing && voice.lastAssistantUtteranceEndedAt > 0) {
+      const timer = setTimeout(() => {
+        setCoachPhase("waiting_for_choice");
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [
+    showCoachControls,
+    coachPhase,
+    voice.isSpeaking,
+    voice.isProcessing,
+    voice.lastAssistantUtteranceEndedAt,
+  ]);
 
   const tryEnableMicrophone = useCallback(async () => {
     setMicAccessBlocked(false);
@@ -1141,6 +1179,30 @@ export function VoiceInterface({
     voice.nextQuestion();
   }, [saveCurrentContent, voice]);
 
+  const handleCoachDoneAnswering = useCallback(() => {
+    if (!hasCoachAnswerContent(voice.userTranscript, messages)) {
+      setCoachError(COACH_ANSWER_REQUIRED_MESSAGE);
+      return;
+    }
+    setCoachError("");
+    setCoachPhase("coaching");
+    voice.sendCoachAnswerDone();
+  }, [voice, messages]);
+
+  const handleCoachTryAgain = useCallback(() => {
+    setCoachError("");
+    setCoachAttempt((attempt) => attempt + 1);
+    setCoachPhase("answering");
+    voice.sendCoachRetryQuestion();
+  }, [voice]);
+
+  const handleCoachNextQuestion = useCallback(async () => {
+    setCoachError("");
+    setCoachPhase("answering");
+    setCoachAttempt(1);
+    await handleNextQuestion();
+  }, [handleNextQuestion]);
+
   // ── Editor toggle helpers (save before deactivate, restore on activate)
   const saveCodeEditorState = useCallback(() => {
     const ce = codeEditorRef.current;
@@ -1597,6 +1659,20 @@ export function VoiceInterface({
           </p>
         )}
       </div>
+
+      {showCoachControls && voice.isConnected && (
+        <CoachModeControls
+          phase={coachPhase}
+          attempt={coachAttempt}
+          errorMessage={coachError}
+          isConnected={voice.isConnected}
+          isTransitioning={voice.isTransitioning}
+          canGoNext={voice.currentQuestionIndex < voice.totalQuestions - 1}
+          onDoneAnswering={handleCoachDoneAnswering}
+          onTryAgain={handleCoachTryAgain}
+          onNextQuestion={handleCoachNextQuestion}
+        />
+      )}
 
       {/* Error display */}
       {error && (
