@@ -4,11 +4,16 @@ import test from "node:test";
 import {
   buildRealtimeConversationCreateEvent,
   buildRealtimeTextContent,
+  DEFAULT_MOCK_ANSWER_COMPLETION_MS,
   isFillerOnlyTranscript,
+  isStrictFastNextRequest,
   isSubstantiveTranscript,
   isWithinFragmentMergeWindow,
   readTranscriptCommitThresholds,
+  readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
+  shouldDeferPreFlush,
+  shouldSuppressEmptyResponseRetry,
 } from "../server/openai-voice-relay-helpers";
 
 test("buildRealtimeTextContent uses output_text for assistant and input_text otherwise", () => {
@@ -100,6 +105,81 @@ test("does not allow TTS barge-in until enough assistant audio has been delivere
       consecutiveFrames: 3,
       thresholdFrames: 3,
     }),
+    false,
+  );
+});
+
+test("isStrictFastNextRequest rejects long noisy utterances with embedded next question", () => {
+  const noisy =
+    "Bye.IIHello?Yeah, can you hear me?I'm hello I'm done hello next question";
+  assert.equal(isStrictFastNextRequest(noisy), false);
+  assert.equal(isStrictFastNextRequest("next question"), true);
+  assert.equal(isStrictFastNextRequest("move on"), true);
+  assert.equal(isStrictFastNextRequest("skip"), true);
+  assert.equal(isStrictFastNextRequest("go next"), true);
+});
+
+test("readVoiceTranscriptTiming uses mock answer completion delay", () => {
+  const mock = readVoiceTranscriptTiming("mock");
+  assert.equal(mock.speechStopFinalizeMs, DEFAULT_MOCK_ANSWER_COMPLETION_MS);
+});
+
+test("shouldDeferPreFlush when user is speaking or speech started recently", () => {
+  const now = 10_000;
+  assert.equal(
+    shouldDeferPreFlush({ userSpeaking: true, lastSpeechStartedAt: 0, nowMs: now }),
+    true,
+  );
+  assert.equal(
+    shouldDeferPreFlush({ userSpeaking: false, lastSpeechStartedAt: 9_000, nowMs: now }),
+    true,
+  );
+  assert.equal(
+    shouldDeferPreFlush({ userSpeaking: false, lastSpeechStartedAt: 6_000, nowMs: now }),
+    false,
+  );
+});
+
+test("shouldSuppressEmptyResponseRetry during user speech or cancelled barge-in", () => {
+  const now = 10_000;
+  assert.equal(
+    shouldSuppressEmptyResponseRetry({
+      userSpeaking: true,
+      lastSpeechStartedAt: 0,
+      nowMs: now,
+      respStatus: "cancelled",
+      hasPendingTranscript: false,
+    }).suppress,
+    true,
+  );
+  assert.equal(
+    shouldSuppressEmptyResponseRetry({
+      userSpeaking: false,
+      lastSpeechStartedAt: 9_500,
+      nowMs: now,
+      respStatus: "cancelled",
+      hasPendingTranscript: false,
+    }).suppress,
+    true,
+  );
+  assert.equal(
+    shouldSuppressEmptyResponseRetry({
+      userSpeaking: false,
+      lastSpeechStartedAt: 0,
+      nowMs: now,
+      respStatus: "cancelled",
+      hasPendingTranscript: false,
+    }).suppress,
+    true,
+  );
+  assert.equal(
+    shouldSuppressEmptyResponseRetry({
+      userSpeaking: false,
+      lastSpeechStartedAt: 0,
+      nowMs: now,
+      respStatus: "failed",
+      hasPendingTranscript: false,
+    }).suppress,
     false,
   );
 });

@@ -75,6 +75,24 @@ describe("coach mode opening", () => {
   });
 });
 
+describe("coach mode concrete feedback", () => {
+  it("includes score, example phrases, STAR, and short-answer handling", () => {
+    const prompt = applyPracticeModeToVoicePrompt("base", "coach");
+    assert.match(prompt, /X\/10|out of 10/i);
+    assert.match(prompt, /For example, you could say/i);
+    assert.match(prompt, /Try adding a sentence like/i);
+    assert.match(prompt, /STAR|Situation|Task|Action|Result/i);
+    assert.match(prompt, /user\/observation|metric or impact/i);
+    assert.match(prompt, /too short to evaluate/i);
+  });
+
+  it("does not add concrete feedback instructions to mock mode", () => {
+    const mockPrompt = applyPracticeModeToVoicePrompt("base", "mock");
+    assert.equal(mockPrompt, "base");
+    assert.doesNotMatch(mockPrompt, /For example, you could say/i);
+  });
+});
+
 describe("buildSystemPrompt coach instructions", () => {
   const basePrompt = "You are Parker, a professional AI interviewer.";
 

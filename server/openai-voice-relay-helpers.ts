@@ -65,6 +65,9 @@ export const DEFAULT_MIN_COMMIT_WORDS = 8;
 export const DEFAULT_MIN_COMMIT_CHARS = 40;
 export const DEFAULT_FRAGMENT_MERGE_MS = 4000;
 export const DEFAULT_COACH_FRAGMENT_MERGE_MS = 5000;
+export const DEFAULT_SPEECH_STARTED_RECENT_MS = 2500;
+export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 2100;
+export const DEFAULT_STRICT_NAV_MAX_WORDS = 6;
 
 export interface TranscriptCommitThresholds {
   minWords: number;
@@ -162,10 +165,112 @@ export function readVoiceTranscriptTiming(
     };
   }
   return {
-    speechStopFinalizeMs: 1600,
+    speechStopFinalizeMs: DEFAULT_MOCK_ANSWER_COMPLETION_MS,
     transcriptStabilityMs: 900,
     transcriptMaxWaitMs: 4500,
   };
+}
+
+export function normalizeNavigationPhrase(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const STRICT_FAST_NEXT_EXACT = new Set([
+  "next question",
+  "move on",
+  "skip",
+  "go next",
+  "下一个问题",
+  "下一题",
+  "跳过",
+]);
+
+const STRICT_FAST_PREV_EXACT = new Set([
+  "previous question",
+  "go back",
+  "上一个问题",
+  "上一题",
+]);
+
+/** Short, unambiguous skip/next commands only — not embedded in long utterances. */
+export function isStrictFastNextRequest(
+  text: string,
+  maxWords = DEFAULT_STRICT_NAV_MAX_WORDS,
+): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const words = countTranscriptWords(trimmed);
+  if (words > maxWords) return false;
+  const normalized = normalizeNavigationPhrase(trimmed);
+  if (STRICT_FAST_NEXT_EXACT.has(normalized)) return true;
+  return /^(?:next\s*question|move\s+on|skip|go\s+next)\.?$/i.test(normalized);
+}
+
+export function isStrictFastPrevRequest(
+  text: string,
+  maxWords = DEFAULT_STRICT_NAV_MAX_WORDS,
+): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const words = countTranscriptWords(trimmed);
+  if (words > maxWords) return false;
+  const normalized = normalizeNavigationPhrase(trimmed);
+  if (STRICT_FAST_PREV_EXACT.has(normalized)) return true;
+  return /^(?:previous\s*question|go\s+back)\.?$/i.test(normalized);
+}
+
+export interface PreFlushDeferInput {
+  userSpeaking: boolean;
+  lastSpeechStartedAt: number;
+  nowMs: number;
+  recentSpeechMs?: number;
+}
+
+export function shouldDeferPreFlush(input: PreFlushDeferInput): boolean {
+  if (input.userSpeaking) return true;
+  const recentMs = input.recentSpeechMs ?? DEFAULT_SPEECH_STARTED_RECENT_MS;
+  if (
+    input.lastSpeechStartedAt > 0 &&
+    input.nowMs - input.lastSpeechStartedAt < recentMs
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export interface EmptyResponseRetrySuppressInput {
+  userSpeaking: boolean;
+  lastSpeechStartedAt: number;
+  nowMs: number;
+  respStatus: string;
+  hasPendingTranscript: boolean;
+  recentSpeechMs?: number;
+}
+
+export function shouldSuppressEmptyResponseRetry(
+  input: EmptyResponseRetrySuppressInput,
+): { suppress: boolean; reason?: string } {
+  if (input.userSpeaking) {
+    return { suppress: true, reason: "user is speaking" };
+  }
+  const recentMs = input.recentSpeechMs ?? DEFAULT_SPEECH_STARTED_RECENT_MS;
+  if (
+    input.lastSpeechStartedAt > 0 &&
+    input.nowMs - input.lastSpeechStartedAt < recentMs
+  ) {
+    return { suppress: true, reason: "speech_started recently" };
+  }
+  if (input.hasPendingTranscript) {
+    return { suppress: true, reason: "pending user transcript" };
+  }
+  if (input.respStatus === "cancelled") {
+    return { suppress: true, reason: "response cancelled (likely barge-in)" };
+  }
+  return { suppress: false };
 }
 
 export function isWithinFragmentMergeWindow(

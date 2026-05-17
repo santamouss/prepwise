@@ -17,7 +17,7 @@ export const COACH_RETRY_SYSTEM_PROMPT =
   "The candidate wants to retry the same question. Re-ask the current question and do not move forward. Do NOT call signal_question_change.";
 
 export const COACH_ANSWER_DONE_SYSTEM_PROMPT =
-  "The candidate clicked \"I'm done answering\" and has finished their answer. Give concise coaching now (one strength, one gap, one concrete improvement). Do NOT call signal_question_change. Do NOT ask whether to retry or move on — the UI shows Try Again and Next Question buttons.";
+  "The candidate clicked \"I'm done answering\" and has finished their answer. Give concise coach-style feedback now: quick X/10 when appropriate, one strength, one gap, one specific improvement, and a short example phrase (\"For example, you could say…\" or \"Try adding a sentence like…\") when useful — not a full model answer. Use STAR for behavioral gaps; user/observation/improvement/metric for product/case. If too short, say so and give a simple retry structure. End by pointing them to the Try Again or Next Question buttons. Do NOT call signal_question_change.";
 
 export function isCoachModePractice(practiceMode?: PracticeMode): boolean {
   return practiceMode === "coach";

@@ -32,14 +32,20 @@ import {
 } from "../src/lib/practice/coach-mode-ui";
 import {
   buildRealtimeConversationCreateEvent,
+  countTranscriptWords,
+  DEFAULT_SPEECH_STARTED_RECENT_MS,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_BYTES,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_MS,
+  isStrictFastNextRequest,
+  isStrictFastPrevRequest,
   isSubstantiveTranscript,
   isWithinFragmentMergeWindow,
   type RealtimeMessageRole,
   readTranscriptCommitThresholds,
   readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
+  shouldDeferPreFlush,
+  shouldSuppressEmptyResponseRetry,
 } from "./openai-voice-relay-helpers";
 
 const log = createLogger("openai-relay");
@@ -343,25 +349,8 @@ function mergeAsrText(previous: string, incoming: string): string {
   return next.length >= prev.length ? next : prev;
 }
 
-const FAST_NEXT_PATTERNS = [
-  /^(?:下一个问题|下一题|跳过|next\s*question|skip)\.?$/i,
-];
-
 const FAST_PREV_PATTERNS = [
   /^(?:上一个问题|上一题|previous\s*question)\.?$/i,
-];
-
-const USER_SKIP_PATTERNS = [
-  /(?:let'?s|please|can\s+(?:we|you))\s+(?:move\s+on|skip|proceed|go\s+to\s+(?:the\s+)?next)/i,
-  /move\s+on(?:\s+to)?/i,
-  /continue\s+to\s+(?:the\s+)?next/i,
-  /go\s+(?:on\s+)?to\s+(?:the\s+)?next/i,
-  /skip\s+(?:this|the)\s+(?:question|one|problem)/i,
-  /I\s+(?:give\s+up|want\s+to\s+skip|'?d\s+like\s+to\s+skip)/i,
-  /next\s+question/i,
-  /please\s+(?:move\s+on|skip)/i,
-  /(?:跳过|下一(?:个问题|题)|不做了|放弃了?|结束吧|请继续(?:下一|到下))/,
-  /(?:我不会|不想做了|不想答了|过吧|换下一)/,
 ];
 
 const USER_PREV_PATTERNS = [
@@ -375,18 +364,9 @@ const USER_PREV_PATTERNS = [
   /(?:我(?:想|要|需要)|请|可以)(?:回到|返回|回去)上一/,
 ];
 
-function isFastNextRequest(text: string): boolean {
-  const trimmed = text.trim();
-  return FAST_NEXT_PATTERNS.some((pattern) => pattern.test(trimmed));
-}
-
 function isFastPrevRequest(text: string): boolean {
   const trimmed = text.trim();
   return FAST_PREV_PATTERNS.some((pattern) => pattern.test(trimmed));
-}
-
-function isUserSkipRequest(text: string): boolean {
-  return USER_SKIP_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 function isUserPrevRequest(text: string): boolean {
@@ -957,7 +937,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   let lastTranscriptCommittedAt = 0;
   let lastResponseRequestedAt = 0;
   let lastVadSpeechEnd = 0;
+  let lastSpeechStartedAt = 0;
   let vadSpeechActive = false;
+  let mockAutoResponseTimer: ReturnType<typeof setTimeout> | null = null;
   let lastTtsAudioTime = 0; // when we last sent TTS audio to browser
   const TTS_ECHO_COOLDOWN_MS = 1500;
   let isTransitioning = false;
@@ -1132,6 +1114,18 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     modelIsSpeaking = false;
   }
 
+  function logVoicePipelineState(context: string) {
+    const pending = bestAvailableTranscript();
+    log.info(
+      `[voice-pipeline] ${context} userSpeaking=${vadSpeechActive} lastSpeechStartedAt=${lastSpeechStartedAt || "none"} lastSpeechStoppedAt=${lastVadSpeechEnd || "none"} pendingTranscript words=${countTranscriptWords(pending)} chars=${pending.length}`,
+    );
+  }
+
+  function skipAssistantResponse(reason: string) {
+    log.info(`[voice-pipeline] skipped response.create (${reason})`);
+    logVoicePipelineState("skip");
+  }
+
   function requestAssistantResponse(reason: string, response?: Record<string, unknown>) {
     if (
       !oaiWs ||
@@ -1140,6 +1134,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       isTransitioning ||
       (interviewDone && !pendingInterviewComplete)
     ) {
+      skipAssistantResponse(`${reason}: session not ready`);
       return;
     }
     if (responseInFlight) {
@@ -1154,6 +1149,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     lastResponseRequestedAt = Date.now();
     oaiWs.send(JSON.stringify(payload));
     log.info(`[voice-pipeline] response.create requested (${reason})`);
+    logVoicePipelineState(reason);
   }
 
   function takeQueuedAssistantResponse() {
@@ -1279,11 +1275,56 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     return false;
   }
 
-  function clearSpeechFinalizeTimer() {
+  function clearSpeechFinalizeTimer(reason?: string) {
     if (pendingSpeechFinalize) {
       clearTimeout(pendingSpeechFinalize);
       pendingSpeechFinalize = null;
+      if (reason && ctx.practiceMode === "coach") {
+        log.info(`[voice-pipeline] coach speech finalize timer cancelled (${reason})`);
+      }
     }
+  }
+
+  function clearMockAutoResponseTimer(reason?: string) {
+    if (mockAutoResponseTimer) {
+      clearTimeout(mockAutoResponseTimer);
+      mockAutoResponseTimer = null;
+      if (reason) {
+        log.info(`[voice-pipeline] mock auto-response timer cancelled (${reason})`);
+      }
+    }
+  }
+
+  function scheduleMockAnswerCompletion(reason: string, delayMs = USER_SPEECH_STOP_FINALIZE_MS) {
+    if (ctx.practiceMode === "coach") return;
+    clearMockAutoResponseTimer();
+    log.info(
+      `[voice-pipeline] mock auto-response timer scheduled (${reason}, ${delayMs}ms)`,
+    );
+    mockAutoResponseTimer = setTimeout(() => {
+      mockAutoResponseTimer = null;
+      if (vadSpeechActive || speechTranscriptCommitted) return;
+      const pending = bestAvailableTranscript();
+      if (!pending) return;
+      if (!transcriptLooksStable()) {
+        const now = Date.now();
+        const waitForStability = Math.max(
+          150,
+          USER_TRANSCRIPT_STABILITY_MS - (now - lastTranscriptUpdateAt),
+        );
+        const waitForCap = lastVadSpeechEnd
+          ? Math.max(150, USER_TRANSCRIPT_MAX_WAIT_MS - (now - lastVadSpeechEnd))
+          : USER_TRANSCRIPT_STABILITY_MS;
+        scheduleMockAnswerCompletion(
+          `${reason} stability wait`,
+          Math.min(waitForStability, waitForCap),
+        );
+        return;
+      }
+      log.info(`[voice-pipeline] mock auto-response timer fired (${reason})`);
+      logVoicePipelineState(`mock auto-response fired (${reason})`);
+      finalizeUserTurn(`mock auto-response (${reason})`);
+    }, delayMs);
   }
 
   function bestAvailableTranscript(): string {
@@ -1308,7 +1349,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       markPendingTurnActivity(now);
     }
     if (!vadSpeechActive && !speechTranscriptCommitted && pending) {
-      scheduleSpeechFinalize("asr stability", USER_TRANSCRIPT_STABILITY_MS);
+      if (ctx.practiceMode === "coach") {
+        scheduleSpeechFinalize("asr stability", USER_TRANSCRIPT_STABILITY_MS);
+      } else {
+        scheduleMockAnswerCompletion("asr stability", USER_TRANSCRIPT_STABILITY_MS);
+      }
     }
   }
 
@@ -1455,7 +1500,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   function handleSpeechStartedEvent() {
     noteMeaningfulUserActivity("speech_started");
+    lastSpeechStartedAt = Date.now();
     log.info("[voice-pipeline] speech_started");
+    logVoicePipelineState("speech_started");
     speechStopForwardGraceUntil = 0;
     queuedAssistantResponse = null;
 
@@ -1469,7 +1516,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     }
 
     cancelOngoingResponse();
-    clearSpeechFinalizeTimer();
+    clearSpeechFinalizeTimer("speech_started");
+    clearMockAutoResponseTimer("speech_started");
     vadSpeechActive = true;
     if (speechTranscriptCommitted) {
       speechTranscriptCommitted = false;
@@ -1487,21 +1535,52 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     lastVadSpeechEnd = Date.now();
     speechStopForwardGraceUntil = lastVadSpeechEnd + SPEECH_STOP_FORWARD_GRACE_MS;
     log.info("[voice-pipeline] speech_stopped");
+    logVoicePipelineState("speech_stopped");
     if (!speechTranscriptCommitted && bestAvailableTranscript()) {
-      scheduleSpeechFinalize("speech stop", USER_SPEECH_STOP_FINALIZE_MS);
+      if (ctx.practiceMode === "coach") {
+        scheduleSpeechFinalize("speech stop", USER_SPEECH_STOP_FINALIZE_MS);
+      } else {
+        scheduleMockAnswerCompletion("speech stop");
+      }
     }
   }
 
   function flushPendingUserTurnBeforeAssistant() {
-    if (!speechTranscriptCommitted && bestAvailableTranscript()) {
-      const pendingUserText = bestAvailableTranscript();
+    const now = Date.now();
+    const pendingUserText = bestAvailableTranscript();
+    if (
+      shouldDeferPreFlush({
+        userSpeaking: vadSpeechActive,
+        lastSpeechStartedAt,
+        nowMs: now,
+        recentSpeechMs: DEFAULT_SPEECH_STARTED_RECENT_MS,
+      })
+    ) {
+      if (pendingUserText) {
+        log.info(
+          `[voice-pipeline] ASR pre-flush deferred: userSpeaking=${vadSpeechActive} pending=${JSON.stringify(pendingUserText)}`,
+        );
+        if (ctx.practiceMode === "coach") {
+          scheduleSpeechFinalize("response pre-flush deferred", USER_TRANSCRIPT_STABILITY_MS);
+        } else {
+          scheduleMockAnswerCompletion("response pre-flush deferred");
+        }
+      }
+      return;
+    }
+
+    if (!speechTranscriptCommitted && pendingUserText) {
       if (transcriptLooksStable()) {
         volcAsrPreFlushed = true;
         log.info(`ASR pre-flush: ${JSON.stringify(pendingUserText)}`);
         finalizeUserTurn("response pre-flush");
       } else {
-        log.info(`ASR pre-flush deferred: ${JSON.stringify(pendingUserText)}`);
-        scheduleSpeechFinalize("response pre-flush", USER_TRANSCRIPT_STABILITY_MS);
+        log.info(`ASR pre-flush deferred (transcript unstable): ${JSON.stringify(pendingUserText)}`);
+        if (ctx.practiceMode === "coach") {
+          scheduleSpeechFinalize("response pre-flush", USER_TRANSCRIPT_STABILITY_MS);
+        } else {
+          scheduleMockAnswerCompletion("response pre-flush deferred");
+        }
       }
       return;
     }
@@ -2065,13 +2144,29 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
             // Detect empty responses and retry: the model sometimes
             // produces responses with no audio and no function calls.
             if (!hadTts && pendingFunctionCalls.length === 0 && respOutputCount === 0 && !interviewDone && !queuedResponse) {
-              emptyResponseRetries++;
-              if (emptyResponseRetries <= MAX_EMPTY_RETRIES) {
-                log.warn(`Empty response (status=${respStatus}, attempt ${emptyResponseRetries}/${MAX_EMPTY_RETRIES}) — nudging model to speak`);
-                requestAssistantResponse(`empty response retry ${emptyResponseRetries}`);
+              const suppress = shouldSuppressEmptyResponseRetry({
+                userSpeaking: vadSpeechActive,
+                lastSpeechStartedAt,
+                nowMs: Date.now(),
+                respStatus: String(respStatus),
+                hasPendingTranscript:
+                  !!bestAvailableTranscript() && !speechTranscriptCommitted,
+                recentSpeechMs: DEFAULT_SPEECH_STARTED_RECENT_MS,
+              });
+              if (suppress.suppress) {
+                log.info(
+                  `[voice-pipeline] skipped empty-response retry because ${suppress.reason}`,
+                );
+                logVoicePipelineState("empty-response retry suppressed");
               } else {
-                log.error(`Empty response (status=${respStatus}) — exhausted retries, giving up`);
-                emptyResponseRetries = 0;
+                emptyResponseRetries++;
+                if (emptyResponseRetries <= MAX_EMPTY_RETRIES) {
+                  log.warn(`Empty response (status=${respStatus}, attempt ${emptyResponseRetries}/${MAX_EMPTY_RETRIES}) — nudging model to speak`);
+                  requestAssistantResponse(`empty response retry ${emptyResponseRetries}`);
+                } else {
+                  log.error(`Empty response (status=${respStatus}) — exhausted retries, giving up`);
+                  emptyResponseRetries = 0;
+                }
               }
             } else if (hadTts) {
               emptyResponseRetries = 0;
@@ -2367,14 +2462,18 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return true;
     }
 
-    if (isFastPrevRequest(userText) || isUserPrevRequest(userText)) {
+    if (
+      isStrictFastPrevRequest(userText) ||
+      isFastPrevRequest(userText) ||
+      (isUserPrevRequest(userText) && countTranscriptWords(userText) <= 6)
+    ) {
       if (currentQuestionIndex <= 0) return false;
       log.info(`Fast-path PREV transition from user: "${userText}"`);
       requestTransition(currentQuestionIndex - 1, "Previous Question", "user_request");
       return true;
     }
 
-    if (isFastNextRequest(userText) || isUserSkipRequest(userText)) {
+    if (isStrictFastNextRequest(userText)) {
       const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
       if (nextIdx === currentQuestionIndex) return false;
       log.info(`Fast-path NEXT transition from user: "${userText}"`);
@@ -2561,6 +2660,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     clearInterval(livenessTimer);
     clearPendingTransition();
     clearQuestionPrompt();
+    clearSpeechFinalizeTimer("browser disconnected");
+    clearMockAutoResponseTimer("browser disconnected");
     cleanupVolcAsr();
     if (pendingInputFlush) clearTimeout(pendingInputFlush);
     if (pendingAsrUpdate) clearTimeout(pendingAsrUpdate);
