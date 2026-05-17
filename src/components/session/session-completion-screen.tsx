@@ -8,9 +8,14 @@ import {
   applyThankYouLockToPlan,
   buildCompletionRunKey,
   coerceCompletionPhase,
+  isTerminalCompletionPhase,
   lockCompletionFlowBranch,
+  markCompletionRunCompleted,
   persistCompletionPhase,
   readPersistedCompletionPhase,
+  releaseActiveCompletionRunOnCancel,
+  resolveFeedbackPollTerminalPhase,
+  shouldStartCompletionRun,
   type CompletionFlowBranch,
   type CompletionPhase,
 } from "@/lib/session/session-completion-flow";
@@ -64,9 +69,15 @@ export function SessionCompletionScreen({
   });
 
   const flowBranchRef = useRef<CompletionFlowBranch | null>(null);
-  const runStartedRef = useRef<string | null>(null);
+  const activeRunKeyRef = useRef<string | null>(null);
+  const completedRunKeyRef = useRef<string | null>(null);
+  const phaseRef = useRef<CompletionPhase>(phase);
   const authWaitStartedRef = useRef(Date.now());
   const [authTimedOut, setAuthTimedOut] = useState(false);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
 
   const livePlan = useMemo(
     () =>
@@ -140,19 +151,52 @@ export function SessionCompletionScreen({
 
     const persisted = readPersistedCompletionPhase(sessionId);
     if (persisted === "thank-you" || persisted === "feedback-pending") {
+      const runKey = buildCompletionRunKey(sessionId, branch);
       completionLog("restored terminal phase from storage", {
         sessionId,
         persisted,
+        runKey,
       });
+      completedRunKeyRef.current = markCompletionRunCompleted(runKey);
+      activeRunKeyRef.current = null;
       setPhaseSafe(persisted);
       return;
     }
 
     const runKey = buildCompletionRunKey(sessionId, branch);
-    if (runStartedRef.current === runKey) return;
-    runStartedRef.current = runKey;
+
+    if (
+      !shouldStartCompletionRun(
+        completedRunKeyRef.current,
+        activeRunKeyRef.current,
+        runKey,
+      )
+    ) {
+      if (completedRunKeyRef.current === runKey) {
+        completionLog("run already completed; skipping start", { runKey });
+      } else if (activeRunKeyRef.current === runKey) {
+        completionLog("run already active; skipping duplicate start", {
+          runKey,
+        });
+      }
+      return;
+    }
+
+    activeRunKeyRef.current = runKey;
+    completionLog("run started", { runKey, branch });
 
     let cancelled = false;
+
+    const reachTerminalPhase = (next: CompletionPhase) => {
+      setPhaseSafe(next);
+      if (isTerminalCompletionPhase(next)) {
+        completedRunKeyRef.current = markCompletionRunCompleted(runKey);
+        if (activeRunKeyRef.current === runKey) {
+          activeRunKeyRef.current = null;
+        }
+        completionLog("terminal phase set", { runKey, phase: next });
+      }
+    };
 
     const sleep = (ms: number) =>
       new Promise<void>((resolve) => {
@@ -242,7 +286,7 @@ export function SessionCompletionScreen({
         if (cancelled) return;
 
         completionLog("thank-you flow complete", { sessionId, saveOk });
-        setPhaseSafe("thank-you");
+        reachTerminalPhase("thank-you");
         return;
       }
 
@@ -280,37 +324,59 @@ export function SessionCompletionScreen({
       await ensureMinDisplay(startedAt);
       if (cancelled) return;
 
-      if (!saveOk) {
-        completionLog("save not confirmed; showing fallback", { sessionId });
-        setPhaseSafe("feedback-pending");
+      const terminalPhase = resolveFeedbackPollTerminalPhase({
+        saveOk,
+        feedbackReady,
+        redirectPath: plan.redirectPath,
+      });
+
+      if (terminalPhase === "feedback-pending") {
+        if (!saveOk) {
+          completionLog("save not confirmed; showing fallback", { sessionId });
+        } else {
+          completionLog("feedback polling timed out; showing fallback", {
+            sessionId,
+            waitedMs: Date.now() - startedAt,
+          });
+        }
+        reachTerminalPhase(terminalPhase);
         return;
       }
 
-      if (!feedbackReady) {
-        completionLog("feedback polling timed out; showing fallback", {
-          sessionId,
-          waitedMs: Date.now() - startedAt,
-        });
-        setPhaseSafe("feedback-pending");
-        return;
-      }
-
-      if (plan.redirectPath) {
+      if (terminalPhase === "redirecting" && plan.redirectPath) {
         completionLog("redirecting after feedback ready", {
           sessionId,
           path: plan.redirectPath,
         });
-        setPhaseSafe("redirecting");
+        reachTerminalPhase(terminalPhase);
         router.push(plan.redirectPath);
         return;
       }
 
-      setPhaseSafe("thank-you");
+      reachTerminalPhase(terminalPhase);
     })();
 
     return () => {
-      if (branch === "feedback-poll") {
-        cancelled = true;
+      cancelled = true;
+      const phaseAtCleanup = phaseRef.current;
+      const released = releaseActiveCompletionRunOnCancel(
+        activeRunKeyRef.current,
+        runKey,
+        phaseAtCleanup,
+      );
+      if (released !== activeRunKeyRef.current) {
+        activeRunKeyRef.current = released;
+        if (!isTerminalCompletionPhase(phaseAtCleanup)) {
+          completionLog("cleanup cancellation; rerun allowed", {
+            runKey,
+            phase: phaseAtCleanup,
+          });
+        }
+      } else {
+        completionLog("cleanup (run still active or terminal)", {
+          runKey,
+          phase: phaseAtCleanup,
+        });
       }
     };
   }, [

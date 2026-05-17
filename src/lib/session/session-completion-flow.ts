@@ -88,3 +88,49 @@ export function buildCompletionRunKey(
 ): string {
   return `${sessionId}:${branch}`;
 }
+
+/** Whether a new async completion run should start for this runKey. */
+export function shouldStartCompletionRun(
+  completedRunKey: string | null,
+  activeRunKey: string | null,
+  runKey: string,
+): boolean {
+  if (completedRunKey === runKey) return false;
+  if (activeRunKey === runKey) return false;
+  return true;
+}
+
+export function markCompletionRunCompleted(
+  runKey: string,
+): string {
+  return runKey;
+}
+
+/**
+ * Clears the active run when cleanup cancels before a terminal phase,
+ * allowing the same runKey to start again.
+ */
+export function releaseActiveCompletionRunOnCancel(
+  activeRunKey: string | null,
+  runKey: string,
+  phase: CompletionPhase,
+): string | null {
+  if (activeRunKey !== runKey) return activeRunKey;
+  if (isTerminalCompletionPhase(phase)) return activeRunKey;
+  return null;
+}
+
+/** Resolves the terminal phase after feedback polling finishes or times out. */
+export function resolveFeedbackPollTerminalPhase(input: {
+  saveOk: boolean;
+  feedbackReady: boolean;
+  redirectPath: string | null;
+}): CompletionPhase {
+  if (!input.saveOk || !input.feedbackReady) {
+    return "feedback-pending";
+  }
+  if (input.redirectPath) {
+    return "redirecting";
+  }
+  return "thank-you";
+}

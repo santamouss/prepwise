@@ -4,6 +4,10 @@ import {
   applyThankYouLockToPlan,
   coerceCompletionPhase,
   lockCompletionFlowBranch,
+  markCompletionRunCompleted,
+  releaseActiveCompletionRunOnCancel,
+  resolveFeedbackPollTerminalPhase,
+  shouldStartCompletionRun,
 } from "../src/lib/session/session-completion-flow";
 import { resolvePostInterviewRedirect } from "../src/lib/session/post-interview-redirect";
 
@@ -35,6 +39,60 @@ describe("coerceCompletionPhase", () => {
     assert.equal(
       coerceCompletionPhase("processing", "feedback-pending"),
       "feedback-pending",
+    );
+  });
+});
+
+describe("completion run lifecycle", () => {
+  const runKey = "sess-1:feedback-poll";
+
+  it("allows restart after cancelled non-terminal run", () => {
+    let active: string | null = runKey;
+    const completed: string | null = null;
+
+    assert.equal(shouldStartCompletionRun(completed, active, runKey), false);
+
+    active = releaseActiveCompletionRunOnCancel(active, runKey, "processing");
+    assert.equal(active, null);
+    assert.equal(shouldStartCompletionRun(completed, active, runKey), true);
+  });
+
+  it("blocks restart after terminal completion", () => {
+    const completed = markCompletionRunCompleted(runKey);
+    assert.equal(shouldStartCompletionRun(completed, null, runKey), false);
+  });
+
+  it("does not release active run when phase is already terminal", () => {
+    const active = runKey;
+    const released = releaseActiveCompletionRunOnCancel(
+      active,
+      runKey,
+      "feedback-pending",
+    );
+    assert.equal(released, runKey);
+  });
+});
+
+describe("resolveFeedbackPollTerminalPhase", () => {
+  it("uses fallback when polling times out without feedback", () => {
+    assert.equal(
+      resolveFeedbackPollTerminalPhase({
+        saveOk: true,
+        feedbackReady: false,
+        redirectPath: "/my-sessions/s1",
+      }),
+      "feedback-pending",
+    );
+  });
+
+  it("redirects when feedback is ready", () => {
+    assert.equal(
+      resolveFeedbackPollTerminalPhase({
+        saveOk: true,
+        feedbackReady: true,
+        redirectPath: "/my-sessions/s1",
+      }),
+      "redirecting",
     );
   });
 });
