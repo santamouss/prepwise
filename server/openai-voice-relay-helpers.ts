@@ -66,7 +66,7 @@ export const DEFAULT_MIN_COMMIT_CHARS = 40;
 export const DEFAULT_FRAGMENT_MERGE_MS = 4000;
 export const DEFAULT_COACH_FRAGMENT_MERGE_MS = 5000;
 export const DEFAULT_SPEECH_STARTED_RECENT_MS = 2500;
-export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 2100;
+export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 2500;
 export const DEFAULT_STRICT_NAV_MAX_WORDS = 6;
 
 export interface TranscriptCommitThresholds {
@@ -240,6 +240,89 @@ export function shouldDeferPreFlush(input: PreFlushDeferInput): boolean {
     return true;
   }
   return false;
+}
+
+export function shouldDeferFlush(input: PreFlushDeferInput): boolean {
+  return shouldDeferPreFlush(input);
+}
+
+export interface ResponseCreateBlockInput {
+  userSpeaking: boolean;
+  lastSpeechStartedAt: number;
+  lastSpeechStoppedAt: number;
+  nowMs: number;
+  hasPendingTranscript: boolean;
+  transcriptStabilizing: boolean;
+  recentSpeechMs?: number;
+}
+
+export function isSpeechResumedAfterStop(
+  lastSpeechStartedAt: number,
+  lastSpeechStoppedAt: number,
+): boolean {
+  return (
+    lastSpeechStartedAt > 0 &&
+    lastSpeechStoppedAt > 0 &&
+    lastSpeechStartedAt >= lastSpeechStoppedAt
+  );
+}
+
+/** Blocks response.create while the user may still be answering. */
+export function shouldBlockVoiceResponseCreate(
+  input: ResponseCreateBlockInput,
+): { block: boolean; reason?: string } {
+  if (input.userSpeaking) {
+    return { block: true, reason: "userSpeaking=true" };
+  }
+  const recentMs = input.recentSpeechMs ?? DEFAULT_SPEECH_STARTED_RECENT_MS;
+  if (
+    input.lastSpeechStartedAt > 0 &&
+    input.nowMs - input.lastSpeechStartedAt < recentMs
+  ) {
+    return { block: true, reason: "speech_started within recent window" };
+  }
+  if (isSpeechResumedAfterStop(input.lastSpeechStartedAt, input.lastSpeechStoppedAt)) {
+    return { block: true, reason: "speech resumed after last stop" };
+  }
+  if (input.transcriptStabilizing) {
+    return { block: true, reason: "ASR still stabilizing" };
+  }
+  if (input.hasPendingTranscript) {
+    return { block: true, reason: "pending user transcript" };
+  }
+  return { block: false };
+}
+
+/** Blocks mock auto-response timer until silence is stable (pending transcript allowed). */
+export function shouldBlockMockAutoResponse(
+  input: Omit<ResponseCreateBlockInput, "hasPendingTranscript">,
+): { block: boolean; reason?: string } {
+  if (input.userSpeaking) {
+    return { block: true, reason: "userSpeaking=true" };
+  }
+  const recentMs = input.recentSpeechMs ?? DEFAULT_SPEECH_STARTED_RECENT_MS;
+  if (
+    input.lastSpeechStartedAt > 0 &&
+    input.nowMs - input.lastSpeechStartedAt < recentMs
+  ) {
+    return { block: true, reason: "speech_started within recent window" };
+  }
+  if (isSpeechResumedAfterStop(input.lastSpeechStartedAt, input.lastSpeechStoppedAt)) {
+    return { block: true, reason: "speech resumed after last stop" };
+  }
+  if (input.transcriptStabilizing) {
+    return { block: true, reason: "ASR still stabilizing" };
+  }
+  return { block: false };
+}
+
+export function canMockAutoRespondAfterSilence(
+  input: Omit<ResponseCreateBlockInput, "hasPendingTranscript"> & {
+    hasTranscript: boolean;
+  },
+): boolean {
+  if (!input.hasTranscript) return false;
+  return !shouldBlockMockAutoResponse(input).block;
 }
 
 export interface EmptyResponseRetrySuppressInput {

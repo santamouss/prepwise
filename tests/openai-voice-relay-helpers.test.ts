@@ -12,6 +12,9 @@ import {
   readTranscriptCommitThresholds,
   readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
+  shouldBlockMockAutoResponse,
+  shouldBlockVoiceResponseCreate,
+  shouldDeferFlush,
   shouldDeferPreFlush,
   shouldSuppressEmptyResponseRetry,
 } from "../server/openai-voice-relay-helpers";
@@ -137,6 +140,84 @@ test("shouldDeferPreFlush when user is speaking or speech started recently", () 
   assert.equal(
     shouldDeferPreFlush({ userSpeaking: false, lastSpeechStartedAt: 6_000, nowMs: now }),
     false,
+  );
+});
+
+test("shouldDeferFlush when user is speaking", () => {
+  const now = 10_000;
+  assert.equal(
+    shouldDeferFlush({ userSpeaking: true, lastSpeechStartedAt: 0, nowMs: now }),
+    true,
+  );
+});
+
+test("shouldBlockVoiceResponseCreate when user is speaking or pending transcript", () => {
+  const now = 10_000;
+  const base = {
+    lastSpeechStartedAt: 0,
+    lastSpeechStoppedAt: 8_000,
+    nowMs: now,
+    transcriptStabilizing: false,
+  };
+  assert.equal(
+    shouldBlockVoiceResponseCreate({
+      ...base,
+      userSpeaking: true,
+      hasPendingTranscript: false,
+    }).block,
+    true,
+  );
+  assert.equal(
+    shouldBlockVoiceResponseCreate({
+      ...base,
+      userSpeaking: false,
+      hasPendingTranscript: true,
+    }).reason,
+    "pending user transcript",
+  );
+  assert.equal(
+    shouldBlockVoiceResponseCreate({
+      ...base,
+      userSpeaking: false,
+      hasPendingTranscript: false,
+      lastSpeechStartedAt: 9_500,
+    }).block,
+    true,
+  );
+  assert.equal(
+    shouldBlockVoiceResponseCreate({
+      ...base,
+      nowMs: 12_000,
+      userSpeaking: false,
+      hasPendingTranscript: false,
+      lastSpeechStartedAt: 8_500,
+      lastSpeechStoppedAt: 8_000,
+    }).reason,
+    "speech resumed after last stop",
+  );
+});
+
+test("shouldBlockMockAutoResponse allows pending transcript after stable silence", () => {
+  const now = 10_000;
+  assert.equal(
+    shouldBlockMockAutoResponse({
+      userSpeaking: false,
+      lastSpeechStartedAt: 6_000,
+      lastSpeechStoppedAt: 8_000,
+      nowMs: now,
+      transcriptStabilizing: false,
+    }).block,
+    false,
+  );
+  assert.equal(
+    shouldBlockMockAutoResponse({
+      userSpeaking: true,
+      lastSpeechStartedAt: 0,
+      lastSpeechStoppedAt: 8_000,
+      nowMs: now,
+      transcriptStabilizing: false,
+    }).reason,
+    "userSpeaking=true",
   );
 });
 
