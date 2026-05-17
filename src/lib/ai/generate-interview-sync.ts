@@ -25,6 +25,7 @@ export async function generateInterviewFromDescription(
     durationMinutes: number;
     language?: string;
     jobDescription?: string;
+    resumeText?: string;
   },
 ): Promise<GeneratedInterview> {
   const provider = getProvider(INTERVIEW_GENERATION_MODEL);
@@ -33,6 +34,7 @@ export async function generateInterviewFromDescription(
     options.durationMinutes,
     options.language ?? "en",
     options.jobDescription,
+    options.resumeText,
   );
 
   const MAX_RETRIES = 2;

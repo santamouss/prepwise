@@ -13,14 +13,17 @@ import {
   Briefcase,
   ChevronDown,
   ChevronUp,
+  FileText,
+  Link2,
   Loader2,
   Mic,
   Users,
   Wrench,
+  X,
   Zap,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 const INTERVIEW_TYPES: {
   value: PracticeInterviewType;
@@ -52,11 +55,75 @@ export default function PracticePage() {
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
   const [jobDescription, setJobDescription] = useState("");
-  const [showJobDescription, setShowJobDescription] = useState(false);
+  const [jobDescriptionUrl, setJobDescriptionUrl] = useState("");
+  const [jobDescriptionUrlWarning, setJobDescriptionUrlWarning] = useState("");
+  const [jdUrlLoading, setJdUrlLoading] = useState(false);
+  const [resumeText, setResumeText] = useState("");
+  const [resumeFileName, setResumeFileName] = useState("");
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeError, setResumeError] = useState("");
+  const [showContext, setShowContext] = useState(false);
   const [interviewType, setInterviewType] = useState<PracticeInterviewType>("BEHAVIORAL");
   const [durationMinutes, setDurationMinutes] = useState<PracticeDuration>(10);
 
+  const resumeFileRef = useRef<HTMLInputElement>(null);
   const isStarting = startPractice.isPending;
+
+  const extractText = useCallback(async (source: { file?: File; url?: string }) => {
+    const formData = new FormData();
+    if (source.file) formData.append("file", source.file);
+    if (source.url) formData.append("url", source.url);
+    const res = await fetch("/api/ai/extract-text", { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Extraction failed");
+    return data.text as string;
+  }, []);
+
+  const handleFetchJobUrl = useCallback(async () => {
+    const url = jobDescriptionUrl.trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) {
+      setJobDescriptionUrlWarning("Enter a valid URL starting with http:// or https://");
+      return;
+    }
+
+    setJdUrlLoading(true);
+    setJobDescriptionUrlWarning("");
+    try {
+      await extractText({ url });
+      setJobDescriptionUrlWarning("");
+    } catch (err) {
+      setJobDescriptionUrlWarning(
+        err instanceof Error
+          ? err.message
+          : "Could not load this URL. You can still start practice with your role and pasted description.",
+      );
+    } finally {
+      setJdUrlLoading(false);
+    }
+  }, [jobDescriptionUrl, extractText]);
+
+  const handleResumeFile = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setResumeLoading(true);
+      setResumeError("");
+      try {
+        const text = await extractText({ file });
+        setResumeText(text);
+        setResumeFileName(file.name);
+      } catch (err) {
+        setResumeError(err instanceof Error ? err.message : "Failed to extract resume text");
+        setResumeText("");
+        setResumeFileName("");
+      } finally {
+        setResumeLoading(false);
+        if (resumeFileRef.current) resumeFileRef.current.value = "";
+      }
+    },
+    [extractText],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,9 +134,22 @@ export default function PracticePage() {
         role: role.trim(),
         company: company.trim() || undefined,
         jobDescription: jobDescription.trim() || undefined,
+        jobDescriptionUrl: jobDescriptionUrl.trim() || undefined,
+        resumeText: resumeText.trim() || undefined,
+        resumeFileName: resumeFileName || undefined,
         interviewType,
         durationMinutes,
       });
+
+      if (result.warnings?.length) {
+        for (const message of result.warnings) {
+          toast({
+            title: "Note about your job posting link",
+            description: message,
+          });
+        }
+      }
+
       router.push(result.redirectUrl);
     } catch (error) {
       const message =
@@ -97,8 +177,8 @@ export default function PracticePage() {
         <CardHeader>
           <CardTitle className="text-lg">Interview setup</CardTitle>
           <CardDescription>
-            Parker will tailor spoken questions to your role and interview type. You may be asked
-            for microphone access when the session starts.
+            Parker will tailor spoken questions to your role, job posting, and resume when you
+            provide them. You may be asked for microphone access when the session starts.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,39 +209,135 @@ export default function PracticePage() {
             </div>
 
             <div className="space-y-2">
-              {!showJobDescription ? (
+              {!showContext ? (
                 <button
                   type="button"
                   className="flex items-center gap-1 text-sm font-medium text-[#3B6FF0] hover:underline"
-                  onClick={() => setShowJobDescription(true)}
+                  onClick={() => setShowContext(true)}
                   disabled={isStarting}
                 >
-                  Add job description (optional)
+                  Add job description or resume (optional)
                   <ChevronDown className="h-4 w-4" />
                 </button>
               ) : (
-                <>
+                <div className="space-y-4 rounded-lg border border-border p-4">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="jobDescription">Job Description</Label>
+                    <p className="text-sm font-medium text-foreground">
+                      Job context & resume
+                    </p>
                     <button
                       type="button"
                       className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowJobDescription(false)}
+                      onClick={() => setShowContext(false)}
                       disabled={isStarting}
                     >
                       Hide
                       <ChevronUp className="h-3 w-3" />
                     </button>
                   </div>
-                  <Textarea
-                    id="jobDescription"
-                    rows={5}
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                    placeholder="Paste the job description here for tailored questions..."
-                    disabled={isStarting}
-                  />
-                </>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="jobDescriptionUrl">Job posting URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="jobDescriptionUrl"
+                        type="url"
+                        value={jobDescriptionUrl}
+                        onChange={(e) => {
+                          setJobDescriptionUrl(e.target.value);
+                          setJobDescriptionUrlWarning("");
+                        }}
+                        placeholder="https://company.com/careers/role"
+                        disabled={isStarting || jdUrlLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="shrink-0"
+                        disabled={isStarting || jdUrlLoading || !jobDescriptionUrl.trim()}
+                        onClick={() => void handleFetchJobUrl()}
+                      >
+                        {jdUrlLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Link2 className="h-4 w-4" />
+                        )}
+                        <span className="sr-only">Test job URL</span>
+                      </Button>
+                    </div>
+                    {jobDescriptionUrlWarning && (
+                      <p className="text-xs text-amber-600">{jobDescriptionUrlWarning}</p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      We&apos;ll fetch the posting when you start practice. A failed link won&apos;t
+                      block you if your role is filled in.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="jobDescription">Pasted job description</Label>
+                    <Textarea
+                      id="jobDescription"
+                      rows={4}
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                      placeholder="Paste the job description here for tailored questions..."
+                      disabled={isStarting}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Resume (PDF, optional)</Label>
+                    <input
+                      ref={resumeFileRef}
+                      type="file"
+                      accept=".pdf,application/pdf"
+                      className="hidden"
+                      onChange={handleResumeFile}
+                      disabled={isStarting || resumeLoading}
+                    />
+                    {resumeLoading && (
+                      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Extracting resume…
+                      </p>
+                    )}
+                    {resumeText && !resumeLoading && (
+                      <div className="flex items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                        <FileText className="h-4 w-4 shrink-0 text-[#3B6FF0]" />
+                        <span className="min-w-0 flex-1 truncate">{resumeFileName}</span>
+                        <button
+                          type="button"
+                          className="text-muted-foreground hover:text-foreground"
+                          onClick={() => {
+                            setResumeText("");
+                            setResumeFileName("");
+                            setResumeError("");
+                          }}
+                          disabled={isStarting}
+                          aria-label="Remove resume"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
+                    {!resumeText && !resumeLoading && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        disabled={isStarting}
+                        onClick={() => resumeFileRef.current?.click()}
+                      >
+                        <FileText className="mr-2 h-4 w-4" />
+                        Upload resume (PDF)
+                      </Button>
+                    )}
+                    {resumeError && (
+                      <p className="text-xs text-destructive">{resumeError}</p>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -218,7 +394,7 @@ export default function PracticePage() {
                   );
                 })}
               </div>
-              </div>
+            </div>
 
             <div className="flex items-start gap-3 rounded-lg border border-[#3B6FF0]/20 bg-[#EEF2FF] px-4 py-3 text-sm text-[#1e3a8a]">
               <Mic className="mt-0.5 h-5 w-5 shrink-0 text-[#3B6FF0]" />

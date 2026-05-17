@@ -8,6 +8,7 @@ import {
   type PracticeDuration,
   type PracticeInterviewType,
 } from "@/lib/practice/constants";
+import { resolvePracticeJobDescription } from "@/lib/practice/job-description-context";
 import { getSessionOverallScore, type SessionScoreInsights } from "@/lib/session-score";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -18,6 +19,9 @@ const startInput = z.object({
   role: z.string().min(1),
   company: z.string().optional(),
   jobDescription: z.string().optional(),
+  jobDescriptionUrl: z.string().optional(),
+  resumeText: z.string().optional(),
+  resumeFileName: z.string().optional(),
   interviewType: z.enum([
     "BEHAVIORAL",
     "ROLE_SPECIFIC",
@@ -230,6 +234,14 @@ export const practiceRouter = router({
     const followUpDepth = practiceFollowUpDepth(duration);
     const interviewType = input.interviewType as PracticeInterviewType;
 
+    const { combined: jobDescriptionForAi, urlFetchFailed } =
+      await resolvePracticeJobDescription({
+        pastedJobDescription: input.jobDescription,
+        jobDescriptionUrl: input.jobDescriptionUrl?.trim() || undefined,
+      });
+
+    const resumeText = input.resumeText?.trim() || undefined;
+
     const generatorDescription = buildPracticeGeneratorDescription({
       role: input.role,
       company: input.company,
@@ -240,7 +252,8 @@ export const practiceRouter = router({
     const generated = await generateInterviewFromDescription(generatorDescription, {
       durationMinutes: duration,
       language: "en",
-      jobDescription: input.jobDescription,
+      jobDescription: jobDescriptionForAi,
+      resumeText,
     });
 
     const roleTitle = input.role.trim();
@@ -251,9 +264,7 @@ export const practiceRouter = router({
       `Role: ${roleTitle}.`,
       input.company?.trim() ? `Company/industry: ${input.company.trim()}.` : "",
       `Interview type: ${typeLabel}.`,
-      input.jobDescription?.trim()
-        ? `\n\nJob description:\n${input.jobDescription.trim()}`
-        : "",
+      jobDescriptionForAi ? `\n\nJob description:\n${jobDescriptionForAi}` : "",
     ]
       .filter(Boolean)
       .join(" ");
@@ -378,10 +389,34 @@ export const practiceRouter = router({
 
     const session = sessionJson as { id: string };
 
+    const participantMetadata: Record<string, string> = {
+      source: "practice",
+      role: roleTitle,
+    };
+    const companyTrimmed = input.company?.trim();
+    if (companyTrimmed) participantMetadata.company = companyTrimmed;
+    const jdUrl = input.jobDescriptionUrl?.trim();
+    if (jdUrl) participantMetadata.jobDescriptionUrl = jdUrl;
+    const resumeFileName = input.resumeFileName?.trim();
+    if (resumeFileName) participantMetadata.resumeFileName = resumeFileName;
+
+    await ctx.supabase
+      .from("sessions")
+      .update({ participantMetadata })
+      .eq("id", session.id);
+
+    const warnings: string[] = [];
+    if (urlFetchFailed) {
+      warnings.push(
+        "We could not load text from the job posting URL. Your interview was created using your role and any pasted job description.",
+      );
+    }
+
     return {
       sessionId: session.id,
       slug,
       redirectUrl: `/i/${slug}/session?sid=${session.id}`,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   }),
 
