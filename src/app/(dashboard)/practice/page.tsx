@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { PracticeDuration, PracticeInterviewType } from "@/lib/practice/constants";
+import {
+  jobPostingFetchErrorMessage,
+  validateJobPostingExtractedText,
+} from "@/lib/practice/validate-job-posting-text";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -47,6 +51,8 @@ const DURATIONS: {
   { value: 15, label: "15 min", questions: 7 },
 ];
 
+type JobUrlFetchStatus = "idle" | "loading" | "success" | "error";
+
 export default function PracticePage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -56,8 +62,8 @@ export default function PracticePage() {
   const [company, setCompany] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [jobDescriptionUrl, setJobDescriptionUrl] = useState("");
-  const [jobDescriptionUrlWarning, setJobDescriptionUrlWarning] = useState("");
-  const [jdUrlLoading, setJdUrlLoading] = useState(false);
+  const [jobUrlFetchStatus, setJobUrlFetchStatus] = useState<JobUrlFetchStatus>("idle");
+  const [jobUrlFetchMessage, setJobUrlFetchMessage] = useState("");
   const [resumeText, setResumeText] = useState("");
   const [resumeFileName, setResumeFileName] = useState("");
   const [resumeLoading, setResumeLoading] = useState(false);
@@ -68,6 +74,7 @@ export default function PracticePage() {
 
   const resumeFileRef = useRef<HTMLInputElement>(null);
   const isStarting = startPractice.isPending;
+  const isFetchingJobUrl = jobUrlFetchStatus === "loading";
 
   const extractText = useCallback(async (source: { file?: File; url?: string }) => {
     const formData = new FormData();
@@ -83,23 +90,31 @@ export default function PracticePage() {
     const url = jobDescriptionUrl.trim();
     if (!url) return;
     if (!/^https?:\/\//i.test(url)) {
-      setJobDescriptionUrlWarning("Enter a valid URL starting with http:// or https://");
+      setJobUrlFetchStatus("error");
+      setJobUrlFetchMessage("Enter a valid URL starting with http:// or https://");
       return;
     }
 
-    setJdUrlLoading(true);
-    setJobDescriptionUrlWarning("");
+    setJobUrlFetchStatus("loading");
+    setJobUrlFetchMessage("Fetching job post…");
     try {
-      await extractText({ url });
-      setJobDescriptionUrlWarning("");
-    } catch (err) {
-      setJobDescriptionUrlWarning(
-        err instanceof Error
-          ? err.message
-          : "Could not load this URL. You can still start practice with your role and pasted description.",
+      const text = await extractText({ url });
+      const validation = validateJobPostingExtractedText(text);
+      if (!validation.ok) {
+        setJobUrlFetchStatus("error");
+        setJobUrlFetchMessage(jobPostingFetchErrorMessage(url));
+        return;
+      }
+
+      setJobDescription(text);
+      const charCount = text.trim().length;
+      setJobUrlFetchStatus("success");
+      setJobUrlFetchMessage(
+        `Job post loaded. Loaded ${charCount.toLocaleString()} characters from job post.`,
       );
-    } finally {
-      setJdUrlLoading(false);
+    } catch {
+      setJobUrlFetchStatus("error");
+      setJobUrlFetchMessage(jobPostingFetchErrorMessage(url));
     }
   }, [jobDescriptionUrl, extractText]);
 
@@ -127,7 +142,19 @@ export default function PracticePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!role.trim() || isStarting) return;
+    if (isStarting) return;
+
+    if (!role.trim()) {
+      toast({
+        title: "Role title needed",
+        description:
+          jobDescription.trim()
+            ? "Enter a role title to start practice. Your pasted job description will still be used."
+            : "Enter a role title, or add a job description under optional context.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       const result = await startPractice.mutateAsync({
@@ -245,32 +272,51 @@ export default function PracticePage() {
                         value={jobDescriptionUrl}
                         onChange={(e) => {
                           setJobDescriptionUrl(e.target.value);
-                          setJobDescriptionUrlWarning("");
+                          if (!isFetchingJobUrl) {
+                            setJobUrlFetchStatus("idle");
+                            setJobUrlFetchMessage("");
+                          }
                         }}
                         placeholder="https://company.com/careers/role"
-                        disabled={isStarting || jdUrlLoading}
+                        disabled={isStarting || isFetchingJobUrl}
                       />
                       <Button
                         type="button"
                         variant="outline"
                         className="shrink-0"
-                        disabled={isStarting || jdUrlLoading || !jobDescriptionUrl.trim()}
+                        disabled={
+                          isStarting || isFetchingJobUrl || !jobDescriptionUrl.trim()
+                        }
                         onClick={() => void handleFetchJobUrl()}
+                        aria-label="Fetch job posting"
                       >
-                        {jdUrlLoading ? (
+                        {isFetchingJobUrl ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <Link2 className="h-4 w-4" />
                         )}
-                        <span className="sr-only">Test job URL</span>
                       </Button>
                     </div>
-                    {jobDescriptionUrlWarning && (
-                      <p className="text-xs text-amber-600">{jobDescriptionUrlWarning}</p>
+                    {jobUrlFetchStatus !== "idle" && jobUrlFetchMessage && (
+                      <p
+                        role="status"
+                        className={cn(
+                          "text-xs",
+                          jobUrlFetchStatus === "loading" &&
+                            "flex items-center gap-1.5 text-muted-foreground",
+                          jobUrlFetchStatus === "success" && "text-green-700 dark:text-green-400",
+                          jobUrlFetchStatus === "error" && "text-amber-600 dark:text-amber-500",
+                        )}
+                      >
+                        {jobUrlFetchStatus === "loading" && (
+                          <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                        )}
+                        {jobUrlFetchMessage}
+                      </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      We&apos;ll fetch the posting when you start practice. A failed link won&apos;t
-                      block you if your role is filled in.
+                      Fetch loads the posting into the field below. A failed link won&apos;t block
+                      you if you enter a role or paste the description.
                     </p>
                   </div>
 

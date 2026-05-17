@@ -1,4 +1,5 @@
 import { extractTextFromUrl } from "@/lib/ai/extract-document-text";
+import { validateJobPostingExtractedText } from "@/lib/practice/validate-job-posting-text";
 
 export type PracticeJobDescriptionInput = {
   pastedJobDescription?: string;
@@ -33,7 +34,13 @@ export async function resolvePracticeJobDescription(
   const url = input.jobDescriptionUrl?.trim();
   if (url) {
     try {
-      urlText = await extractTextFromUrl(url);
+      const extracted = await extractTextFromUrl(url);
+      const validation = validateJobPostingExtractedText(extracted);
+      if (validation.ok) {
+        urlText = extracted;
+      } else {
+        urlFetchFailed = true;
+      }
     } catch {
       urlFetchFailed = true;
     }
