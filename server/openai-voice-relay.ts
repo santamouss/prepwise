@@ -44,7 +44,11 @@ import {
   readTranscriptCommitThresholds,
   readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
+  isAllowedMockResponseCreateReason,
+  MOCK_ANSWER_COMPLETION_REASON,
   shouldBlockMockAutoResponse,
+  shouldBlockMockTranscriptCommit,
+  shouldBlockResponseCreateHard,
   shouldBlockVoiceResponseCreate,
   shouldDeferFlush,
   shouldDeferPreFlush,
@@ -993,15 +997,28 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     );
   }
 
+  function deferMockAnswerCompletionFromFlush() {
+    if (ctx.practiceMode === "coach") return;
+    if (bestAvailableTranscript()) {
+      scheduleMockAnswerCompletion("flush deferred");
+    }
+  }
+
   function flushUserInput() {
     if (pendingInputFlush) { clearTimeout(pendingInputFlush); pendingInputFlush = null; }
+
+    if (ctx.practiceMode !== "coach") {
+      if (vadSpeechActive) {
+        log.info("[voice-pipeline] flush deferred because userSpeaking=true");
+      }
+      deferMockAnswerCompletionFromFlush();
+      return;
+    }
+
     const now = Date.now();
     if (shouldDeferFlush({ ...getVoicePipelineBlockInput(now), userSpeaking: vadSpeechActive })) {
       if (vadSpeechActive) {
         log.info("[voice-pipeline] flush deferred because userSpeaking=true");
-      }
-      if (ctx.practiceMode !== "coach" && bestAvailableTranscript()) {
-        scheduleMockAnswerCompletion("flush deferred");
       }
       return;
     }
@@ -1012,6 +1029,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function scheduleInputFlush() {
+    if (ctx.practiceMode !== "coach") return;
     if (vadSpeechActive) return;
     if (pendingInputFlush) clearTimeout(pendingInputFlush);
     pendingInputFlush = setTimeout(() => {
@@ -1179,13 +1197,36 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return;
     }
     if (!isExemptFromUserSpeechBlock(reason)) {
-      const block = shouldBlockVoiceResponseCreate(getVoicePipelineBlockInput());
-      if (block.block) {
-        log.info(`[voice-pipeline] response.create blocked because ${block.reason}`);
+      const blockInput = getVoicePipelineBlockInput();
+      const hardBlock = shouldBlockResponseCreateHard(blockInput);
+      if (hardBlock.block) {
+        log.info(
+          `[voice-pipeline] response.create blocked: ${hardBlock.reason} reason=${reason}`,
+        );
         logVoicePipelineState(`blocked (${reason})`);
-        if (ctx.practiceMode !== "coach") {
-          scheduleMockAnswerCompletion(`blocked response.create (${reason})`);
-        }
+        deferMockAnswerCompletionFromFlush();
+        return;
+      }
+
+      if (
+        ctx.practiceMode !== "coach" &&
+        !isAllowedMockResponseCreateReason(reason)
+      ) {
+        log.info(
+          `[voice-pipeline] response.create blocked: mock requires timer reason=${reason}`,
+        );
+        logVoicePipelineState(`blocked (${reason})`);
+        deferMockAnswerCompletionFromFlush();
+        return;
+      }
+
+      const block = shouldBlockVoiceResponseCreate(blockInput);
+      if (block.block) {
+        log.info(
+          `[voice-pipeline] response.create blocked: ${block.reason} reason=${reason}`,
+        );
+        logVoicePipelineState(`blocked (${reason})`);
+        deferMockAnswerCompletionFromFlush();
         return;
       }
     }
@@ -1323,6 +1364,15 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         "[SYSTEM] The participant just said they are done with the coding/whiteboard task. Do NOT stay silent. Acknowledge briefly, then ask them to walk through their solution, including key tradeoffs and complexity.",
       );
     }
+    if (
+      ctx.practiceMode !== "coach" &&
+      !isAllowedMockResponseCreateReason(reason)
+    ) {
+      log.info(
+        `[voice-pipeline] mock committed text ignored for response (${reason})`,
+      );
+      return false;
+    }
     requestAssistantResponse(reason);
     return false;
   }
@@ -1379,9 +1429,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         return;
       }
 
-      log.info(`[voice-pipeline] mock timer fired with userSpeaking=false (${reason})`);
-      logVoicePipelineState(`mock auto-response fired (${reason})`);
-      finalizeUserTurn(`mock auto-response (${reason})`);
+      log.info(
+        `[voice-pipeline] mock timer fired with userSpeaking=false (${MOCK_ANSWER_COMPLETION_REASON})`,
+      );
+      logVoicePipelineState(`mock auto-response fired (${MOCK_ANSWER_COMPLETION_REASON})`);
+      finalizeUserTurn(MOCK_ANSWER_COMPLETION_REASON);
     }, delayMs);
   }
 
@@ -1426,9 +1478,18 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     clearSpeechFinalizeTimer();
     if (speechTranscriptCommitted) return "";
 
-    if (
+    const blockInput = getVoicePipelineBlockInput();
+    if (ctx.practiceMode !== "coach") {
+      if (shouldBlockMockTranscriptCommit(reason, blockInput)) {
+        if (vadSpeechActive && (reason === "flush" || reason === "response pre-flush")) {
+          log.info(`[voice-pipeline] commit deferred (${reason}) because userSpeaking=true`);
+        }
+        deferMockAnswerCompletionFromFlush();
+        return "";
+      }
+    } else if (
       (reason === "flush" || reason === "response pre-flush") &&
-      shouldDeferFlush({ ...getVoicePipelineBlockInput(), userSpeaking: vadSpeechActive })
+      shouldDeferFlush({ ...blockInput, userSpeaking: vadSpeechActive })
     ) {
       if (vadSpeechActive) {
         log.info(`[voice-pipeline] commit deferred (${reason}) because userSpeaking=true`);
@@ -1490,7 +1551,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return "";
     }
 
-    if (wantsResponse && ctx.practiceMode !== "coach") {
+    if (ctx.practiceMode !== "coach") {
+      if (reason !== MOCK_ANSWER_COMPLETION_REASON) {
+        scheduleMockAnswerCompletion(`${reason} deferred`);
+        return "";
+      }
       const block = shouldBlockMockAutoResponse(getVoicePipelineBlockInput());
       if (block.block) {
         log.info(`[voice-pipeline] finalize deferred (${reason}) because ${block.reason}`);
@@ -1533,7 +1598,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     if (userText && !volcAsrPreFlushed) {
       if (USE_VOLC_ASR_PRIMARY) {
         log.info(`${logLabel}: ${JSON.stringify(userText)}`);
-        finalizeUserTurn(reason);
+        if (ctx.practiceMode !== "coach") {
+          scheduleMockAnswerCompletion(reason);
+        } else {
+          finalizeUserTurn(reason);
+        }
       } else {
         log.debug(`${logLabel} (interim-only): ${JSON.stringify(userText)}`);
         noteTranscriptUpdate();
@@ -1627,6 +1696,19 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function flushPendingUserTurnBeforeAssistant() {
+    if (ctx.practiceMode !== "coach") {
+      const pendingUserText = bestAvailableTranscript();
+      if (pendingUserText && !speechTranscriptCommitted) {
+        if (vadSpeechActive) {
+          log.info(
+            `[voice-pipeline] ASR pre-flush deferred: userSpeaking=${vadSpeechActive} pending=${JSON.stringify(pendingUserText)}`,
+          );
+        }
+        scheduleMockAnswerCompletion("response pre-flush deferred");
+      }
+      return;
+    }
+
     const now = Date.now();
     const pendingUserText = bestAvailableTranscript();
     if (
@@ -1657,11 +1739,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         finalizeUserTurn("response pre-flush");
       } else {
         log.info(`ASR pre-flush deferred (transcript unstable): ${JSON.stringify(pendingUserText)}`);
-        if (ctx.practiceMode === "coach") {
-          scheduleSpeechFinalize("response pre-flush", USER_TRANSCRIPT_STABILITY_MS);
-        } else {
-          scheduleMockAnswerCompletion("response pre-flush deferred");
-        }
+        scheduleSpeechFinalize("response pre-flush", USER_TRANSCRIPT_STABILITY_MS);
       }
       return;
     }
@@ -1942,9 +2020,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       (now - lastOaiActivity) >= STALL_AFTER_COMMIT_MS
     ) {
       log.warn(
-        `[voice-stall] Substantive answer waiting ${Math.round((now - lastVadSpeechEnd) / 1000)}s after speech stopped — requesting response`,
+        `[voice-stall] Substantive answer waiting ${Math.round((now - lastVadSpeechEnd) / 1000)}s after speech stopped — scheduling mock response`,
       );
-      finalizeUserTurn("stall recovery after speech stop");
+      scheduleMockAnswerCompletion("stall recovery after speech stop");
       return;
     }
 
@@ -2200,9 +2278,17 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
             if (hadTts && responseTtsBytes > 0) {
               // Flush any pending user text BEFORE committing agent text
               // so the transcript order matches the conversation order.
-              flushPendingUserTurnBeforeAssistant();
-              if (inputTranscriptBuffer) {
-                flushUserInput();
+              if (ctx.practiceMode === "coach") {
+                flushPendingUserTurnBeforeAssistant();
+                if (inputTranscriptBuffer) {
+                  flushUserInput();
+                }
+              } else if (
+                !speechTranscriptCommitted &&
+                bestAvailableTranscript() &&
+                !vadSpeechActive
+              ) {
+                scheduleMockAnswerCompletion("after assistant turn");
               }
               if (capturedModelText) {
                 log.info(`[voice-pipeline] response.done / TTS done (${responseTtsBytes}B sent)`);

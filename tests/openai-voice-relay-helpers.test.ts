@@ -5,8 +5,12 @@ import {
   buildRealtimeConversationCreateEvent,
   buildRealtimeTextContent,
   DEFAULT_MOCK_ANSWER_COMPLETION_MS,
+  isAllowedMockResponseCreateReason,
   isFillerOnlyTranscript,
+  MOCK_ANSWER_COMPLETION_REASON,
   isStrictFastNextRequest,
+  shouldBlockMockTranscriptCommit,
+  shouldBlockResponseCreateHard,
   isSubstantiveTranscript,
   isWithinFragmentMergeWindow,
   readTranscriptCommitThresholds,
@@ -151,6 +155,25 @@ test("shouldDeferFlush when user is speaking", () => {
   );
 });
 
+test("mock flush path blocks commit and response while user is speaking", () => {
+  const now = 10_000;
+  const input = {
+    userSpeaking: true,
+    lastSpeechStartedAt: 9_500,
+    lastSpeechStoppedAt: 8_000,
+    nowMs: now,
+    hasPendingTranscript: true,
+    transcriptStabilizing: true,
+  };
+  assert.equal(shouldBlockMockTranscriptCommit("flush", input), true);
+  assert.equal(shouldBlockResponseCreateHard(input).reason, "userSpeaking=true");
+  assert.equal(isAllowedMockResponseCreateReason("flush"), false);
+  assert.equal(
+    isAllowedMockResponseCreateReason(MOCK_ANSWER_COMPLETION_REASON),
+    true,
+  );
+});
+
 test("shouldBlockVoiceResponseCreate when user is speaking or pending transcript", () => {
   const now = 10_000;
   const base = {
@@ -192,6 +215,21 @@ test("shouldBlockVoiceResponseCreate when user is speaking or pending transcript
       hasPendingTranscript: false,
       lastSpeechStartedAt: 8_500,
       lastSpeechStoppedAt: 8_000,
+    }).reason,
+    "speech resumed after last stop",
+  );
+});
+
+test("shouldBlockResponseCreateHard blocks speech resumed after stop", () => {
+  const now = 12_000;
+  assert.equal(
+    shouldBlockResponseCreateHard({
+      userSpeaking: false,
+      lastSpeechStartedAt: 8_500,
+      lastSpeechStoppedAt: 8_000,
+      nowMs: now,
+      hasPendingTranscript: false,
+      transcriptStabilizing: false,
     }).reason,
     "speech resumed after last stop",
   );

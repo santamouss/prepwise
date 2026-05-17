@@ -65,8 +65,9 @@ export const DEFAULT_MIN_COMMIT_WORDS = 8;
 export const DEFAULT_MIN_COMMIT_CHARS = 40;
 export const DEFAULT_FRAGMENT_MERGE_MS = 4000;
 export const DEFAULT_COACH_FRAGMENT_MERGE_MS = 5000;
-export const DEFAULT_SPEECH_STARTED_RECENT_MS = 2500;
-export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 2500;
+export const MOCK_ANSWER_COMPLETION_REASON = "mock answer completion";
+export const DEFAULT_SPEECH_STARTED_RECENT_MS = 3000;
+export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 3000;
 export const DEFAULT_STRICT_NAV_MAX_WORDS = 6;
 
 export interface TranscriptCommitThresholds {
@@ -267,8 +268,8 @@ export function isSpeechResumedAfterStop(
   );
 }
 
-/** Blocks response.create while the user may still be answering. */
-export function shouldBlockVoiceResponseCreate(
+/** Hard guard: never response.create while user may still be answering. */
+export function shouldBlockResponseCreateHard(
   input: ResponseCreateBlockInput,
 ): { block: boolean; reason?: string } {
   if (input.userSpeaking) {
@@ -287,10 +288,40 @@ export function shouldBlockVoiceResponseCreate(
   if (input.transcriptStabilizing) {
     return { block: true, reason: "ASR still stabilizing" };
   }
+  return { block: false };
+}
+
+/** Blocks response.create while the user may still be answering. */
+export function shouldBlockVoiceResponseCreate(
+  input: ResponseCreateBlockInput,
+): { block: boolean; reason?: string } {
+  const hard = shouldBlockResponseCreateHard(input);
+  if (hard.block) return hard;
   if (input.hasPendingTranscript) {
     return { block: true, reason: "pending user transcript" };
   }
   return { block: false };
+}
+
+export function isAllowedMockResponseCreateReason(reason: string): boolean {
+  return reason === MOCK_ANSWER_COMPLETION_REASON;
+}
+
+/** Mock interviews must not commit transcripts from debounced flush / pre-flush paths. */
+export function shouldBlockMockTranscriptCommit(
+  reason: string,
+  input: ResponseCreateBlockInput,
+): boolean {
+  if (reason === "flush" || reason === "response pre-flush") {
+    return true;
+  }
+  if (input.userSpeaking) {
+    return true;
+  }
+  if (reason !== MOCK_ANSWER_COMPLETION_REASON) {
+    return shouldBlockResponseCreateHard(input).block;
+  }
+  return false;
 }
 
 /** Blocks mock auto-response timer until silence is stable (pending transcript allowed). */
