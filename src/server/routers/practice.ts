@@ -9,6 +9,9 @@ import {
   type PracticeInterviewType,
 } from "@/lib/practice/constants";
 import { resolvePracticeJobDescription } from "@/lib/practice/job-description-context";
+import { PRACTICE_LIMIT_EXCEEDED_MESSAGE } from "@/lib/practice/usage/constants";
+import { getPracticeMonthlyUsage } from "@/lib/practice/usage/get-usage";
+import { canStartPracticeSession } from "@/lib/practice/usage/limits";
 import { getSessionOverallScore, type SessionScoreInsights } from "@/lib/session-score";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -52,7 +55,7 @@ type PracticeSessionRow = {
 async function assertCandidateProfile(supabase: Context["supabase"], userId: string) {
   const { data: profile } = await supabase
     .from("profiles")
-    .select("user_type, email, name")
+    .select("user_type, email, name, practicePlan")
     .eq("id", userId)
     .single();
 
@@ -70,7 +73,12 @@ async function assertCandidateProfile(supabase: Context["supabase"], userId: str
     });
   }
 
-  return profile as { user_type: "candidate"; email: string; name: string | null };
+  return profile as {
+    user_type: "candidate";
+    email: string;
+    name: string | null;
+    practicePlan: string | null;
+  };
 }
 
 async function resolveDefaultProjectId(
@@ -225,8 +233,22 @@ function collectTopThemes(sessions: PracticeSessionRow[], limit: number): string
 }
 
 export const practiceRouter = router({
+  getMonthlyUsage: protectedProcedure.query(async ({ ctx }) => {
+    const profile = await assertCandidateProfile(ctx.supabase, ctx.user.id);
+    return getPracticeMonthlyUsage(ctx.user.id, profile.practicePlan);
+  }),
+
   start: protectedProcedure.input(startInput).mutation(async ({ ctx, input }) => {
     const profile = await assertCandidateProfile(ctx.supabase, ctx.user.id);
+
+    const usage = await getPracticeMonthlyUsage(ctx.user.id, profile.practicePlan);
+    if (!canStartPracticeSession(usage)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: PRACTICE_LIMIT_EXCEEDED_MESSAGE,
+      });
+    }
+
     const projectId = await resolveDefaultProjectId(ctx.supabase, ctx.user.id);
 
     const duration = input.durationMinutes as PracticeDuration;

@@ -26,6 +26,7 @@ export type Database = {
           organization: string | null;
           role: Database["public"]["Enums"]["UserRole"];
           user_type: "candidate" | "recruiter" | null;
+          practicePlan: "free" | "starter" | "pro";
           createdAt: string;
           updatedAt: string;
         };
@@ -37,6 +38,7 @@ export type Database = {
           organization?: string | null;
           role?: Database["public"]["Enums"]["UserRole"];
           user_type?: "candidate" | "recruiter" | null;
+          practicePlan?: "free" | "starter" | "pro";
           createdAt?: string;
           updatedAt?: string;
         };
@@ -48,8 +50,45 @@ export type Database = {
           organization?: string | null;
           role?: Database["public"]["Enums"]["UserRole"];
           user_type?: "candidate" | "recruiter" | null;
+          practicePlan?: "free" | "starter" | "pro";
           createdAt?: string;
           updatedAt?: string;
+        };
+        Relationships: [];
+      };
+      usage_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          session_id: string | null;
+          event_type: string;
+          billing_period_start: string;
+          billing_period_end: string;
+          quantity: number;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          session_id?: string | null;
+          event_type: string;
+          billing_period_start: string;
+          billing_period_end: string;
+          quantity?: number;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          session_id?: string | null;
+          event_type?: string;
+          billing_period_start?: string;
+          billing_period_end?: string;
+          quantity?: number;
+          metadata?: Json;
+          created_at?: string;
         };
         Relationships: [];
       };

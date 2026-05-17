@@ -10,6 +10,7 @@ import {
   formatSessionDate,
   formatTotalPracticeTime,
 } from "@/lib/practice/format";
+import { formatPracticeUsageSummary } from "@/lib/practice/format-usage";
 import { trpc } from "@/lib/trpc/client";
 import { ArrowRight, Clock, Mic, Star, Target, Trophy } from "lucide-react";
 import Link from "next/link";
@@ -17,6 +18,7 @@ import Link from "next/link";
 export function CandidateDashboard() {
   const { profile } = useAuth();
   const { data, isLoading } = trpc.practice.getProgress.useQuery();
+  const { data: monthlyUsage } = trpc.practice.getMonthlyUsage.useQuery();
 
   const firstName =
     profile?.name?.trim().split(/\s+/)[0] ||
@@ -58,6 +60,11 @@ export function CandidateDashboard() {
         <p className="mt-1 text-sm text-muted-foreground">
           Ready to practice? Parker is here when you are.
         </p>
+        {monthlyUsage && (
+          <p className="mt-2 text-sm font-medium text-foreground">
+            {formatPracticeUsageSummary(monthlyUsage)}
+          </p>
+        )}
       </div>
 
       <Card className="overflow-hidden border-0 bg-[#3B6FF0] text-white shadow-md">

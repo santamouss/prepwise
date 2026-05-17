@@ -8,6 +8,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { PracticeDuration, PracticeInterviewType } from "@/lib/practice/constants";
 import {
+  formatPracticeRemaining,
+  formatPracticeUsageSummary,
+} from "@/lib/practice/format-usage";
+import {
   jobPostingFetchErrorMessage,
   validateJobPostingExtractedText,
 } from "@/lib/practice/validate-job-posting-text";
@@ -57,6 +61,7 @@ export default function PracticePage() {
   const router = useRouter();
   const { toast } = useToast();
   const startPractice = trpc.practice.start.useMutation();
+  const { data: monthlyUsage } = trpc.practice.getMonthlyUsage.useQuery();
 
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
@@ -75,6 +80,13 @@ export default function PracticePage() {
   const resumeFileRef = useRef<HTMLInputElement>(null);
   const isStarting = startPractice.isPending;
   const isFetchingJobUrl = jobUrlFetchStatus === "loading";
+  const atMonthlyLimit =
+    monthlyUsage != null &&
+    !monthlyUsage.isUnlimited &&
+    monthlyUsage.remaining === 0;
+  const remainingLabel = monthlyUsage
+    ? formatPracticeRemaining(monthlyUsage)
+    : null;
 
   const extractText = useCallback(async (source: { file?: File; url?: string }) => {
     const formData = new FormData();
@@ -198,6 +210,21 @@ export default function PracticePage() {
         <p className="mt-1 text-sm text-muted-foreground">
           Set up a voice mock interview and practice speaking with Parker
         </p>
+        {monthlyUsage && (
+          <p className="mt-2 text-sm font-medium text-foreground">
+            {formatPracticeUsageSummary(monthlyUsage)}
+          </p>
+        )}
+        {remainingLabel && (
+          <p
+            className={cn(
+              "mt-1 text-sm",
+              atMonthlyLimit ? "text-amber-600" : "text-muted-foreground",
+            )}
+          >
+            {remainingLabel}
+          </p>
+        )}
       </div>
 
       <Card>
@@ -453,7 +480,7 @@ export default function PracticePage() {
             <Button
               type="submit"
               className="w-full bg-[#3B6FF0] hover:bg-[#3B6FF0]/90"
-              disabled={isStarting || !role.trim()}
+              disabled={isStarting || !role.trim() || atMonthlyLimit}
             >
               {isStarting ? (
                 <>

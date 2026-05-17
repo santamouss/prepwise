@@ -1,5 +1,6 @@
 import { generateSessionSummary } from "@/lib/ai/generate-session-summary";
 import { createLogger } from "@/lib/logger";
+import { recordPracticeUsageIfCountable } from "@/lib/practice/usage/record-usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { handleVoiceSave, type CompletionSession, type ProgressSession, type VoiceSaveOps, type VoiceSavePayload } from "./logic";
@@ -83,5 +84,12 @@ const voiceSaveOps: VoiceSaveOps = {
 export async function POST(req: Request) {
   const payload = (await req.json()) as VoiceSavePayload;
   const result = await handleVoiceSave(payload, voiceSaveOps);
+
+  if (result.status === 200 && payload.complete && payload.sessionId) {
+    void recordPracticeUsageIfCountable(payload.sessionId).catch((err) => {
+      log.error("Practice usage recording after voice save failed:", err);
+    });
+  }
+
   return NextResponse.json(result.body, { status: result.status });
 }

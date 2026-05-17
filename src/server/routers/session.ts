@@ -1,4 +1,5 @@
 import { triggerSessionSummaryIfNeeded } from "@/lib/ai/generate-session-summary";
+import { recordPracticeUsageIfCountable } from "@/lib/practice/usage/record-usage";
 import { createLogger } from "@/lib/logger";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
@@ -515,6 +516,10 @@ export const sessionRouter = router({
 
       void triggerSessionSummaryIfNeeded(input.id).catch((err) => {
         log.error("Background summary after session.complete failed:", err);
+      });
+
+      void recordPracticeUsageIfCountable(input.id).catch((err) => {
+        log.error("Practice usage recording after session.complete failed:", err);
       });
 
       return { success: true };
