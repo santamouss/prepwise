@@ -10,6 +10,7 @@ import { PreparingScreen } from "@/components/session/preparing-screen";
 import { SessionCompletionScreen } from "@/components/session/session-completion-screen";
 import type { InterviewContext } from "@/hooks/use-voice";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
+import { getPracticeMode } from "@/lib/practice/practice-mode";
 import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
 import { trpc } from "@/lib/trpc/client";
 import dynamic from "next/dynamic";
@@ -199,6 +200,7 @@ export default function SlugSessionPage() {
   }
 
   if (useVoice) {
+    const practiceMode = isPractice ? getPracticeMode(interview.data) : undefined;
     const interviewContext = {
       title: interview.data.title,
       objective: interview.data.objective,
@@ -206,6 +208,7 @@ export default function SlugSessionPage() {
       aiTone: interview.data.aiTone,
       language: interview.data.language,
       followUpDepth: interview.data.followUpDepth,
+      ...(practiceMode ? { practiceMode } : {}),
       startQuestionIndex: isResuming ? resumeQuestionIndex : undefined,
       questions: interview.data.questions.map((q: any) => ({
         text: q.text,

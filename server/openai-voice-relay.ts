@@ -19,6 +19,7 @@ import {
   buildBigModelHeaders,
   parseAsrResponse,
 } from "./volcengine-asr";
+import { applyPracticeModeToVoicePrompt } from "../src/lib/practice/coach-mode-prompt";
 import {
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_BYTES,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_MS,
@@ -398,6 +399,7 @@ interface InterviewContext {
   aiTone: string;
   language: string;
   followUpDepth: string;
+  practiceMode?: "mock" | "coach";
   startQuestionIndex?: number;
   questions: Array<{
     text: string;
@@ -478,7 +480,7 @@ function buildSystemPrompt(ctx: InterviewContext, startIdx: number): string {
   const currentQ = startIdx + 1;
 
   if (isZh) {
-    return `你是"${ctx.aiName}"，一位${ctx.aiTone}的AI面试官。
+    return applyPracticeModeToVoicePrompt(`你是"${ctx.aiName}"，一位${ctx.aiTone}的AI面试官。
 
 ## 面试信息
 - 主题: "${ctx.title}"
@@ -527,10 +529,10 @@ ${questionList}
 - 如果受访者只是简单打招呼、确认性问题或模糊回答（如"你好"、"能听到吗?"、"我遇到过很多挑战"），先友好回应，再继续当前问题；不要调用 signal_question_change。这些不是实质性回答。必须等受访者给出详细、具体的回答后再切换。如果回答太简短或模糊，应追问以获取更多信息。
 - 始终关注当前问题，不要跳到其他话题。
 - 对于选择题，确保受访者给出选择并解释理由。
-- 当受访者让你看白板时，描述你看到的内容并给出反馈。不要在收到图片更新时自动开口说话。`;
+- 当受访者让你看白板时，描述你看到的内容并给出反馈。不要在收到图片更新时自动开口说话。`, ctx.practiceMode);
   }
 
-  return `You are "${ctx.aiName}", a ${ctx.aiTone} AI interviewer.
+  return applyPracticeModeToVoicePrompt(`You are "${ctx.aiName}", a ${ctx.aiTone} AI interviewer.
 
 ## Interview Details
 - Topic: "${ctx.title}"
@@ -579,7 +581,7 @@ When transitioning to a CODING or WHITEBOARD question:
 - Do NOT call signal_question_change if the participant has only said a brief greeting, clarifying remark, or vague statement (e.g. "hi", "can you hear me?", "I had many challenges"). First respond warmly and helpfully, then continue the current question. These are NOT substantive answers. You MUST wait for a detailed, specific response that actually addresses the question before moving on. If their answer is too brief or vague, probe deeper.
 - Stay focused on the current question. Do not jump to unrelated topics.
 - For choice questions, ensure the participant both selects an option AND explains their reasoning.
-- When the participant asks you to look at the whiteboard, describe what you see and give feedback. Do NOT automatically start speaking when you receive a whiteboard image update — wait for the participant to address you.`;
+- When the participant asks you to look at the whiteboard, describe what you see and give feedback. Do NOT automatically start speaking when you receive a whiteboard image update — wait for the participant to address you.`, ctx.practiceMode);
 }
 
 // ── OpenAI tool definitions ─────────────────────────────────────────

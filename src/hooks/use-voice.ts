@@ -24,6 +24,7 @@ export interface InterviewContext {
   aiTone: string;
   language: string;
   followUpDepth: string;
+  practiceMode?: "mock" | "coach";
   startQuestionIndex?: number;
   questions: Array<{
     text: string;

@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { PracticeDuration, PracticeInterviewType } from "@/lib/practice/constants";
+import type { PracticeMode } from "@/lib/practice/practice-mode";
 import {
   formatPracticeRemaining,
   formatPracticeUsageSummary,
@@ -45,6 +46,23 @@ const INTERVIEW_TYPES: {
   { value: "LEADERSHIP", label: "Leadership", icon: Users },
 ];
 
+const PRACTICE_STYLES: {
+  value: PracticeMode;
+  label: string;
+  helper: string;
+}[] = [
+  {
+    value: "mock",
+    label: "Mock Interview",
+    helper: "Simulate the real interview and get feedback at the end.",
+  },
+  {
+    value: "coach",
+    label: "Coach Mode",
+    helper: "Get coaching after each answer and retry before moving on.",
+  },
+];
+
 const DURATIONS: {
   value: PracticeDuration;
   label: string;
@@ -76,6 +94,7 @@ export default function PracticePage() {
   const [showContext, setShowContext] = useState(false);
   const [interviewType, setInterviewType] = useState<PracticeInterviewType>("BEHAVIORAL");
   const [durationMinutes, setDurationMinutes] = useState<PracticeDuration>(10);
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>("mock");
 
   const resumeFileRef = useRef<HTMLInputElement>(null);
   const isStarting = startPractice.isPending;
@@ -178,6 +197,7 @@ export default function PracticePage() {
         resumeFileName: resumeFileName || undefined,
         interviewType,
         durationMinutes,
+        practiceMode,
       });
 
       if (result.warnings?.length) {
@@ -412,6 +432,32 @@ export default function PracticePage() {
                   </div>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-3">
+              <Label>Practice Style</Label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PRACTICE_STYLES.map((style) => {
+                  const selected = practiceMode === style.value;
+                  return (
+                    <button
+                      key={style.value}
+                      type="button"
+                      disabled={isStarting}
+                      onClick={() => setPracticeMode(style.value)}
+                      className={cn(
+                        "flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors",
+                        selected
+                          ? "border-[#3B6FF0] bg-[#EEF2FF] text-[#1e3a8a]"
+                          : "border-border hover:border-[#3B6FF0]/40",
+                      )}
+                    >
+                      <span className="text-sm font-medium">{style.label}</span>
+                      <span className="text-xs text-muted-foreground">{style.helper}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             <div className="space-y-3">

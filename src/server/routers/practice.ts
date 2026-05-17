@@ -8,6 +8,10 @@ import {
   type PracticeDuration,
   type PracticeInterviewType,
 } from "@/lib/practice/constants";
+import {
+  buildPracticeCustomBranding,
+  normalizePracticeMode,
+} from "@/lib/practice/practice-mode";
 import { resolvePracticeJobDescription } from "@/lib/practice/job-description-context";
 import { PRACTICE_LIMIT_EXCEEDED_MESSAGE } from "@/lib/practice/usage/constants";
 import { getPracticeMonthlyUsage } from "@/lib/practice/usage/get-usage";
@@ -33,6 +37,7 @@ const startInput = z.object({
     "LEADERSHIP",
   ]),
   durationMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
+  practiceMode: z.enum(["mock", "coach"]).default("mock"),
 });
 
 type PracticeSessionRow = {
@@ -255,6 +260,7 @@ export const practiceRouter = router({
     const questionCount = practiceQuestionCount(duration);
     const followUpDepth = practiceFollowUpDepth(duration);
     const interviewType = input.interviewType as PracticeInterviewType;
+    const practiceMode = normalizePracticeMode(input.practiceMode);
 
     const { combined: jobDescriptionForAi, urlFetchFailed } =
       await resolvePracticeJobDescription({
@@ -314,7 +320,7 @@ export const practiceRouter = router({
         videoEnabled: false,
         antiCheatingEnabled: false,
         isPractice: true,
-        customBranding: { isPractice: true, source: "practice" },
+        customBranding: buildPracticeCustomBranding(practiceMode),
         requireInvite: false,
         aiName: "Parker",
         aiTone: "FRIENDLY",
