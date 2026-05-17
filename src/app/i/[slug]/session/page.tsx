@@ -11,6 +11,7 @@ import { SessionCompletionScreen } from "@/components/session/session-completion
 import type { InterviewContext } from "@/hooks/use-voice";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
 import { getPracticeMode } from "@/lib/practice/practice-mode";
+import { shouldSkipCandidatePracticeOnboarding } from "@/lib/session/skip-practice-onboarding";
 import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
 import { trpc } from "@/lib/trpc/client";
 import dynamic from "next/dynamic";
@@ -71,19 +72,32 @@ export default function SlugSessionPage() {
   }, [sessionId, session.isError, slug, router]);
 
 
-  if (interview.isLoading || session.isLoading || !interview.data || !session.data) {
-    return <PreparingScreen />;
+  const interviewData = interview.data;
+  const skipPracticeOnboarding =
+    !!interviewData &&
+    shouldSkipCandidatePracticeOnboarding(interviewData, { isPreview });
+
+  if (interview.isLoading || session.isLoading || !interviewData || !session.data) {
+    return (
+      <PreparingScreen
+        title={
+          skipPracticeOnboarding
+            ? "Starting your practice interview..."
+            : undefined
+        }
+      />
+    );
   }
 
-  const antiCheatingEnabled = !isPreview && !!interview.data.antiCheatingEnabled;
-  const isPractice = isPracticeInterview(interview.data);
+  const antiCheatingEnabled = !isPreview && !!interviewData.antiCheatingEnabled;
+  const isPractice = isPracticeInterview(interviewData);
 
   if (session.data.status === "COMPLETED" || completed) {
     try { localStorage.removeItem(STORAGE_PREFIX + slug); } catch { /* noop */ }
     return (
       <SessionCompletionScreen
         sessionId={sessionId!}
-        interviewId={interview.data.id}
+        interviewId={interviewData.id}
         isPractice={isPractice}
         isPreview={isPreview}
         isInviteFlow={false}
@@ -95,20 +109,20 @@ export default function SlugSessionPage() {
     );
   }
 
-  if (!onboardingDone) {
+  if (!skipPracticeOnboarding && !onboardingDone) {
     return (
       <IntervieweeOnboarding
-        interviewTitle={interview.data.title}
-        interviewDescription={interview.data.description}
-        questionCount={interview.data.questions.length}
-        timeLimitMinutes={interview.data.timeLimitMinutes}
-        language={interview.data.language}
+        interviewTitle={interviewData.title}
+        interviewDescription={interviewData.description}
+        questionCount={interviewData.questions.length}
+        timeLimitMinutes={interviewData.timeLimitMinutes}
+        language={interviewData.language}
         antiCheatingEnabled={antiCheatingEnabled}
         isPractice={isPractice}
-        voiceEnabled={!!interview.data.voiceEnabled}
-        chatEnabled={!!interview.data.chatEnabled}
-        aiName={interview.data.aiName}
-        questionTypes={interview.data.questions.map((q: any) => q.type as string)}
+        voiceEnabled={!!interviewData.voiceEnabled}
+        chatEnabled={!!interviewData.chatEnabled}
+        aiName={interviewData.aiName}
+        questionTypes={interviewData.questions.map((q: any) => q.type as string)}
         onComplete={() => setOnboardingDone(true)}
       />
     );
@@ -119,7 +133,7 @@ export default function SlugSessionPage() {
   const resumeQuestionIndex = (() => {
     const { currentQuestionId } = session.data;
     if (currentQuestionId) {
-      const idx = interview.data.questions.findIndex((q: any) => q.id === currentQuestionId);
+      const idx = interviewData.questions.findIndex((q: any) => q.id === currentQuestionId);
       if (idx >= 0) return idx;
     }
     return 0;
@@ -139,19 +153,19 @@ export default function SlugSessionPage() {
       snapshotData: JSON.stringify(m.whiteboardData),
     }));
 
-  const useVoice = interview.data.voiceEnabled;
+  const useVoice = interviewData.voiceEnabled;
 
   const showPreviewTour = isPreview && !previewTourDone;
 
   if (showPreviewTour) {
     const mode = useVoice ? "voice" : "chat";
     const mockContext: InterviewContext = {
-      title: interview.data.title,
-      aiName: interview.data.aiName ?? "AI Interviewer",
+      title: interviewData.title,
+      aiName: interviewData.aiName ?? "AI Interviewer",
       aiTone: "professional",
-      language: interview.data.language ?? "en-US",
+      language: interviewData.language ?? "en-US",
       followUpDepth: "medium",
-      questions: interview.data.questions.map((q: any, i: number) => ({
+      questions: interviewData.questions.map((q: any, i: number) => ({
         text: q.text,
         type: q.type as string,
         order: i,
@@ -165,12 +179,12 @@ export default function SlugSessionPage() {
             <VoiceInterface
               sessionId="__preview__"
               interviewId="__preview__"
-              interviewTitle={interview.data.title}
-              aiName={interview.data.aiName ?? "AI Interviewer"}
-              questionCount={interview.data.questions.length}
+              interviewTitle={interviewData.title}
+              aiName={interviewData.aiName ?? "AI Interviewer"}
+              questionCount={interviewData.questions.length}
               interviewContext={mockContext}
-              durationMinutes={interview.data.timeLimitMinutes ?? undefined}
-              chatEnabled={!!interview.data.chatEnabled}
+              durationMinutes={interviewData.timeLimitMinutes ?? undefined}
+              chatEnabled={!!interviewData.chatEnabled}
               onComplete={() => {}}
               preview
             />
@@ -179,8 +193,8 @@ export default function SlugSessionPage() {
               sessionId="__preview__"
               interview={{
                 id: "__preview__",
-                title: interview.data.title,
-                aiName: interview.data.aiName ?? "AI Interviewer",
+                title: interviewData.title,
+                aiName: interviewData.aiName ?? "AI Interviewer",
                 mode: "CHAT",
                 questions: mockContext.questions.map((q, i) => ({
                   id: `preview-q-${i}`,
@@ -188,7 +202,7 @@ export default function SlugSessionPage() {
                   type: q.type,
                 })),
               }}
-              durationMinutes={interview.data.timeLimitMinutes ?? undefined}
+              durationMinutes={interviewData.timeLimitMinutes ?? undefined}
               onComplete={() => {}}
               preview
             />
@@ -200,17 +214,17 @@ export default function SlugSessionPage() {
   }
 
   if (useVoice) {
-    const practiceMode = isPractice ? getPracticeMode(interview.data) : undefined;
+    const practiceMode = isPractice ? getPracticeMode(interviewData) : undefined;
     const interviewContext = {
-      title: interview.data.title,
-      objective: interview.data.objective,
-      aiName: interview.data.aiName,
-      aiTone: interview.data.aiTone,
-      language: interview.data.language,
-      followUpDepth: interview.data.followUpDepth,
+      title: interviewData.title,
+      objective: interviewData.objective,
+      aiName: interviewData.aiName,
+      aiTone: interviewData.aiTone,
+      language: interviewData.language,
+      followUpDepth: interviewData.followUpDepth,
       ...(isPractice && practiceMode ? { practiceMode } : {}),
       startQuestionIndex: isResuming ? resumeQuestionIndex : undefined,
-      questions: interview.data.questions.map((q: any) => ({
+      questions: interviewData.questions.map((q: any) => ({
         text: q.text,
         type: q.type,
         description: q.description,
@@ -225,18 +239,18 @@ export default function SlugSessionPage() {
         <AntiCheatingGuard enabled={antiCheatingEnabled} sessionId={sessionId!} />
         <VoiceInterface
           sessionId={sessionId!}
-          interviewId={interview.data.id}
-          interviewTitle={interview.data.title}
-          aiName={interview.data.aiName}
-          questionCount={interview.data.questions.length}
+          interviewId={interviewData.id}
+          interviewTitle={interviewData.title}
+          aiName={interviewData.aiName}
+          questionCount={interviewData.questions.length}
           interviewContext={interviewContext}
-          durationMinutes={interview.data.timeLimitMinutes ?? undefined}
+          durationMinutes={interviewData.timeLimitMinutes ?? undefined}
           initialMessages={isResuming ? resumeTextMessages : undefined}
           initialDrawings={isResuming && resumeDrawings?.length ? resumeDrawings : undefined}
-          chatEnabled={!!interview.data.chatEnabled}
+          chatEnabled={!!interviewData.chatEnabled}
           autoStartMicrophone={isPractice && !isPreview}
           onComplete={handleComplete}
-          videoMode={isPreview ? false : !!interview.data.videoEnabled}
+          videoMode={isPreview ? false : !!interviewData.videoEnabled}
         />
       </>
     );
@@ -248,13 +262,13 @@ export default function SlugSessionPage() {
       <ChatInterface
         sessionId={sessionId!}
         interview={{
-          ...interview.data,
-          questions: interview.data.questions.map((q: any) => ({
+          ...interviewData,
+          questions: interviewData.questions.map((q: any) => ({
             ...q,
             starterCode: q.starterCode as { language: string; code: string } | null,
           })),
         }}
-        durationMinutes={interview.data.timeLimitMinutes ?? undefined}
+        durationMinutes={interviewData.timeLimitMinutes ?? undefined}
         initialMessages={resumeMessages
           ?.filter((m: any) => m.contentType !== "WHITEBOARD")
           .map((m: any) => ({
