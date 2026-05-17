@@ -19,10 +19,15 @@ import {
   buildBigModelHeaders,
   parseAsrResponse,
 } from "./volcengine-asr";
-import { applyPracticeModeToVoicePrompt } from "../src/lib/practice/coach-mode-prompt";
 import {
+  applyPracticeModeToVoicePrompt,
+  buildCoachModeInitialSystemGreeting,
+} from "../src/lib/practice/coach-mode-prompt";
+import {
+  buildRealtimeConversationCreateEvent,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_BYTES,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_MS,
+  type RealtimeMessageRole,
   shouldAllowTtsBargeIn,
 } from "./openai-voice-relay-helpers";
 
@@ -448,6 +453,36 @@ function int16ToFloat32(buf: Buffer): Buffer {
     out.writeFloatLE(buf.readInt16LE(i * 2) / 32768, i * 4);
   }
   return out;
+}
+
+function sendConversationTextMessage(
+  ws: WebSocket,
+  role: RealtimeMessageRole,
+  text: string,
+): void {
+  ws.send(JSON.stringify(buildRealtimeConversationCreateEvent(role, text)));
+}
+
+function replayConversationHistory(
+  ws: WebSocket,
+  history: Array<{ role: "user" | "assistant"; text: string }>,
+): { replayed: number; failed: number } {
+  let replayed = 0;
+  let failed = 0;
+  for (const turn of history) {
+    try {
+      sendConversationTextMessage(ws, turn.role, turn.text);
+      replayed += 1;
+    } catch (err) {
+      failed += 1;
+      log.warn(
+        `[reconnect] History replay failed for role=${turn.role}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+  return { replayed, failed };
 }
 
 // ── System prompt builder ───────────────────────────────────────────
@@ -907,6 +942,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   let modelIsSpeaking = false;
   let lastOaiActivity = Date.now();
   let lastUserInput = 0;
+  let lastMeaningfulUserInput = 0;
+  let lastTranscriptCommittedAt = 0;
+  let lastResponseRequestedAt = 0;
   let lastVadSpeechEnd = 0;
   let vadSpeechActive = false;
   let lastTtsAudioTime = 0; // when we last sent TTS audio to browser
@@ -1023,20 +1061,19 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     }
   }
 
+  function noteMeaningfulUserActivity(reason: string) {
+    const now = Date.now();
+    lastMeaningfulUserInput = now;
+    lastUserInput = now;
+    log.info(`[voice-pipeline] Meaningful user activity (${reason})`);
+  }
+
   function sendQuestionPrompt(prompt: string, retriesLeft = 2) {
     pendingQuestionPrompt = prompt;
     if (pendingPromptTimer) clearTimeout(pendingPromptTimer);
 
     if (oaiWs?.readyState === WebSocket.OPEN && !reconnecting) {
-      // Inject as a system message and trigger a response
-      oaiWs.send(JSON.stringify({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "system",
-          content: [{ type: "input_text", text: prompt }],
-        },
-      }));
+      sendConversationTextMessage(oaiWs, "system", prompt);
       requestAssistantResponse("question prompt");
     }
 
@@ -1097,8 +1134,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       ? { type: "response.create", response }
       : { type: "response.create" };
     responseInFlight = true;
+    lastResponseRequestedAt = Date.now();
     oaiWs.send(JSON.stringify(payload));
-    log.info(`Requested assistant response (${reason})`);
+    log.info(`[voice-pipeline] response.create requested (${reason})`);
   }
 
   function takeQueuedAssistantResponse() {
@@ -1153,17 +1191,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       oaiWs &&
       oaiWs.readyState === WebSocket.OPEN
     ) {
-      oaiWs.send(JSON.stringify({
-        type: "conversation.item.create",
-        item: {
-          type: "message",
-          role: "system",
-          content: [{
-            type: "input_text",
-            text: "[SYSTEM] The participant just said they are done with the coding/whiteboard task. Do NOT stay silent. Acknowledge briefly, then ask them to walk through their solution, including key tradeoffs and complexity.",
-          }],
-        },
-      }));
+      sendConversationTextMessage(
+        oaiWs,
+        "system",
+        "[SYSTEM] The participant just said they are done with the coding/whiteboard task. Do NOT stay silent. Acknowledge briefly, then ask them to walk through their solution, including key tradeoffs and complexity.",
+      );
     }
     requestAssistantResponse(reason);
     return false;
@@ -1202,9 +1234,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     if (!committedText) return "";
 
     speechTranscriptCommitted = true;
+    lastTranscriptCommittedAt = Date.now();
+    noteMeaningfulUserActivity(`transcript committed (${reason})`);
     pushHistory("user", committedText);
     send({ type: "asr_ended", text: committedText });
-    log.info(`Committed user transcript (${reason}): ${JSON.stringify(committedText)}`);
+    log.info(`[voice-pipeline] User transcript committed (${reason})`);
     inputTranscriptBuffer = "";
     volcAsrAccumulator = "";
     lastTranscriptUpdateAt = 0;
@@ -1301,7 +1335,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return;
     }
 
-    log.info(`ASR completed: ${JSON.stringify(transcript)}`);
+    log.info("[voice-pipeline] ASR completed");
     inputTranscriptBuffer = mergeAsrText(inputTranscriptBuffer, transcript);
     noteTranscriptUpdate();
     if (pendingAsrUpdate) clearTimeout(pendingAsrUpdate);
@@ -1311,7 +1345,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function handleSpeechStartedEvent() {
-    log.debug("VAD: user speech started");
+    noteMeaningfulUserActivity("speech_started");
+    log.info("[voice-pipeline] speech_started");
     speechStopForwardGraceUntil = 0;
     queuedAssistantResponse = null;
     if (shouldSplitUserTurnOnSpeechStart()) {
@@ -1335,7 +1370,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     vadSpeechActive = false;
     lastVadSpeechEnd = Date.now();
     speechStopForwardGraceUntil = lastVadSpeechEnd + SPEECH_STOP_FORWARD_GRACE_MS;
-    log.debug("VAD: user speech stopped");
+    log.info("[voice-pipeline] speech_stopped");
     if (!speechTranscriptCommitted && bestAvailableTranscript()) {
       scheduleSpeechFinalize("speech stop", USER_SPEECH_STOP_FINALIZE_MS);
     }
@@ -1592,20 +1627,49 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     }
   }, 5_000);
 
-  // Liveness check
-  const LIVENESS_TIMEOUT_MS = 120_000;
+  // Stall recovery + liveness check
+  const STALL_AFTER_COMMIT_MS = 15_000;
+  const LIVENESS_RESPONSE_STALL_MS = 90_000;
   const LIVENESS_INPUT_WINDOW_MS = 60_000;
   const livenessTimer = setInterval(() => {
     if (browserClosed || interviewDone || reconnecting) return;
     if (!oaiWs || oaiWs.readyState !== WebSocket.OPEN) return;
     const now = Date.now();
-    const userRecentlyActive = (now - lastUserInput) < LIVENESS_INPUT_WINDOW_MS;
-    const oaiSilent = (now - lastOaiActivity) > LIVENESS_TIMEOUT_MS;
-    if (userRecentlyActive && oaiSilent) {
-      log.warn("User is active but OpenAI silent for 2min — forcing reconnect");
+
+    if (
+      lastTranscriptCommittedAt > 0 &&
+      !responseInFlight &&
+      !isTransitioning &&
+      (now - lastTranscriptCommittedAt) >= STALL_AFTER_COMMIT_MS &&
+      (now - lastOaiActivity) >= STALL_AFTER_COMMIT_MS
+    ) {
+      log.warn(
+        `[voice-stall] No assistant activity ${Math.round((now - lastTranscriptCommittedAt) / 1000)}s after user commit — requesting response`,
+      );
+      lastTranscriptCommittedAt = 0;
+      requestAssistantResponse("stall recovery after commit");
+      return;
+    }
+
+    const userRecentlyActive =
+      lastMeaningfulUserInput > 0 &&
+      (now - lastMeaningfulUserInput) < LIVENESS_INPUT_WINDOW_MS;
+    const responseRequestedStalled =
+      lastResponseRequestedAt > 0 &&
+      (now - lastResponseRequestedAt) > LIVENESS_RESPONSE_STALL_MS;
+    const oaiSilent = (now - lastOaiActivity) > LIVENESS_RESPONSE_STALL_MS;
+    if (
+      userRecentlyActive &&
+      responseRequestedStalled &&
+      oaiSilent &&
+      !responseInFlight
+    ) {
+      log.warn(
+        `[voice-stall] User active but assistant silent for ${Math.round(LIVENESS_RESPONSE_STALL_MS / 1000)}s after response.create — forcing reconnect`,
+      );
       oaiWs.close();
     }
-  }, 15_000);
+  }, 10_000);
 
   // ── OpenAI event handler ──────────────────────────────────────────
 
@@ -1631,6 +1695,15 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
             if (/Cancellation failed: no active response found/i.test(errorMessage)) {
               responseInFlight = false;
               log.debug(`Ignoring benign OpenAI cancel error: ${errorMessage}`);
+              break;
+            }
+            if (
+              reconnecting &&
+              /input_text|output_text|content type/i.test(errorMessage)
+            ) {
+              log.warn(
+                `[reconnect] OpenAI conversation replay error (continuing session): ${errorMessage}`,
+              );
               break;
             }
             log.error("OpenAI error:", errorMessage);
@@ -1835,8 +1908,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
                 flushUserInput();
               }
               if (capturedModelText) {
-                log.info(`TTS done (${responseTtsBytes}B sent): ${JSON.stringify(capturedModelText)}`);
+                log.info(`[voice-pipeline] response.done / TTS done (${responseTtsBytes}B sent)`);
                 pushHistory("assistant", capturedModelText);
+                lastTranscriptCommittedAt = 0;
               }
               send({ type: "tts_ended" });
             } else if (hadTts) {
@@ -2015,28 +2089,13 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
             ? conversationHistory.slice(-MAX_REPLAY_TURNS)
             : conversationHistory;
 
-          for (const h of recentHistory) {
-            ws.send(JSON.stringify({
-              type: "conversation.item.create",
-              item: {
-                type: "message",
-                role: h.role,
-                content: [{ type: "input_text", text: h.text }],
-              },
-            }));
-          }
-          log.info(`Replayed ${recentHistory.length}/${conversationHistory.length} history turns`);
+          const { replayed, failed } = replayConversationHistory(ws, recentHistory);
+          log.info(
+            `[reconnect] Replayed ${replayed}/${recentHistory.length} history turns (${conversationHistory.length} total${failed ? `, ${failed} send failures` : ""})`,
+          );
         }
 
-        // Send resume prompt as system message
-        ws.send(JSON.stringify({
-          type: "conversation.item.create",
-          item: {
-            type: "message",
-            role: "system",
-            content: [{ type: "input_text", text: resumePrompt }],
-          },
-        }));
+        sendConversationTextMessage(ws, "system", resumePrompt);
 
         log.info("Reconnected successfully");
         reconnecting = false;
@@ -2080,18 +2139,13 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     await new Promise((r) => setTimeout(r, 1_500));
 
     // Trigger initial greeting
-    const greeting = currentQuestionIndex > 0
-      ? `The participant is returning to the interview. Continue from question ${currentQuestionIndex + 1}.`
-      : "The participant has just joined. Please greet them and begin with question 1.";
+    const greeting = ctx.practiceMode === "coach"
+      ? buildCoachModeInitialSystemGreeting(currentQuestionIndex)
+      : currentQuestionIndex > 0
+        ? `The participant is returning to the interview. Continue from question ${currentQuestionIndex + 1}.`
+        : "The participant has just joined. Please greet them and begin with question 1.";
 
-    oaiWs.send(JSON.stringify({
-      type: "conversation.item.create",
-      item: {
-        type: "message",
-        role: "system",
-        content: [{ type: "input_text", text: `[SYSTEM] ${greeting}` }],
-      },
-    }));
+    sendConversationTextMessage(oaiWs, "system", `[SYSTEM] ${greeting}`);
     requestAssistantResponse("initial greeting", { tool_choice: "none" });
   } catch (err) {
     log.error("Failed to connect to OpenAI:", err);
@@ -2229,7 +2283,6 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
           if (!withinSpeechStopGrace || !looksLikeContinuationSpeech) return;
         }
 
-        lastUserInput = nowMs;
         const inEchoCooldown = (nowMs - lastTtsAudioTime) < TTS_ECHO_COOLDOWN_MS;
         const bargeInFrameEligible =
           inEchoCooldown &&
@@ -2278,7 +2331,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         } else if (msg.type === "text_input" && msg.content) {
           const text = (msg.content as string).trim();
           if (text) {
-            lastUserInput = Date.now();
+            noteMeaningfulUserActivity("text input");
             queuedAssistantResponse = null;
             pushHistory("user", text);
           if (tryHandleExplicitUserNavigation(text)) {
@@ -2287,14 +2340,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
           send({ type: "interrupt" });
           // Cancel any ongoing response, send text as user message, trigger new response
           cancelOngoingResponse();
-          oaiWs.send(JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "message",
-              role: "user",
-              content: [{ type: "input_text", text }],
-            },
-          }));
+          sendConversationTextMessage(oaiWs, "user", text);
           requestAssistantResponse("text input");
         }
       } else if (msg.type === "code_update") {
@@ -2303,35 +2349,19 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         latestCode = content;
         latestCodeLanguage = language;
         if (content) {
-          oaiWs.send(JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "message",
-              role: "user",
-              content: [{ type: "input_text", text:
-                `[CODE_UPDATE] The participant's current code (${language}):\n\`\`\`${language}\n${content}\n\`\`\``,
-              }],
-            },
-          }));
-          // Acknowledge silently so it doesn't trigger a response
-          oaiWs.send(JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "message",
-              role: "assistant",
-              content: [{ type: "text", text: "(Noted the code update.)" }],
-            },
-          }));
+          sendConversationTextMessage(
+            oaiWs,
+            "user",
+            `[CODE_UPDATE] The participant's current code (${language}):\n\`\`\`${language}\n${content}\n\`\`\``,
+          );
+          sendConversationTextMessage(oaiWs, "assistant", "(Noted the code update.)");
         }
       } else if (msg.type === "text" && msg.content) {
-        oaiWs.send(JSON.stringify({
-          type: "conversation.item.create",
-          item: {
-            type: "message",
-            role: "system",
-            content: [{ type: "input_text", text: `[SYSTEM] Please say the following aloud: ${msg.content}` }],
-          },
-        }));
+        sendConversationTextMessage(
+          oaiWs,
+          "system",
+          `[SYSTEM] Please say the following aloud: ${msg.content}`,
+        );
         requestAssistantResponse("system say-aloud");
       } else if (msg.type === "whiteboard_update") {
         const imageDataUrl = (msg.imageDataUrl as string) || "";
@@ -2348,14 +2378,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
               }],
             },
           }));
-          oaiWs.send(JSON.stringify({
-            type: "conversation.item.create",
-            item: {
-              type: "message",
-              role: "assistant",
-              content: [{ type: "text", text: "(Received whiteboard update.)" }],
-            },
-          }));
+          sendConversationTextMessage(oaiWs, "assistant", "(Received whiteboard update.)");
           log.info("Whiteboard image sent to OpenAI");
         }
       }

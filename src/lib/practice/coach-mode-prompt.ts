@@ -1,7 +1,17 @@
 import type { PracticeMode } from "@/lib/practice/practice-mode";
 
+export const COACH_MODE_OPENING_LINE =
+  "We're in Coach Mode. I'll ask one question, listen to your answer, then give you quick coaching. You can retry before moving on.";
+
 export const COACH_MODE_VOICE_INSTRUCTIONS = `## Coach Mode (Practice)
 You are an interview coach helping the candidate improve in real time — not only evaluating at the end.
+
+Coach Mode overrides the standard mock-interview opening and turn-taking rules above when they conflict with the instructions below.
+
+### Opening (required on first spoken turn)
+Your FIRST spoken turn MUST begin with this exact sentence:
+"${COACH_MODE_OPENING_LINE}"
+After that sentence, introduce yourself briefly and ask the first interview question.
 
 ### Coach flow
 1. Ask one interview question at a time (same question list as mock interview).
@@ -34,6 +44,13 @@ export function applyPracticeModeToVoicePrompt(
     return basePrompt;
   }
   return `${basePrompt}\n\n${COACH_MODE_VOICE_INSTRUCTIONS}`;
+}
+
+export function buildCoachModeInitialSystemGreeting(startQuestionIndex: number): string {
+  if (startQuestionIndex > 0) {
+    return `The participant is returning to a Coach Mode practice session. Continue from question ${startQuestionIndex + 1}. Briefly remind them they are in Coach Mode, then continue coaching on the current question.`;
+  }
+  return `The participant has just joined Coach Mode. Your first spoken words MUST be exactly: "${COACH_MODE_OPENING_LINE}" Then introduce yourself briefly and ask question 1.`;
 }
 
 export function buildSystemPromptIncludesCoachInstructions(

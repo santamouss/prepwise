@@ -1,7 +1,32 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { shouldAllowTtsBargeIn } from "../server/openai-voice-relay-helpers";
+import {
+  buildRealtimeConversationCreateEvent,
+  buildRealtimeTextContent,
+  shouldAllowTtsBargeIn,
+} from "../server/openai-voice-relay-helpers";
+
+test("buildRealtimeTextContent uses output_text for assistant and input_text otherwise", () => {
+  assert.deepEqual(buildRealtimeTextContent("user", "hello"), [
+    { type: "input_text", text: "hello" },
+  ]);
+  assert.deepEqual(buildRealtimeTextContent("system", "note"), [
+    { type: "input_text", text: "note" },
+  ]);
+  assert.deepEqual(buildRealtimeTextContent("assistant", "hi there"), [
+    { type: "output_text", text: "hi there" },
+  ]);
+});
+
+test("buildRealtimeConversationCreateEvent maps assistant history to output_text", () => {
+  const event = buildRealtimeConversationCreateEvent("assistant", "prior answer");
+  assert.equal(event.type, "conversation.item.create");
+  assert.equal(event.item.role, "assistant");
+  assert.deepEqual(event.item.content, [
+    { type: "output_text", text: "prior answer" },
+  ]);
+});
 
 test("does not allow TTS barge-in before assistant audio has actually started", () => {
   assert.equal(

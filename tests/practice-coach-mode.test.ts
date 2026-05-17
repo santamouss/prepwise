@@ -4,7 +4,9 @@ import { z } from "zod";
 
 import {
   applyPracticeModeToVoicePrompt,
+  buildCoachModeInitialSystemGreeting,
   buildSystemPromptIncludesCoachInstructions,
+  COACH_MODE_OPENING_LINE,
   COACH_MODE_VOICE_INSTRUCTIONS,
 } from "../src/lib/practice/coach-mode-prompt";
 import {
@@ -62,6 +64,14 @@ describe("practice.start branding", () => {
       practiceMode: "coach",
     });
     assert.equal(normalizePracticeMode("invalid"), "mock");
+  });
+});
+
+describe("coach mode opening", () => {
+  it("requires the coach mode opening line in prompt and greeting", () => {
+    const prompt = applyPracticeModeToVoicePrompt("base", "coach");
+    assert.ok(prompt.includes(COACH_MODE_OPENING_LINE));
+    assert.ok(buildCoachModeInitialSystemGreeting(0).includes(COACH_MODE_OPENING_LINE));
   });
 });
 
