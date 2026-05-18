@@ -78,6 +78,17 @@ import {
   shouldSuppressEmptyResponseRetry,
   updateLiveTranscriptGateState,
 } from "./openai-voice-relay-helpers";
+import {
+  buildResumeAssistantSystemInstruction,
+  createNoiseBargeInState,
+  DEFAULT_NOISE_BARGE_IN_DEBOUNCE_MS,
+  isAssistantActivelySpeaking,
+  RESUME_ASSISTANT_RESPONSE_REASON,
+  shouldConfirmCancelOnAcceptedBargeIn,
+  shouldDeferCancelOnAssistantSpeechStarted,
+  shouldResumeAfterRejectedNoise,
+  type NoiseBargeInState,
+} from "./openai-voice-relay-noise-barge-in";
 
 const log = createLogger("openai-relay");
 
@@ -942,6 +953,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     | { reason: string; response?: Record<string, unknown> }
     | null = null;
 
+  const noiseBargeIn: NoiseBargeInState = createNoiseBargeInState();
+  let deferredNoiseCancelTimer: ReturnType<typeof setTimeout> | null = null;
+  let pendingResumeAfterNoise = false;
+  let lastLoggedAssistantSpeaking: boolean | null = null;
+
   // Debounced user input flush
   const USER_INPUT_FLUSH_MS = 3000;
   let pendingInputFlush: ReturnType<typeof setTimeout> | null = null;
@@ -973,8 +989,143 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       reason === "function call follow-up" ||
       reason === "system say-aloud" ||
       reason === "text input" ||
+      reason === RESUME_ASSISTANT_RESPONSE_REASON ||
       reason.startsWith("queued after ")
     );
+  }
+
+  function getAssistantSpeakingSnapshot() {
+    return isAssistantActivelySpeaking({
+      responseInFlight,
+      modelIsSpeaking,
+      responseAudioStarted,
+      outputTranscriptBuffer,
+    });
+  }
+
+  function logAssistantSpeakingState(context: string) {
+    const assistantSpeaking = getAssistantSpeakingSnapshot();
+    if (lastLoggedAssistantSpeaking === assistantSpeaking) return;
+    lastLoggedAssistantSpeaking = assistantSpeaking;
+    log.info(
+      `[voice-noise-filter] assistantSpeaking=${assistantSpeaking} (${context}) possibleBargeIn=${noiseBargeIn.possibleBargeIn}`,
+    );
+  }
+
+  function snapshotInterruptedAssistantText() {
+    const text = outputTranscriptBuffer.trim();
+    if (text && !noiseBargeIn.interruptedAssistantText) {
+      noiseBargeIn.interruptedAssistantText = text;
+    }
+  }
+
+  function clearDeferredNoiseCancel() {
+    if (deferredNoiseCancelTimer) {
+      clearTimeout(deferredNoiseCancelTimer);
+      deferredNoiseCancelTimer = null;
+    }
+  }
+
+  function confirmNoiseBargeInCancel() {
+    clearDeferredNoiseCancel();
+    snapshotInterruptedAssistantText();
+    noiseBargeIn.assistantInterrupted = true;
+    log.info("[voice-noise-filter] confirming barge-in cancel during assistant speech");
+    cancelOngoingResponse({ preserveInterruptedText: true });
+    send({ type: "interrupt" });
+    logAssistantSpeakingState("after barge-in cancel");
+  }
+
+  function scheduleDeferredNoiseCancel() {
+    clearDeferredNoiseCancel();
+    deferredNoiseCancelTimer = setTimeout(() => {
+      deferredNoiseCancelTimer = null;
+      if (!noiseBargeIn.possibleBargeIn || !vadSpeechActive) return;
+      confirmNoiseBargeInCancel();
+    }, DEFAULT_NOISE_BARGE_IN_DEBOUNCE_MS);
+  }
+
+  function handleAcceptedBargeInTranscript(source: string) {
+    if (
+      shouldConfirmCancelOnAcceptedBargeIn({
+        possibleBargeIn: noiseBargeIn.possibleBargeIn,
+        assistantInterrupted: noiseBargeIn.assistantInterrupted,
+        transcriptAccepted: true,
+      })
+    ) {
+      confirmNoiseBargeInCancel();
+    }
+    clearDeferredNoiseCancel();
+    noiseBargeIn.possibleBargeIn = false;
+    noteMeaningfulUserActivity(`accepted barge-in (${source})`);
+    log.info(`[voice-noise-filter] possibleBargeIn cleared; real user speech (${source})`);
+  }
+
+  function resumeAssistantAfterNoiseInterrupt() {
+    if (pendingResumeAfterNoise || !oaiWs || oaiWs.readyState !== WebSocket.OPEN) {
+      return;
+    }
+    pendingResumeAfterNoise = true;
+    log.info("[voice-noise-filter] noise interrupted assistant; resuming prompt");
+    log.info("[voice-noise-filter] resume assistant prompt requested");
+
+    const instruction = buildResumeAssistantSystemInstruction({
+      interruptedText: noiseBargeIn.interruptedAssistantText,
+      currentQuestionIndex,
+    });
+    sendConversationTextMessage(oaiWs, "system", instruction);
+    requestAssistantResponse(RESUME_ASSISTANT_RESPONSE_REASON, {
+      tool_choice: "none",
+    });
+
+    noiseBargeIn.possibleBargeIn = false;
+    noiseBargeIn.assistantInterrupted = false;
+    pendingResumeAfterNoise = false;
+    noiseBargeIn.interruptedAssistantText = "";
+    logAssistantSpeakingState("after resume requested");
+  }
+
+  function handleRejectedNoiseTranscript(source: string) {
+    const pending = bestAvailableTranscript().trim();
+    const acceptance = pending
+      ? evaluateTranscriptForAcceptance(
+          pending,
+          transcriptThresholds,
+          transcriptAcceptanceOptions(),
+        )
+      : { accept: false as const, reason: "too-short" as const };
+
+    const transcriptRejected = !acceptance.accept;
+    if (!transcriptRejected) return;
+
+    log.info(`[voice-noise-filter] ASR rejected during assistant speech (${source})`);
+
+    if (
+      shouldResumeAfterRejectedNoise({
+        possibleBargeIn: noiseBargeIn.possibleBargeIn,
+        assistantInterrupted: noiseBargeIn.assistantInterrupted,
+        transcriptRejected: true,
+      })
+    ) {
+      inputTranscriptBuffer = "";
+      volcAsrAccumulator = "";
+      resetPendingTurnActivity();
+      resetLiveTranscriptGateState(liveTranscriptGate);
+      resumeAssistantAfterNoiseInterrupt();
+      return;
+    }
+
+    if (noiseBargeIn.possibleBargeIn && !noiseBargeIn.assistantInterrupted) {
+      clearDeferredNoiseCancel();
+      inputTranscriptBuffer = "";
+      volcAsrAccumulator = "";
+      resetPendingTurnActivity();
+      resetLiveTranscriptGateState(liveTranscriptGate);
+      noiseBargeIn.possibleBargeIn = false;
+      log.info(
+        "[voice-noise-filter] rejected noise during assistant speech without cancel; no resume needed",
+      );
+    }
   }
 
   function deferMockAnswerCompletionFromFlush() {
@@ -1153,7 +1304,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     }
   }
 
-  function cancelOngoingResponse() {
+  function cancelOngoingResponse(options?: { preserveInterruptedText?: boolean }) {
+    const assistantSpeaking = getAssistantSpeakingSnapshot();
+    if (assistantSpeaking && !options?.preserveInterruptedText) {
+      snapshotInterruptedAssistantText();
+    }
     const shouldCancel =
       responseInFlight ||
       responseAudioStarted ||
@@ -1169,6 +1324,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     responseAudioStarted = false;
     responseAudioStartedAt = 0;
     modelIsSpeaking = false;
+    logAssistantSpeakingState("after cancelOngoingResponse");
   }
 
   function logVoicePipelineState(context: string) {
@@ -1725,7 +1881,14 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     );
     if (!fragmentAcceptance.accept) {
       logNoiseFilterRejection(log, text, fragmentAcceptance);
+      if (noiseBargeIn.possibleBargeIn) {
+        handleRejectedNoiseTranscript(label);
+      }
       return false;
+    }
+
+    if (noiseBargeIn.possibleBargeIn) {
+      handleAcceptedBargeInTranscript(label);
     }
 
     clearStaleAsrGuard();
@@ -1803,6 +1966,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     );
     if (!whisperAcceptance.accept) {
       logNoiseFilterRejection(log, transcript, whisperAcceptance);
+      if (noiseBargeIn.possibleBargeIn) {
+        handleRejectedNoiseTranscript("whisper completed");
+      }
       return;
     }
 
@@ -1825,18 +1991,20 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   function handleSpeechStartedEvent() {
     const now = Date.now();
+    const assistantSpeaking = getAssistantSpeakingSnapshot();
+    logAssistantSpeakingState("speech_started");
+
     if (deliveryEnabled) {
       recordAnswerPauseBeforeSpeech(now);
       if (!answerTurnStartedAt) {
         answerTurnStartedAt = now;
       }
     }
-    noteMeaningfulUserActivity("speech_started");
+
     lastSpeechStartedAt = now;
     log.info("[voice-pipeline] speech_started");
     logVoicePipelineState("speech_started");
     speechStopForwardGraceUntil = 0;
-    queuedAssistantResponse = null;
 
     const pending = bestAvailableTranscript();
     if (pending && !speechTranscriptCommitted) {
@@ -1852,6 +2020,28 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       }
     }
 
+    vadSpeechActive = true;
+
+    if (shouldDeferCancelOnAssistantSpeechStarted(assistantSpeaking)) {
+      noiseBargeIn.possibleBargeIn = true;
+      snapshotInterruptedAssistantText();
+      log.info("[voice-noise-filter] possibleBargeIn started");
+      scheduleDeferredNoiseCancel();
+      clearSpeechFinalizeTimer("speech_started");
+      clearMockAutoResponseTimer("speech_started");
+      if (speechTranscriptCommitted) {
+        speechTranscriptCommitted = false;
+        volcAsrAccumulator = "";
+        inputTranscriptBuffer = "";
+        resetPendingTurnActivity();
+      } else if (pending) {
+        markPendingTurnActivity();
+      }
+      return;
+    }
+
+    noteMeaningfulUserActivity("speech_started");
+    queuedAssistantResponse = null;
     cancelOngoingResponse();
     clearSpeechFinalizeTimer("speech_started");
     clearMockAutoResponseTimer("speech_started");
@@ -1859,7 +2049,6 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       clearTimeout(pendingInputFlush);
       pendingInputFlush = null;
     }
-    vadSpeechActive = true;
     if (speechTranscriptCommitted) {
       speechTranscriptCommitted = false;
       volcAsrAccumulator = "";
@@ -1885,12 +2074,18 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const segmentMs =
       lastSpeechStartedAt > 0 ? now - lastSpeechStartedAt : 0;
     const pendingAfterStop = bestAvailableTranscript();
-    if (
-      shouldIgnoreShortSpeechBurst(pendingAfterStop, segmentMs, undefined, {
+    clearDeferredNoiseCancel();
+
+    const burstIgnored = shouldIgnoreShortSpeechBurst(
+      pendingAfterStop,
+      segmentMs,
+      undefined,
+      {
         lastParkerTurnAtMs: lastParkerTurnAt,
         nowMs: now,
-      })
-    ) {
+      },
+    );
+    if (burstIgnored) {
       log.info(
         `[voice-noise-filter] ignored transient audio burst (${segmentMs}ms)`,
       );
@@ -1898,6 +2093,22 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       volcAsrAccumulator = "";
       resetPendingTurnActivity();
       resetLiveTranscriptGateState(liveTranscriptGate);
+      if (noiseBargeIn.possibleBargeIn) {
+        handleRejectedNoiseTranscript("transient burst");
+      }
+    } else if (noiseBargeIn.possibleBargeIn && pendingAfterStop.trim()) {
+      const stopAcceptance = evaluateTranscriptForAcceptance(
+        pendingAfterStop,
+        transcriptThresholds,
+        transcriptAcceptanceOptions(),
+      );
+      if (!stopAcceptance.accept) {
+        handleRejectedNoiseTranscript("speech_stopped");
+      } else {
+        handleAcceptedBargeInTranscript("speech_stopped");
+      }
+    } else if (noiseBargeIn.possibleBargeIn && !pendingAfterStop.trim()) {
+      handleRejectedNoiseTranscript("speech_stopped empty");
     }
 
     if (!speechTranscriptCommitted && bestAvailableTranscript() && ctx.practiceMode !== "coach") {
@@ -2314,7 +2525,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
           // ── Model audio output ──
           case "response.output_audio.delta": {
             clearQuestionPrompt();
+            pendingResumeAfterNoise = false;
             modelIsSpeaking = true;
+            logAssistantSpeakingState("response.output_audio.delta");
             if (!isTransitioning && msg.delta) {
               if (!responseAudioStarted) {
                 responseAudioStarted = true;
@@ -2465,8 +2678,21 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
             const hadTts = !!(outputTranscriptBuffer || modelIsSpeaking);
             const capturedModelText = outputTranscriptBuffer;
             const completedFarewellTurn = pendingInterviewComplete && hadTts && responseTtsBytes > 0;
+            if (
+              String(respStatus) === "cancelled" &&
+              noiseBargeIn.possibleBargeIn
+            ) {
+              noiseBargeIn.assistantInterrupted = true;
+              if (capturedModelText.trim() && !noiseBargeIn.interruptedAssistantText) {
+                noiseBargeIn.interruptedAssistantText = capturedModelText.trim();
+              }
+              log.info(
+                "[voice-noise-filter] assistant response cancelled during possibleBargeIn",
+              );
+            }
             outputTranscriptBuffer = "";
             modelIsSpeaking = false;
+            logAssistantSpeakingState("response.done");
             const inferredFarewell =
               !pendingInterviewComplete &&
               currentQuestionIndex >= sortedQuestions.length - 1 &&
@@ -2952,8 +3178,10 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
         if (allowBargeInDuringTts) {
           log.info(`Allowing TTS barge-in after sustained speech (rms=${Math.round(rms)})`);
           ttsBargeInFrames = 0;
-          cancelOngoingResponse();
-          send({ type: "interrupt" });
+          noiseBargeIn.possibleBargeIn = true;
+          snapshotInterruptedAssistantText();
+          log.info("[voice-noise-filter] possibleBargeIn started (sustained TTS barge-in)");
+          confirmNoiseBargeInCancel();
         }
 
         if (!inEchoCooldown || allowBargeInDuringTts) {
