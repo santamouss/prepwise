@@ -30,6 +30,11 @@ export function practiceQuestionCount(duration: PracticeDuration): number {
   }
 }
 
+/** Candidate practice v1: voice-only verbal questions. */
+export function normalizePracticeQuestionType(_type: string): "OPEN_ENDED" {
+  return "OPEN_ENDED";
+}
+
 export function practiceFollowUpDepth(
   duration: PracticeDuration,
 ): "LIGHT" | "MODERATE" | "DEEP" {
@@ -53,8 +58,9 @@ export function buildPracticeGeneratorDescription(input: {
     ` Generate exactly ${practiceQuestionCount(input.duration)} interview questions suitable for a ${input.duration}-minute practice session.`,
     " The interviewer persona is Parker — warm, supportive, and encouraging.",
     input.interviewType === "TECHNICAL"
-      ? " Include at least one technical depth question; use CODING type only if a live coding exercise is essential."
+      ? " Include at least one technical depth question as verbal system-design or architecture discussion (tradeoffs, scalability, reliability). Use OPEN_ENDED only — no CODING or WHITEBOARD types."
       : "",
+    " All questions must use type OPEN_ENDED only. Do not generate CODING, WHITEBOARD, SINGLE_CHOICE, MULTIPLE_CHOICE, or RESEARCH question types.",
     input.interviewType === "SALES"
       ? " Emphasize discovery, objection handling, and closing scenarios."
       : "",

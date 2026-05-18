@@ -1,5 +1,38 @@
 import type { LLMMessage } from "../types";
 
+const PRACTICE_GENERATOR_CONSTRAINTS = `
+CANDIDATE PRACTICE MODE (voice-first):
+- Generate OPEN_ENDED questions ONLY. Every question must have "type": "OPEN_ENDED".
+- Do NOT generate CODING, WHITEBOARD, SINGLE_CHOICE, MULTIPLE_CHOICE, or RESEARCH questions.
+- Set "options" to null and "starterCode" to null for every question.
+- Technical interviews: ask architecture, system design, tradeoffs, scalability, and reliability verbally — like a real spoken interview, not a live coding exercise.
+- Write enough detail in "text" and "description" that Parker can ask the full question aloud without referring to anything on screen.
+`;
+
+export function buildPracticeGeneratorPrompt(
+  description: string,
+  durationMinutes?: number,
+  language?: string,
+  jobDescription?: string,
+  resumeText?: string,
+): LLMMessage[] {
+  const base = buildGeneratorPrompt(
+    description,
+    durationMinutes,
+    language,
+    jobDescription,
+    resumeText,
+  );
+  return base.map((message) =>
+    message.role === "system"
+      ? {
+          ...message,
+          content: `${message.content}\n${PRACTICE_GENERATOR_CONSTRAINTS}`,
+        }
+      : message,
+  );
+}
+
 export function buildGeneratorPrompt(
   description: string,
   durationMinutes?: number,

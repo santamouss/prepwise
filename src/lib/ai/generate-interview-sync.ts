@@ -1,5 +1,8 @@
 import { getProvider, INTERVIEW_GENERATION_MODEL } from "@/lib/ai/registry";
-import { buildGeneratorPrompt } from "@/lib/ai/prompts/generator";
+import {
+  buildGeneratorPrompt,
+  buildPracticeGeneratorPrompt,
+} from "@/lib/ai/prompts/generator";
 import type { GeneratedInterview } from "@/lib/ai/types";
 
 function parseJsonSafe(raw: string): GeneratedInterview {
@@ -26,16 +29,25 @@ export async function generateInterviewFromDescription(
     language?: string;
     jobDescription?: string;
     resumeText?: string;
+    practiceOnly?: boolean;
   },
 ): Promise<GeneratedInterview> {
   const provider = getProvider(INTERVIEW_GENERATION_MODEL);
-  const messages = buildGeneratorPrompt(
-    description,
-    options.durationMinutes,
-    options.language ?? "en",
-    options.jobDescription,
-    options.resumeText,
-  );
+  const messages = options.practiceOnly
+    ? buildPracticeGeneratorPrompt(
+        description,
+        options.durationMinutes,
+        options.language ?? "en",
+        options.jobDescription,
+        options.resumeText,
+      )
+    : buildGeneratorPrompt(
+        description,
+        options.durationMinutes,
+        options.language ?? "en",
+        options.jobDescription,
+        options.resumeText,
+      );
 
   const MAX_RETRIES = 2;
   let lastError: unknown;

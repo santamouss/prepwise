@@ -3,6 +3,7 @@ import type { GeneratedQuestion } from "@/lib/ai/types";
 import { nanoid } from "@/lib/id";
 import {
   buildPracticeGeneratorDescription,
+  normalizePracticeQuestionType,
   practiceFollowUpDepth,
   practiceQuestionCount,
   type PracticeDuration,
@@ -282,6 +283,7 @@ export const practiceRouter = router({
       language: "en",
       jobDescription: jobDescriptionForAi,
       resumeText,
+      practiceOnly: true,
     });
 
     const roleTitle = input.role.trim();
@@ -344,9 +346,9 @@ export const practiceRouter = router({
       order: index,
       text: q.text,
       description: q.description ?? null,
-      type: q.type,
-      options: q.options ?? null,
-      starterCode: q.type === "CODING" && q.starterCode ? q.starterCode : null,
+      type: normalizePracticeQuestionType(q.type),
+      options: null,
+      starterCode: null,
       followUpPrompts: q.followUpPrompts ?? null,
       timeLimitSeconds: q.timeLimitSeconds ?? null,
       isRequired: q.isRequired ?? true,

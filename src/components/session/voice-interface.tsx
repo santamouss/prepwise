@@ -1452,6 +1452,11 @@ export function VoiceInterface({
   const currentQuestionText = currentQVoice?.text || "";
   const isCodingQuestion = currentQVoice?.type === "CODING";
   const isWhiteboardQuestion = currentQVoice?.type === "WHITEBOARD";
+  const isPracticeSession = interviewContext.isPractice === true;
+  const showPracticeQuestionDetails =
+    isPracticeSession &&
+    currentQVoice?.type === "OPEN_ENDED" &&
+    Boolean(currentQuestionText.trim() || currentQVoice.description?.trim());
 
   const codeEditorInitialData = useMemo(() => {
     const snippet = codeSnippets[activeSnippetIdx];
@@ -1671,10 +1676,24 @@ export function VoiceInterface({
           )}
         </div>
         {/* Current question text */}
-        {voice.isConnected && currentQuestionText && (
+        {voice.isConnected && currentQuestionText && !showPracticeQuestionDetails && (
           <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">
             {currentQuestionText}
           </p>
+        )}
+        {voice.isConnected && showPracticeQuestionDetails && (
+          <div className="mt-2 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm">
+            <p className="text-xs font-semibold text-foreground">Question Details</p>
+            <p className="mt-1.5 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+              {currentQuestionText}
+            </p>
+            {currentQVoice.description?.trim() &&
+              currentQVoice.description.trim() !== currentQuestionText.trim() && (
+                <p className="mt-2 border-t border-border pt-2 text-xs leading-relaxed text-muted-foreground whitespace-pre-wrap">
+                  {currentQVoice.description}
+                </p>
+              )}
+          </div>
         )}
       </div>
 

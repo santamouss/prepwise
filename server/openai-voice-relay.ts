@@ -24,6 +24,10 @@ import {
   buildCoachModeInitialSystemGreeting,
 } from "../src/lib/practice/coach-mode-prompt";
 import {
+  buildPracticeVoiceQuestionList,
+  selectVoiceModeSections,
+} from "../src/lib/practice/practice-voice-prompt";
+import {
   analyzeDelivery,
   buildCoachDeliverySystemAddendum,
   LONG_PAUSE_THRESHOLD_SECONDS,
@@ -405,6 +409,7 @@ interface InterviewContext {
   language: string;
   followUpDepth: string;
   practiceMode?: "mock" | "coach";
+  isPractice?: boolean;
   startQuestionIndex?: number;
   questions: Array<{
     text: string;
@@ -489,7 +494,8 @@ function replayConversationHistory(
 
 function buildSystemPrompt(ctx: InterviewContext, startIdx: number): string {
   const isZh = isChineseInterview(ctx);
-  const sorted = ctx.questions.sort((a, b) => a.order - b.order);
+  const isPractice = ctx.isPractice === true;
+  const sorted = [...ctx.questions].sort((a, b) => a.order - b.order);
 
   let maxFollowUps: number;
   switch (ctx.followUpDepth) {
@@ -499,18 +505,18 @@ function buildSystemPrompt(ctx: InterviewContext, startIdx: number): string {
     default:         maxFollowUps = 2;
   }
 
-  const questionList = sorted.map((q, i) => {
-    let entry = `  ${i + 1}. [${q.type}] ${q.text}`;
-    if (q.description) entry += `\n     Context: ${q.description}`;
-    if (q.options?.options?.length) {
-      const labels = q.options.options.map((o, j) => `${String.fromCharCode(65 + j)}) ${o}`).join(", ");
-      const multi = q.options.allowMultiple ? " (multiple choice)" : " (single choice)";
-      entry += `\n     Options${multi}: ${labels}`;
-    }
-    if (q.type === "CODING") entry += `\n     Note: The participant has a code editor. You cannot see their code unless they describe it.`;
-    if (q.type === "WHITEBOARD") entry += `\n     Note: The participant has a whiteboard. You will receive image updates silently — do NOT speak when you receive them. Only describe what you see when the participant asks you to look at it.`;
-    return entry;
-  }).join("\n");
+  const questionList = buildPracticeVoiceQuestionList(sorted, isPractice);
+  const { codingOrPracticeRules, visibilityRules } = selectVoiceModeSections(
+    isPractice,
+    isZh,
+  );
+  const choiceRules = isPractice
+    ? ""
+    : isZh
+      ? `## 选择题的特殊规则
+当提问单选题或多选题时，你必须把所有选项（A、B、C等）逐一朗读出来作为问题的一部分。受访者只能听到你说话——如果你不说出选项，他们就无法知道有哪些选择。列出选项后，请受访者选择并解释理由。对于多选题，提醒他们可以选择多个选项。`
+      : `## Special Rules for Choice Questions
+When asking a SINGLE_CHOICE or MULTIPLE_CHOICE question, you MUST read out ALL the answer options (A, B, C, etc.) as part of asking the question. The participant can only hear you — they cannot see the options unless you say them. After listing the options, ask the participant to choose and explain their reasoning. For multiple-choice questions, remind them they can select more than one option.`;
 
   const currentQ = startIdx + 1;
 
@@ -537,28 +543,11 @@ ${questionList}
 7. 如果受访者要求"跳过"或"下一题"，简短回应后立即调用 signal_question_change 并设 userRequested=true。
 8. 如果受访者要求"上一题"，调用 signal_question_change 并设 questionIndex 为上一题的索引，设 userRequested=true。
 
-## 选择题的特殊规则
-当提问单选题或多选题时，你必须把所有选项（A、B、C等）逐一朗读出来作为问题的一部分。受访者只能听到你说话——如果你不说出选项，他们就无法知道有哪些选择。列出选项后，请受访者选择并解释理由。对于多选题，提醒他们可以选择多个选项。
-
-## 编程题/白板题的特殊规则
-当进入编程题或白板题时：
-- 不要朗读完整的题目内容！题目详情已经显示在受访者的屏幕上。只需简短说明这是编程题/白板题，请他们查看屏幕上的题目并使用编辑器/白板。
-- 回复要保持简短，让受访者专注于思考和编码/绘画。
-- 受访者的发言分为以下几类，请对应回复：
-  1. 向你提问或对话 → 正常回应
-  2. 说"完成了"/"做好了" → 请他们解释思路、复杂度和可能的优化
-  3. 自言自语或思考中 → 只用非常简短的鼓励（如"好的，继续"）
-  4. 明确要跳过/放弃 → 简短鼓励后调用 signal_question_change
-  5. 讨论已自然结束 → 简短感谢后调用 signal_question_change
+${choiceRules ? `${choiceRules}\n\n` : ""}${codingOrPracticeRules}
 
 ## 语言要求
 - 你必须始终用中文进行面试。你必须用中文回答。不要使用其他语言。
-
-## 代码和白板可见性
-- 你可以看到受访者的代码和白板内容！系统会通过 [CODE_UPDATE] 和 [WHITEBOARD_UPDATE] 消息将受访者编辑器中的代码和白板图片实时发送给你。
-- 当受访者问你"能看到我的代码吗"或"看一下我写的"时，回答"是"并参考你收到的最新代码/白板内容。
-- 不要在收到更新时主动开口——只在受访者和你说话时才提及。
-
+${visibilityRules ? `\n${visibilityRules}\n` : ""}
 ## 重要规则
 - 必须通过 signal_question_change 函数来切换问题。不要只口头说"让我们进入下一题"而不调用函数。
 - 如果受访者只是简单打招呼、确认性问题或模糊回答（如"你好"、"能听到吗?"、"我遇到过很多挑战"），先友好回应，再继续当前问题；不要调用 signal_question_change。这些不是实质性回答。必须等受访者给出详细、具体的回答后再切换。如果回答太简短或模糊，应追问以获取更多信息。
@@ -589,28 +578,11 @@ ${questionList}
 7. If the participant asks to "skip" or "next question", briefly acknowledge and immediately call signal_question_change with userRequested=true.
 8. If the participant asks for "previous question", call signal_question_change with the previous question's index and userRequested=true.
 
-## Special Rules for Choice Questions
-When asking a SINGLE_CHOICE or MULTIPLE_CHOICE question, you MUST read out ALL the answer options (A, B, C, etc.) as part of asking the question. The participant can only hear you — they cannot see the options unless you say them. After listing the options, ask the participant to choose and explain their reasoning. For multiple-choice questions, remind them they can select more than one option.
-
-## Special Rules for Coding / Whiteboard Questions
-When transitioning to a CODING or WHITEBOARD question:
-- Do NOT read out the full question text! The question details are already displayed on the participant's screen. Just briefly say it's a coding/whiteboard question and ask them to read the problem on their screen and use the code editor/whiteboard.
-- Keep your responses short — let the participant focus on thinking and coding/drawing.
-- Categorize the participant's speech and respond accordingly:
-  1. Talking TO YOU (asking questions, discussing approach) → Respond naturally
-  2. Saying they're DONE ("I'm done", "finished") → Ask about their approach, time/space complexity, and possible improvements
-  3. Thinking ALOUD (self-talk, "hmm", reading code) → Brief encouragement only (e.g. "Take your time")
-  4. Wanting to SKIP ("I can't do this", "skip", "next question") → Brief encouragement, then call signal_question_change
-  5. Discussion naturally CONCLUDED → Brief acknowledgement, then call signal_question_change
+${choiceRules ? `${choiceRules}\n\n` : ""}${codingOrPracticeRules}
 
 ## Language Requirements
 - YOU MUST ALWAYS RESPOND IN ENGLISH. You must conduct this interview entirely in English. Do not switch to any other language under any circumstance.
-
-## Code and Whiteboard Visibility
-- You CAN see the participant's code and whiteboard! The system sends you real-time updates via [CODE_UPDATE] and [WHITEBOARD_UPDATE] messages containing their editor code and whiteboard images.
-- When the participant asks "can you see my code?" or "look at what I wrote", answer YES and reference the latest code/whiteboard content you received.
-- Do NOT proactively speak when you receive an update — only reference the content when the participant addresses you.
-
+${visibilityRules ? `\n${visibilityRules}\n` : ""}
 ## Important Rules
 - You MUST use the signal_question_change function to transition between questions. NEVER verbally say "let's move on" without also calling the function — the UI only updates when the function is called.
 - Do NOT call signal_question_change if the participant has only said a brief greeting, clarifying remark, or vague statement (e.g. "hi", "can you hear me?", "I had many challenges"). First respond warmly and helpfully, then continue the current question. These are NOT substantive answers. You MUST wait for a detailed, specific response that actually addresses the question before moving on. If their answer is too brief or vague, probe deeper.
