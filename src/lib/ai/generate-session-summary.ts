@@ -5,6 +5,7 @@ import { getProvider, REPORT_MODEL } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
 import { hasSessionFeedback } from "@/lib/session/session-has-feedback";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import type { SessionDeliveryInsights } from "@/lib/voice/delivery-analysis";
 
 const log = createLogger("ai/generate-session-summary");
 
@@ -94,6 +95,11 @@ export async function generateSessionSummary(
       whiteboardDrawings.length > 0 ? whiteboardDrawings : null;
     const codeInput = codeSnippetsInput.length > 0 ? codeSnippetsInput : null;
 
+    const priorInsights = existing?.insights as {
+      deliveryMetrics?: SessionDeliveryInsights;
+    } | null;
+    const deliveryMetrics = priorInsights?.deliveryMetrics ?? null;
+
     const promptMessages = buildSummaryPrompt(
       interviewTitle,
       textMessages,
@@ -103,6 +109,7 @@ export async function generateSessionSummary(
       language,
       drawingsInput,
       codeInput,
+      deliveryMetrics,
     );
 
     let response;
@@ -134,6 +141,7 @@ export async function generateSessionSummary(
           language,
           textOnlyDrawings,
           codeInput,
+          deliveryMetrics,
         );
         response = await provider.generateResponse({
           messages: fallbackMessages,
@@ -160,6 +168,9 @@ export async function generateSessionSummary(
     const insightsData: Record<string, unknown> = {
       keyInsights: parsed.keyInsights ?? [],
     };
+    if (deliveryMetrics) {
+      insightsData.deliveryMetrics = deliveryMetrics;
+    }
     if (parsed.criteriaEvaluations) {
       insightsData.criteriaEvaluations = parsed.criteriaEvaluations;
     }

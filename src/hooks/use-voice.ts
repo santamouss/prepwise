@@ -1,6 +1,7 @@
 "use client";
 
 import { createLogger } from "@/lib/logger";
+import type { DeliveryAnswerRecord } from "@/lib/voice/delivery-analysis";
 import { mergeAsrText } from "@/lib/voice/merge-asr-text";
 import {
   buildRelayTargets,
@@ -72,6 +73,7 @@ interface TrackedMessage {
   role: "user" | "assistant";
   content: string;
   source?: "voice" | "chat";
+  delivery?: DeliveryAnswerRecord;
 }
 
 /**
@@ -534,9 +536,11 @@ export function useVoice({
             } else {
               lastFinalUserTranscriptRef.current = { text: normalized, at: Date.now() };
               onTranscript?.(finalText, true);
+              const delivery = msg.delivery as DeliveryAnswerRecord | undefined;
               trackedMessagesRef.current.push({
                 role: "user",
                 content: finalText,
+                ...(delivery ? { delivery } : {}),
               });
               log.debug(
                 `Tracked USER: "${finalText.slice(0, 60)}..."`

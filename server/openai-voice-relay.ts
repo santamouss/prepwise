@@ -24,6 +24,13 @@ import {
   buildCoachModeInitialSystemGreeting,
 } from "../src/lib/practice/coach-mode-prompt";
 import {
+  analyzeDelivery,
+  buildCoachDeliverySystemAddendum,
+  LONG_PAUSE_THRESHOLD_SECONDS,
+  toDeliveryAnswerRecord,
+  type DeliveryAnalysisResult,
+} from "../src/lib/voice/delivery-analysis";
+import {
   COACH_ANSWER_DONE_SYSTEM_PROMPT,
   COACH_ANSWER_REQUIRED_MESSAGE,
   COACH_RETRY_SYSTEM_PROMPT,
@@ -931,6 +938,12 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   let lastVadSpeechEnd = 0;
   let lastSpeechStartedAt = 0;
   let vadSpeechActive = false;
+  const deliveryEnabled =
+    ctx.practiceMode === "mock" || ctx.practiceMode === "coach";
+  let answerTurnStartedAt = 0;
+  let lastAnswerSpeechStopAt = 0;
+  let answerPauseDurationsMs: number[] = [];
+  let lastAnswerDeliveryAnalysis: DeliveryAnalysisResult | null = null;
   let mockAutoResponseTimer: ReturnType<typeof setTimeout> | null = null;
   let lastTtsAudioTime = 0; // when we last sent TTS audio to browser
   const TTS_ECHO_COOLDOWN_MS = 1500;
@@ -1292,6 +1305,44 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     return "";
   }
 
+  function resetAnswerDeliveryTracking() {
+    answerTurnStartedAt = 0;
+    lastAnswerSpeechStopAt = 0;
+    answerPauseDurationsMs = [];
+  }
+
+  function recordAnswerPauseBeforeSpeech(now: number) {
+    if (!deliveryEnabled || lastAnswerSpeechStopAt <= 0 || answerTurnStartedAt <= 0) {
+      return;
+    }
+    const gapMs = now - lastAnswerSpeechStopAt;
+    if (gapMs >= LONG_PAUSE_THRESHOLD_SECONDS * 1000) {
+      answerPauseDurationsMs.push(gapMs);
+    }
+  }
+
+  function computeAnswerDurationSeconds(now: number): number {
+    if (answerTurnStartedAt > 0) {
+      return Math.max(1, Math.round((now - answerTurnStartedAt) / 1000));
+    }
+    if (pendingTurnAnchorAt > 0) {
+      return Math.max(1, Math.round((now - pendingTurnAnchorAt) / 1000));
+    }
+    const words = countTranscriptWords(bestAvailableTranscript());
+    return Math.max(15, Math.round(words / 2.2));
+  }
+
+  function buildAnswerDeliveryAnalysis(
+    transcript: string,
+    now: number,
+  ): DeliveryAnalysisResult {
+    return analyzeDelivery({
+      transcript,
+      durationSeconds: computeAnswerDurationSeconds(now),
+      pauseDurations: answerPauseDurationsMs.map((ms) => ms / 1000),
+    });
+  }
+
   function resetCoachAnswerBuffers() {
     speechTranscriptCommitted = false;
     inputTranscriptBuffer = "";
@@ -1299,6 +1350,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     lastTranscriptUpdateAt = 0;
     resetPendingTurnActivity();
     clearStaleAsrGuard();
+    resetAnswerDeliveryTracking();
+    lastAnswerDeliveryAnalysis = null;
   }
 
   function handleCoachAnswerDone() {
@@ -1315,7 +1368,15 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       finalizeUserTurn("coach answer done", false);
     }
 
-    sendConversationTextMessage(oaiWs!, "system", COACH_ANSWER_DONE_SYSTEM_PROMPT);
+    const deliveryAnalysis =
+      lastAnswerDeliveryAnalysis ??
+      (answerText ? buildAnswerDeliveryAnalysis(answerText, Date.now()) : null);
+    sendConversationTextMessage(
+      oaiWs!,
+      "system",
+      COACH_ANSWER_DONE_SYSTEM_PROMPT +
+        buildCoachDeliverySystemAddendum(deliveryAnalysis),
+    );
     requestAssistantResponse("coach answer done");
     log.info("[coach-mode] coach_answer_done — coaching requested");
   }
@@ -1545,7 +1606,21 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     lastTranscriptCommittedAt = Date.now();
     noteMeaningfulUserActivity(`transcript committed (${reason})`);
     pushHistory("user", committedText);
-    send({ type: "asr_ended", text: committedText });
+    let deliveryPayload: ReturnType<typeof toDeliveryAnswerRecord> | undefined;
+    if (deliveryEnabled) {
+      const analysis = buildAnswerDeliveryAnalysis(committedText, Date.now());
+      lastAnswerDeliveryAnalysis = analysis;
+      deliveryPayload = toDeliveryAnswerRecord(analysis, currentQuestionIndex);
+      resetAnswerDeliveryTracking();
+      log.info(
+        `[voice-pipeline] delivery wpm=${analysis.wordsPerMinute} fillers=${analysis.fillerWordCount} hedging=${analysis.hedgingPhraseCount} pauses=${analysis.longPauseCount}`,
+      );
+    }
+    send({
+      type: "asr_ended",
+      text: committedText,
+      ...(deliveryPayload ? { delivery: deliveryPayload } : {}),
+    });
     log.info(
       `[voice-pipeline] committed substantive user answer (${reason}) len=${committedText.length} words=${countTranscriptWords(committedText)}`,
     );
@@ -1689,8 +1764,15 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function handleSpeechStartedEvent() {
+    const now = Date.now();
+    if (deliveryEnabled) {
+      recordAnswerPauseBeforeSpeech(now);
+      if (!answerTurnStartedAt) {
+        answerTurnStartedAt = now;
+      }
+    }
     noteMeaningfulUserActivity("speech_started");
-    lastSpeechStartedAt = Date.now();
+    lastSpeechStartedAt = now;
     log.info("[voice-pipeline] speech_started");
     logVoicePipelineState("speech_started");
     speechStopForwardGraceUntil = 0;
@@ -1726,7 +1808,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   function handleSpeechStoppedEvent() {
     vadSpeechActive = false;
-    lastVadSpeechEnd = Date.now();
+    const now = Date.now();
+    lastVadSpeechEnd = now;
+    if (deliveryEnabled) {
+      lastAnswerSpeechStopAt = now;
+    }
     speechStopForwardGraceUntil = lastVadSpeechEnd + SPEECH_STOP_FORWARD_GRACE_MS;
     log.info("[voice-pipeline] speech_stopped");
     logVoicePipelineState("speech_stopped");
@@ -2252,6 +2338,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
                 currentQuestionIndex = newIdx;
                 questionEnteredAt = Date.now();
                 userCommittedWordsThisQuestion = 0;
+                resetAnswerDeliveryTracking();
+                lastAnswerDeliveryAnalysis = null;
                 disableTools();
                 send({
                   type: "question_change",

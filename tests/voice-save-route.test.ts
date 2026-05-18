@@ -25,8 +25,10 @@ function createOps() {
       async insertMessages(
         sessionId: string,
         messages: NonNullable<Parameters<typeof handleVoiceSave>[0]["messages"]>,
+        currentQuestionIndex?: number,
       ) {
         void sessionId;
+        void currentQuestionIndex;
         insertedMessages.push(
           messages.map((m) => ({
             role: m.role === "user" ? "USER" : "ASSISTANT",

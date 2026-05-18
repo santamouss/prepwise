@@ -1,11 +1,16 @@
+import type { DeliveryAnswerRecord } from "@/lib/voice/delivery-analysis";
+
+export type VoiceSaveMessage = {
+  role: string;
+  content: string;
+  questionId?: string;
+  source?: string;
+  delivery?: DeliveryAnswerRecord;
+};
+
 export type VoiceSavePayload = {
   sessionId?: string;
-  messages?: Array<{
-    role: string;
-    content: string;
-    questionId?: string;
-    source?: string;
-  }>;
+  messages?: VoiceSaveMessage[];
   complete?: boolean;
   currentQuestionIndex?: number;
 };
@@ -87,6 +92,7 @@ export type VoiceSaveOps = {
   insertMessages: (
     sessionId: string,
     messages: NonNullable<VoiceSavePayload["messages"]>,
+    currentQuestionIndex?: number,
   ) => Promise<void>;
   loadSessionForCompletion: (
     sessionId: string,
@@ -124,7 +130,7 @@ export async function handleVoiceSave(
 
   try {
     if (messages && Array.isArray(messages) && messages.length > 0) {
-      await ops.insertMessages(sessionId, messages);
+      await ops.insertMessages(sessionId, messages, currentQuestionIndex);
     }
 
     if (complete) {

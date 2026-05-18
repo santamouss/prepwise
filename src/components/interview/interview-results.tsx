@@ -2,6 +2,7 @@
 "use client";
 
 import { CodeBlock } from "@/components/code-editor/code-block";
+import { DeliveryCard } from "@/components/practice/delivery-card";
 import { useOrg } from "@/components/org-provider";
 import { SessionRow, SessionsTable } from "@/components/session/sessions-table";
 import {
@@ -24,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { getSessionOverallScore } from "@/lib/session-score";
 import { trpc } from "@/lib/trpc/client";
+import type { SessionDeliveryInsights } from "@/lib/voice/delivery-analysis";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
@@ -412,6 +414,7 @@ function SessionDetail({
             notes: string;
           }[];
         };
+        deliveryMetrics?: SessionDeliveryInsights;
       }
     | string[]
     | null;
@@ -430,6 +433,9 @@ function SessionDetail({
   const toneAnalysis = Array.isArray(insightsData)
     ? null
     : (insightsData?.toneAnalysis ?? null);
+  const deliveryMetrics = Array.isArray(insightsData)
+    ? null
+    : (insightsData?.deliveryMetrics ?? null);
 
   const sentimentData = summary.data?.sentiment as {
     overall?: string;
@@ -844,6 +850,10 @@ function SessionDetail({
                   ))}
                 </CardContent>
               </Card>
+            )}
+
+            {deliveryMetrics && deliveryMetrics.answers.length > 0 && (
+              <DeliveryCard delivery={deliveryMetrics} />
             )}
 
             {/* Tone & Communication */}

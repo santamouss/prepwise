@@ -2,23 +2,56 @@ import { generateSessionSummary } from "@/lib/ai/generate-session-summary";
 import { createLogger } from "@/lib/logger";
 import { recordPracticeUsageIfCountable } from "@/lib/practice/usage/record-usage";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  mergeDeliveryIntoSessionInsights,
+  type DeliveryAnswerRecord,
+} from "@/lib/voice/delivery-analysis";
 import { NextResponse } from "next/server";
 import { handleVoiceSave, type CompletionSession, type ProgressSession, type VoiceSaveOps, type VoiceSavePayload } from "./logic";
 
 const log = createLogger("api/voice/save");
 const voiceSaveOps: VoiceSaveOps = {
-  async insertMessages(sessionId, messages) {
+  async insertMessages(sessionId, messages, currentQuestionIndex) {
+    const deliveryAnswers: DeliveryAnswerRecord[] = [];
+
     await supabaseAdmin.from("messages").insert(
-      messages.map((m) => ({
-        sessionId,
-        role: m.role === "user" ? ("USER" as const) : ("ASSISTANT" as const),
-        content: m.content,
-        contentType: "TEXT" as const,
-        questionId: m.questionId || null,
-        wordCount: m.content.split(/\s+/).length,
-        transcription: m.source === "chat" ? "chat" : null,
-      })),
+      messages.map((m) => {
+        if (m.role === "user" && m.delivery) {
+          deliveryAnswers.push({
+            ...m.delivery,
+            questionIndex:
+              typeof m.delivery.questionIndex === "number"
+                ? m.delivery.questionIndex
+                : currentQuestionIndex,
+          });
+        }
+        return {
+          sessionId,
+          role: m.role === "user" ? ("USER" as const) : ("ASSISTANT" as const),
+          content: m.content,
+          contentType: "TEXT" as const,
+          questionId: m.questionId || null,
+          wordCount: m.delivery?.wordCount ?? m.content.split(/\s+/).length,
+          readingTimeSeconds: m.delivery?.estimatedDurationSeconds ?? null,
+          transcription: m.source === "chat" ? "chat" : null,
+        };
+      }),
     );
+
+    if (deliveryAnswers.length > 0) {
+      const { data: session } = await supabaseAdmin
+        .from("sessions")
+        .select("insights")
+        .eq("id", sessionId)
+        .single();
+
+      const insights = mergeDeliveryIntoSessionInsights(
+        (session?.insights as Record<string, unknown> | null) ?? null,
+        deliveryAnswers,
+      );
+
+      await supabaseAdmin.from("sessions").update({ insights }).eq("id", sessionId);
+    }
   },
   async loadSessionForCompletion(sessionId) {
     const { data } = await supabaseAdmin

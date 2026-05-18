@@ -1,4 +1,8 @@
 import { getLanguageKey, LANGUAGE_DISPLAY_NAME } from "@/lib/i18n";
+import {
+  buildSummaryDeliverySection,
+  type SessionDeliveryInsights,
+} from "@/lib/voice/delivery-analysis";
 import type { LLMContentPart, LLMMessage } from "../types";
 
 export interface WhiteboardDrawingInput {
@@ -20,7 +24,8 @@ export function buildSummaryPrompt(
   questions?: { text: string; order: number; type?: string }[] | null,
   language?: string | null,
   whiteboardDrawings?: WhiteboardDrawingInput[] | null,
-  codeSnippets?: CodeSnippetInput[] | null
+  codeSnippets?: CodeSnippetInput[] | null,
+  deliveryMetrics?: SessionDeliveryInsights | null,
 ): LLMMessage[] {
   const transcript = messages
     .map((m) => `${m.role === "user" ? "Participant" : "Interviewer"}: ${m.content}`)
@@ -125,6 +130,11 @@ export function buildSummaryPrompt(
     ? "\n- The participant wrote code snippets during the interview. Evaluate the code quality, correctness, readability, and problem-solving approach. Consider whether the code demonstrates strong algorithmic thinking, proper use of data structures, good coding practices, and effective handling of edge cases. Incorporate your code evaluation into the report."
     : "";
 
+  const deliverySection = buildSummaryDeliverySection(deliveryMetrics);
+  const deliveryInstruction = deliverySection
+    ? "\n- Use the measured delivery signals below when commenting on pace, filler words, hedging, answer length, and pauses. Do not invent emotion or personality claims."
+    : "";
+
   const systemPrompt = `You are an expert interview analyst. Evaluate and summarize the following interview transcript. Focus on the participant's responses — their depth, relevance, and quality.
 
 Interview: "${interviewTitle}"${objectiveSection}${criteriaSection}${questionsSection}${whiteboardSection}${codeSection}
@@ -137,8 +147,8 @@ Your analysis should:
 2. Evaluate how well the participant addressed each topic
 3. Identify recurring themes and notable insights
 4. Assess the overall sentiment and engagement level
-5. Highlight any particularly strong or weak responses${whiteboardInstruction}${codeInstruction}
-${questionEvalInstruction}${criteriaEvalInstruction}${toneInstruction}${researchInstruction}${languageInstruction}
+5. Highlight any particularly strong or weak responses${whiteboardInstruction}${codeInstruction}${deliveryInstruction}
+${questionEvalInstruction}${criteriaEvalInstruction}${toneInstruction}${researchInstruction}${languageInstruction}${deliverySection}
 
 Provide a structured analysis as VALID JSON ONLY (use only standard ASCII double-quotes, never Unicode smart quotes like \u201C \u201D):
 {
