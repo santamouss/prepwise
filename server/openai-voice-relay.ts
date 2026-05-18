@@ -40,9 +40,15 @@ import {
 import {
   buildRealtimeConversationCreateEvent,
   countTranscriptWords,
+  createLiveTranscriptGateState,
   DEFAULT_SPEECH_STARTED_RECENT_MS,
+  evaluateTranscriptForAcceptance,
+  extractWhisperLogprobs,
+  logNoiseFilterRejection,
+  resetLiveTranscriptGateState,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_BYTES,
   DEFAULT_TTS_BARGE_IN_MIN_AUDIO_MS,
+  isFillerOnlyTranscript,
   isStrictFastPrevRequest,
   isSubstantiveTranscript,
   isWithinFragmentMergeWindow,
@@ -62,7 +68,10 @@ import {
   shouldBlockVoiceResponseCreate,
   shouldDeferFlush,
   shouldDeferPreFlush,
+  shouldIgnoreShortSpeechBurst,
+  shouldSurfaceLiveTranscript,
   shouldSuppressEmptyResponseRetry,
+  updateLiveTranscriptGateState,
 } from "./openai-voice-relay-helpers";
 
 const log = createLogger("openai-relay");
@@ -1052,6 +1061,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     process.env,
     ctx.practiceMode,
   );
+  const liveTranscriptGate = createLiveTranscriptGateState();
   const voiceTiming = readVoiceTranscriptTiming(ctx.practiceMode);
   const USER_TRANSCRIPT_STABILITY_MS = voiceTiming.transcriptStabilityMs;
   const USER_TRANSCRIPT_MAX_WAIT_MS = voiceTiming.transcriptMaxWaitMs;
@@ -1594,12 +1604,19 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const committedText = bestAvailableTranscript();
     if (!committedText) return "";
 
-    if (
-      !isSubstantiveTranscript(committedText, transcriptThresholds) &&
-      reason !== "voice command"
-    ) {
-      log.info("[voice-pipeline] pending fragment too short; buffering");
+    const commitAcceptance = evaluateTranscriptForAcceptance(
+      committedText,
+      transcriptThresholds,
+      { isFillerOnly: isFillerOnlyTranscript },
+    );
+    if (!commitAcceptance.accept && reason !== "voice command") {
+      logNoiseFilterRejection(log, committedText, commitAcceptance);
       return "";
+    }
+    if (commitAcceptance.accept && commitAcceptance.reason === "protected-short") {
+      log.info(
+        `[voice-noise-filter] accepted short substantive answer: "${committedText.trim().slice(0, 80)}"`,
+      );
     }
 
     speechTranscriptCommitted = true;
@@ -1660,11 +1677,19 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     if (pending && tryHandlePendingNavigationCommand(pending)) {
       return "";
     }
-    if (pending && !isSubstantiveTranscript(pending, transcriptThresholds)) {
-      if (wantsResponse) {
-        log.info("[voice-pipeline] response.create skipped for short fragment");
+    if (pending) {
+      const pendingAcceptance = evaluateTranscriptForAcceptance(
+        pending,
+        transcriptThresholds,
+        { isFillerOnly: isFillerOnlyTranscript },
+      );
+      if (!pendingAcceptance.accept) {
+        if (wantsResponse) {
+          log.info("[voice-pipeline] response.create skipped for short fragment");
+        }
+        logNoiseFilterRejection(log, pending, pendingAcceptance);
+        return "";
       }
-      return "";
     }
 
     if (ctx.practiceMode === "coach") {
@@ -1696,13 +1721,33 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       log.debug(`Ignored stale ${label}: ${JSON.stringify(text)}`);
       return false;
     }
+
+    const fragmentAcceptance = evaluateTranscriptForAcceptance(
+      text,
+      transcriptThresholds,
+      { isFillerOnly: isFillerOnlyTranscript },
+    );
+    if (!fragmentAcceptance.accept) {
+      logNoiseFilterRejection(log, text, fragmentAcceptance);
+      return false;
+    }
+
     clearStaleAsrGuard();
     return true;
   }
 
   function emitInterimUserTranscript(text: string, allowWhenVolcSilent = false) {
     if (allowWhenVolcSilent && volcAsrAccumulator.trim()) return;
-    send({ type: "asr", data: { results: [{ text }] } });
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    const now = Date.now();
+    updateLiveTranscriptGateState(liveTranscriptGate, trimmed, now);
+    if (!shouldSurfaceLiveTranscript(trimmed, liveTranscriptGate, now)) {
+      return;
+    }
+
+    send({ type: "asr", data: { results: [{ text: trimmed }] } });
   }
 
   function handleVolcInterimText(text: string, label: string) {
@@ -1745,8 +1790,23 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     if (pendingInputFlush) scheduleInputFlush();
   }
 
-  function handleWhisperCompletedTranscript(transcript: string) {
-    if (!transcript || !tryAcceptFreshAsrText(transcript, "Whisper completion")) return;
+  function handleWhisperCompletedTranscript(
+    transcript: string,
+    logprobs?: number[],
+  ) {
+    if (!transcript) return;
+
+    const whisperAcceptance = evaluateTranscriptForAcceptance(
+      transcript,
+      transcriptThresholds,
+      { logprobs, isFillerOnly: isFillerOnlyTranscript },
+    );
+    if (!whisperAcceptance.accept) {
+      logNoiseFilterRejection(log, transcript, whisperAcceptance);
+      return;
+    }
+
+    if (!tryAcceptFreshAsrText(transcript, "Whisper completion")) return;
 
     const msSinceVadSpeech = Date.now() - lastVadSpeechEnd;
     if (isWhisperHallucination(transcript) || (msSinceVadSpeech > 10_000 && transcript.trim().split(/\s+/).length <= 6)) {
@@ -1780,7 +1840,12 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
     const pending = bestAvailableTranscript();
     if (pending && !speechTranscriptCommitted) {
-      if (!isSubstantiveTranscript(pending, transcriptThresholds)) {
+      const pendingAcceptance = evaluateTranscriptForAcceptance(
+        pending,
+        transcriptThresholds,
+        { isFillerOnly: isFillerOnlyTranscript },
+      );
+      if (!pendingAcceptance.accept) {
         log.info("[voice-pipeline] pending fragment too short; buffering");
       } else if (pendingFragmentWithinMergeWindow()) {
         log.info("[voice-pipeline] speech restart within merge window; keeping buffered answer");
@@ -1816,6 +1881,20 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     speechStopForwardGraceUntil = lastVadSpeechEnd + SPEECH_STOP_FORWARD_GRACE_MS;
     log.info("[voice-pipeline] speech_stopped");
     logVoicePipelineState("speech_stopped");
+
+    const segmentMs =
+      lastSpeechStartedAt > 0 ? now - lastSpeechStartedAt : 0;
+    const pendingAfterStop = bestAvailableTranscript();
+    if (shouldIgnoreShortSpeechBurst(pendingAfterStop, segmentMs)) {
+      log.info(
+        `[voice-noise-filter] ignored transient audio burst (${segmentMs}ms)`,
+      );
+      inputTranscriptBuffer = "";
+      volcAsrAccumulator = "";
+      resetPendingTurnActivity();
+      resetLiveTranscriptGateState(liveTranscriptGate);
+    }
+
     if (!speechTranscriptCommitted && bestAvailableTranscript() && ctx.practiceMode !== "coach") {
       scheduleMockAnswerCompletion("speech stop");
     }
@@ -2231,7 +2310,10 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
           case "conversation.item.input_audio_transcription.completed": {
             if (!openAiTranscriptionEnabled || speechTranscriptCommitted) break;
-            handleWhisperCompletedTranscript(msg.transcript || "");
+            handleWhisperCompletedTranscript(
+              msg.transcript || "",
+              extractWhisperLogprobs(msg as Record<string, unknown>),
+            );
             break;
           }
 

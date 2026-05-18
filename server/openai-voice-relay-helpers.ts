@@ -86,16 +86,26 @@ export interface VoiceTranscriptTiming {
 const FILLER_ONLY_PATTERNS: RegExp[] = [
   /^well[,.!?\s]*$/i,
   /^yeah[,.!?\s]*$/i,
+  /^yep[,.!?\s]*$/i,
+  /^yup[,.!?\s]*$/i,
   /^yes[,.!?\s]*$/i,
   /^no[,.!?\s]*$/i,
   /^um+[,.!?\s]*$/i,
   /^uh+[,.!?\s]*$/i,
+  /^mm+[,.!?\s]*$/i,
+  /^hm+[,.!?\s]*$/i,
+  /^hmm[,.!?\s]*$/i,
+  /^hello[,.!?\s]*$/i,
+  /^hi[,.!?\s]*$/i,
+  /^hey[,.!?\s]*$/i,
+  /^bye[,.!?\s]*$/i,
+  /^bye[,.!?\s-]*bye[,.!?\s]*$/i,
+  /^okay[,.!?\s]*$/i,
+  /^ok[,.!?\s]*$/i,
   /^i think[,.!?\s]*$/i,
   /^well,?\s+i know[,.!?\s]*$/i,
   /^you know[,.!?\s]*$/i,
   /^so[,.!?\s]*$/i,
-  /^okay[,.!?\s]*$/i,
-  /^ok[,.!?\s]*$/i,
 ];
 
 export function readEnvInt(
@@ -125,13 +135,9 @@ export function isSubstantiveTranscript(
   text: string,
   thresholds: Pick<TranscriptCommitThresholds, "minWords" | "minChars">,
 ): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return false;
-  if (isFillerOnlyTranscript(trimmed)) return false;
-  return (
-    countTranscriptWords(trimmed) >= thresholds.minWords &&
-    trimmed.length >= thresholds.minChars
-  );
+  return evaluateTranscriptForAcceptance(text, thresholds, {
+    isFillerOnly: isFillerOnlyTranscript,
+  }).accept;
 }
 
 export function readTranscriptCommitThresholds(
@@ -534,4 +540,304 @@ export function shouldAllowTtsBargeIn({
   if (rms < thresholdRms) return false;
   if (consecutiveFrames < thresholdFrames) return false;
   return true;
+}
+
+// ── Accidental noise / short fragment filtering ─────────────────────────
+
+export const DEFAULT_MIN_SPEECH_SEGMENT_MS = 500;
+export const DEFAULT_LIVE_TRANSCRIPT_MIN_WORDS = 4;
+export const DEFAULT_LIVE_TRANSCRIPT_MIN_CHARS = 20;
+export const DEFAULT_LIVE_TRANSCRIPT_STABLE_MS = 1200;
+export const DEFAULT_MAX_NOISE_FRAGMENT_WORDS = 3;
+export const DEFAULT_LOW_CONFIDENCE_LOGPROB_THRESHOLD = -1.0;
+
+const NOISE_FRAGMENT_EXACT = new Set([
+  "bye",
+  "bye bye",
+  "bye-bye",
+  "yeah",
+  "yep",
+  "yup",
+  "okay",
+  "ok",
+  "hello",
+  "hi",
+  "hey",
+  "mm",
+  "mmm",
+  "hmm",
+  "hm",
+  "uh",
+  "um",
+  "ah",
+  "oh",
+  "huh",
+  "well",
+  "so",
+  "you",
+  "thanks",
+  "thank you",
+  "goodbye",
+]);
+
+const SHORT_SUBSTANTIVE_ALLOWLIST = new Set([
+  "google",
+  "python",
+  "typescript",
+  "javascript",
+  "react",
+  "java",
+  "kotlin",
+  "swift",
+  "golang",
+  "rust",
+  "ruby",
+  "sql",
+  "aws",
+  "azure",
+  "kubernetes",
+  "docker",
+  "yes",
+  "no",
+  "true",
+  "false",
+  "star",
+]);
+
+const COACH_CONTROL_PATTERNS: RegExp[] = [
+  /\bi m done\b/,
+  /\bdone answering\b/,
+  /\bfinished answering\b/,
+  /\btry again\b/,
+  /\blet me try\b/,
+  /\bretry\b/,
+  /\bone more time\b/,
+];
+
+export function normalizeTranscriptForNoise(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\w\u4e00-\u9fff]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function isAllowedShortSubstantiveAnswer(text: string): boolean {
+  const normalized = normalizeTranscriptForNoise(text);
+  if (!normalized) return false;
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length === 0 || words.length > 3) return false;
+  if (words.length === 1 && SHORT_SUBSTANTIVE_ALLOWLIST.has(words[0]!)) {
+    return true;
+  }
+  return words.every((word) => SHORT_SUBSTANTIVE_ALLOWLIST.has(word));
+}
+
+export function isCoachControlTranscript(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  const normalized = normalizeTranscriptForNoise(trimmed);
+  return COACH_CONTROL_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+export function isProtectedShortTranscript(text: string): boolean {
+  if (isClearNextQuestionCommand(text).detected) return true;
+  if (isCoachControlTranscript(text)) return true;
+  if (isAllowedShortSubstantiveAnswer(text)) return true;
+  return false;
+}
+
+export function isRejectableNoiseFragment(
+  text: string,
+  maxNoiseWords = DEFAULT_MAX_NOISE_FRAGMENT_WORDS,
+): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return true;
+  if (isProtectedShortTranscript(trimmed)) return false;
+
+  const wordCount = countTranscriptWords(trimmed);
+  if (wordCount >= maxNoiseWords) return false;
+
+  const normalized = normalizeTranscriptForNoise(trimmed);
+  return NOISE_FRAGMENT_EXACT.has(normalized) || isFillerOnlyTranscript(trimmed);
+}
+
+export function isLowConfidenceShortTranscript(
+  transcript: string,
+  logprobs: number[] | null | undefined,
+  options?: { maxWords?: number; threshold?: number },
+): boolean {
+  const maxWords = options?.maxWords ?? 2;
+  const threshold = options?.threshold ?? DEFAULT_LOW_CONFIDENCE_LOGPROB_THRESHOLD;
+  if (!logprobs?.length) return false;
+
+  const wordCount = countTranscriptWords(transcript);
+  if (wordCount > maxWords) return false;
+
+  const avg = logprobs.reduce((sum, value) => sum + value, 0) / logprobs.length;
+  return avg < threshold;
+}
+
+export function meetsLiveTranscriptSizeThreshold(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  return (
+    countTranscriptWords(trimmed) >= DEFAULT_LIVE_TRANSCRIPT_MIN_WORDS ||
+    trimmed.length >= DEFAULT_LIVE_TRANSCRIPT_MIN_CHARS
+  );
+}
+
+export type LiveTranscriptGateState = {
+  firstSeenAt: number;
+  stableSinceAt: number;
+  lastText: string;
+};
+
+export function createLiveTranscriptGateState(): LiveTranscriptGateState {
+  return { firstSeenAt: 0, stableSinceAt: 0, lastText: "" };
+}
+
+export function resetLiveTranscriptGateState(state: LiveTranscriptGateState): void {
+  state.firstSeenAt = 0;
+  state.stableSinceAt = 0;
+  state.lastText = "";
+}
+
+export function updateLiveTranscriptGateState(
+  state: LiveTranscriptGateState,
+  text: string,
+  nowMs: number,
+): void {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    resetLiveTranscriptGateState(state);
+    return;
+  }
+
+  if (!state.firstSeenAt) {
+    state.firstSeenAt = nowMs;
+  }
+
+  const normalized = normalizeTranscriptForNoise(trimmed);
+  const lastNormalized = normalizeTranscriptForNoise(state.lastText);
+  if (normalized !== lastNormalized) {
+    state.stableSinceAt = nowMs;
+    state.lastText = trimmed;
+  } else if (!state.stableSinceAt) {
+    state.stableSinceAt = nowMs;
+    state.lastText = trimmed;
+  }
+}
+
+export function shouldSurfaceLiveTranscript(
+  text: string,
+  state: LiveTranscriptGateState,
+  nowMs: number,
+  stableMs = DEFAULT_LIVE_TRANSCRIPT_STABLE_MS,
+): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (isProtectedShortTranscript(trimmed)) return true;
+  if (meetsLiveTranscriptSizeThreshold(trimmed)) return true;
+  if (state.stableSinceAt > 0 && nowMs - state.stableSinceAt >= stableMs) {
+    return true;
+  }
+  return false;
+}
+
+export function shouldIgnoreShortSpeechBurst(
+  pendingTranscript: string,
+  segmentDurationMs: number,
+  minSpeechMs = DEFAULT_MIN_SPEECH_SEGMENT_MS,
+): boolean {
+  if (segmentDurationMs <= 0 || segmentDurationMs >= minSpeechMs) {
+    return false;
+  }
+  const pending = pendingTranscript.trim();
+  if (!pending) return true;
+  if (isProtectedShortTranscript(pending)) return false;
+  return isRejectableNoiseFragment(pending);
+}
+
+export type TranscriptAcceptanceResult =
+  | { accept: true; reason: "protected-short" | "substantive" | "command" }
+  | { accept: false; reason: "noise-fragment" | "filler" | "too-short" | "low-confidence" };
+
+export function evaluateTranscriptForAcceptance(
+  text: string,
+  thresholds: Pick<TranscriptCommitThresholds, "minWords" | "minChars">,
+  options?: {
+    logprobs?: number[] | null;
+    isFillerOnly?: (t: string) => boolean;
+  },
+): TranscriptAcceptanceResult {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { accept: false, reason: "too-short" };
+  }
+
+  if (isProtectedShortTranscript(trimmed)) {
+    return { accept: true, reason: "protected-short" };
+  }
+
+  if (
+    options?.logprobs &&
+    isLowConfidenceShortTranscript(trimmed, options.logprobs)
+  ) {
+    return { accept: false, reason: "low-confidence" };
+  }
+
+  if (isRejectableNoiseFragment(trimmed)) {
+    return { accept: false, reason: "noise-fragment" };
+  }
+
+  const fillerCheck = options?.isFillerOnly ?? isFillerOnlyTranscript;
+  if (fillerCheck(trimmed)) {
+    return { accept: false, reason: "filler" };
+  }
+
+  if (
+    countTranscriptWords(trimmed) >= thresholds.minWords &&
+    trimmed.length >= thresholds.minChars
+  ) {
+    return { accept: true, reason: "substantive" };
+  }
+
+  return { accept: false, reason: "too-short" };
+}
+
+export function logNoiseFilterRejection(
+  log: { info: (message: string) => void },
+  text: string,
+  result: Extract<TranscriptAcceptanceResult, { accept: false }>,
+): void {
+  const snippet = text.trim().slice(0, 80);
+  if (result.reason === "low-confidence") {
+    log.info(`[voice-noise-filter] rejected low-confidence fragment: "${snippet}"`);
+    return;
+  }
+  if (result.reason === "noise-fragment" || result.reason === "filler") {
+    log.info(`[voice-noise-filter] rejected short noise fragment: "${snippet}"`);
+    return;
+  }
+  log.info(`[voice-noise-filter] rejected short fragment (${result.reason}): "${snippet}"`);
+}
+
+export function extractWhisperLogprobs(
+  msg: Record<string, unknown>,
+): number[] | undefined {
+  const direct = msg.logprobs;
+  if (Array.isArray(direct)) {
+    return direct
+      .map((entry) => {
+        if (typeof entry === "number") return entry;
+        if (entry && typeof entry === "object" && "logprob" in entry) {
+          const value = (entry as { logprob?: unknown }).logprob;
+          return typeof value === "number" ? value : Number.NaN;
+        }
+        return Number.NaN;
+      })
+      .filter((value) => Number.isFinite(value));
+  }
+  return undefined;
 }
