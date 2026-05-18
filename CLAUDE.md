@@ -3,16 +3,16 @@
 > **Source of truth** for what Parker is, how it works, and where it is going.
 > Update this file as product decisions are made. Use it as context for Cursor / Claude sessions.
 >
-> **Brand:** Customer-facing product is **Parker** (also **ParkerHero** in some deploy names, e.g. Fly app `parkerhero-voice`).
+> **Brand:** Customer-facing brand is **ParkerHero**. The AI interviewer is **Parker** (e.g. Fly app `parkerhero-voice`).
 > **Repo / internal name:** PrepWise (`prepwise` in `package.json`). Fork of [Aural OSS](https://github.com/1146345502/aural-oss) (MIT).
 
 ---
 
 ## Product overview
 
-**Parker** is a **voice-first AI interview practice** product for **job candidates**.
+**ParkerHero** is a **voice-first AI interview practice** product for **job candidates**.
 
-Candidates run mock interviews with Parker (AI interviewer/coach), get structured feedback and delivery metrics, and build confidence before real interviews.
+Candidates run mock interviews with **Parker** (AI interviewer/coach), get structured feedback and delivery metrics, and build confidence before real interviews.
 
 **Core value prop:** Practice realistic voice interviews anytime, get instant AI feedback, improve delivery, land the job.
 
@@ -195,7 +195,7 @@ Browser — use-voice.ts
 | `NEXT_PUBLIC_VOICE_RELAY_URL` | Legacy Volcengine relay |
 | `NEXT_PUBLIC_VOICE_RELAY_PRIMARY` | `voice` \| `openai` — routing order |
 | `OPENAI_REALTIME_API_KEY` / `OPENAI_API_KEY` | Realtime auth |
-| `OPENAI_REALTIME_MODEL` | e.g. `gpt-4o-realtime-preview` |
+| `OPENAI_REALTIME_MODEL` | Currently `gpt-realtime` in production |
 | `OPENAI_REALTIME_VOICE` | TTS voice id |
 | `USE_AZURE_OPENAI_REALTIME` | Optional Azure Realtime path |
 | `VOICE_MIN_COMMIT_WORDS`, `VOICE_MIN_COMMIT_CHARS` | Transcript commit thresholds |
@@ -280,7 +280,8 @@ Prompt shaping: `applyPracticeModeToVoicePrompt` in `openai-voice-relay.ts` (moc
 - **Triggers:**
   - Voice practice complete: `POST /api/voice/save` with `complete: true` → `src/app/api/voice/save/route.ts`
   - Recruiter sessions: `POST /api/ai/summarize`
-- **Chat-only complete:** `trpc.session.complete` does **not** auto-generate summary — prefer voice for practice.
+  - Any mode on complete: `trpc.session.complete` → `triggerSessionSummaryIfNeeded()` in background (`src/server/routers/session.ts`, `src/lib/ai/generate-session-summary.ts`) if feedback not already present
+- **Note:** Candidate practice is voice-first; chat-complete paths still get async summary via `session.complete`.
 
 ### Persisted on `sessions`
 
@@ -371,10 +372,9 @@ Regenerate types: `npm run db:types`.
 |-------|-------|
 | **Vercel / Fly version skew** | Coach voice on Fly but UI missing if Vercel not redeployed |
 | **Relay primary** | Volcengine fallback ignores `practiceMode` — force OpenAI primary for Coach |
-| **Session completion race** | `session-completion-screen.tsx` — effect cleanup + `runStartedRef` can leave spinner stuck on `processing` |
+| **Session completion flow** | Previously fixed; keep regression testing candidate, recruiter, and public/invite completion paths (`session-completion-screen.tsx`) |
 | **Checklist skip not auth-gated** | Anyone with practice interview metadata skips checklist |
 | **Transcript / turn-taking** | Keep testing mock auto-advance, coach manual flow, short nav phrases |
-| **Chat practice summary** | No auto-summary on chat-only complete |
 | **Report generation timeout** | Long sessions may hit feedback-pending fallback |
 
 ---
@@ -388,7 +388,6 @@ Regenerate types: `npm run db:types`.
 - [ ] Pricing page (Free / Starter / Pro; Sprint Pass if productized)
 - [ ] Marketing site copy (replace Aural docs in `src/content/docs/` where candidate-facing)
 - [ ] Email notifications (session complete, weekly recap)
-- [ ] Harden session completion screen (race fix)
 - [ ] Optional: auth-gate practice checklist skip
 
 ### Later
@@ -505,7 +504,7 @@ supabase/migrations/006_add_user_type.sql
 |------|----------|-----------|
 | May 2026 | Fork Aural OSS (MIT) | Working voice + interview infra |
 | May 2026 | B2C candidates as primary; keep B2B stack | Faster MVP; future bootcamp licensing |
-| May 2026 | Brand: **Parker** | Customer-facing; repo stays PrepWise |
+| May 2026 | Brand: **ParkerHero** / AI **Parker** | Customer-facing; repo stays PrepWise |
 | May 2026 | OpenAI Realtime as primary voice | Quality; GA API support in relay |
 | May 2026 | Mock vs Coach practice modes | Mock = realistic flow; Coach = deliberate feedback |
 | May 2026 | Usage limits in DB before Stripe | `usage_events` + `practicePlan` |
