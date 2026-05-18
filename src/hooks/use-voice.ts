@@ -30,6 +30,7 @@ export interface InterviewContext {
   isPractice?: boolean;
   startQuestionIndex?: number;
   questions: Array<{
+    id?: string;
     text: string;
     type: string;
     description?: string | null;
@@ -73,6 +74,7 @@ interface VoiceState {
 interface TrackedMessage {
   role: "user" | "assistant";
   content: string;
+  questionId?: string;
   source?: "voice" | "chat";
   delivery?: DeliveryAnswerRecord;
 }
@@ -149,6 +151,21 @@ export function useVoice({
   const lastOnAIResponseRef = useRef<string>("");
   const currentQuestionIndexRef = useRef(
     interviewContext.startQuestionIndex ?? 0
+  );
+
+  const questionIdForIndex = useCallback(
+    (index: number): string | undefined => {
+      const sorted = [...interviewContext.questions].sort(
+        (a, b) => a.order - b.order,
+      );
+      return sorted[index]?.id;
+    },
+    [interviewContext.questions],
+  );
+
+  const currentQuestionId = useCallback(
+    () => questionIdForIndex(currentQuestionIndexRef.current),
+    [questionIdForIndex],
   );
   const latestCodeUpdateRef = useRef<{ content: string; language: string } | null>(
     null
@@ -457,9 +474,14 @@ export function useVoice({
     async (currentQuestionIndex: number) => {
       // Flush any remaining ASR buffer (chatBuffer is already cleared
       // before this is called by the question_change handler).
+      const savedQuestionIndex = Math.max(0, currentQuestionIndex - 1);
       const pendingAsrText = asrBufferRef.current.trim();
       if (pendingAsrText) {
-        trackedMessagesRef.current.push({ role: "user", content: pendingAsrText });
+        trackedMessagesRef.current.push({
+          role: "user",
+          content: pendingAsrText,
+          questionId: questionIdForIndex(savedQuestionIndex),
+        });
         asrBufferRef.current = "";
       }
 
@@ -482,7 +504,7 @@ export function useVoice({
         log.error("Failed to save progress:", err);
       }
     },
-    [sessionId]
+    [sessionId, questionIdForIndex]
   );
 
   /** Handle JSON messages from relay */
@@ -541,6 +563,7 @@ export function useVoice({
               trackedMessagesRef.current.push({
                 role: "user",
                 content: finalText,
+                questionId: currentQuestionId(),
                 ...(delivery ? { delivery } : {}),
               });
               log.debug(
@@ -616,6 +639,7 @@ export function useVoice({
               trackedMessagesRef.current.push({
                 role: "assistant",
                 content: fullResponse,
+                questionId: currentQuestionId(),
               });
               log.debug(
                 `Tracked ASSISTANT (${msg.type}): "${fullResponse.slice(0, 60)}..."`
@@ -634,6 +658,7 @@ export function useVoice({
             trackedMessagesRef.current.push({
               role: "assistant",
               content: text,
+              questionId: currentQuestionId(),
             });
           }
           chatBufferRef.current = "";
@@ -867,7 +892,12 @@ export function useVoice({
       const connector = relayConnectorRef.current;
       if (!connector?.isReady) return;
 
-      trackedMessagesRef.current.push({ role: "user", content: trimmed, source: "chat" });
+      trackedMessagesRef.current.push({
+        role: "user",
+        content: trimmed,
+        source: "chat",
+        questionId: currentQuestionId(),
+      });
       connector.sendJson({ type: "text_input", content: trimmed });
     },
     [],
@@ -932,7 +962,7 @@ export function useVoice({
       log.error("Failed to save voice data:", err);
       return false;
     }
-  }, [sessionId]);
+  }, [sessionId, currentQuestionId]);
 
   /** Disconnect, save messages, and clean up everything */
   const disconnect = useCallback(async (): Promise<boolean> => {

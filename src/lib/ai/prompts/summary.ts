@@ -99,7 +99,14 @@ export function buildSummaryPrompt(
   // ── Per-question evaluation section ────────────────────────────
   const questionEvalInstruction =
     questions && questions.length > 0
-      ? `6. For EACH interview question, evaluate the participant's response: how well they addressed the question, key strengths, areas for improvement, and a score (1-10)\n`
+      ? `6. For EACH interview question listed above, evaluate the participant's response when they actually reached and answered it.
+- Set "status" to one of: "answered", "partial", "skipped", "timed_out", "not_reached".
+- Use "not_reached" when the session ended (especially on a timer) before that question was asked or discussed — do NOT assign a low score.
+- Use "timed_out" when the question was started but time expired before a substantive answer.
+- Use "partial" only when the participant began answering but the response was too brief to judge fairly.
+- Use "answered" when they gave a substantive response.
+- Only assign "score" (1-10) for "answered" or "skipped". For "not_reached", "timed_out", and "partial", set "score" to null.
+- Do NOT penalize the candidate for questions they never had time to reach.\n`
       : "";
 
   const questionEvalJsonField =
@@ -108,6 +115,7 @@ export function buildSummaryPrompt(
   "questionEvaluations": [
     {
       "question": "the interview question text",
+      "status": "answered",
       "score": 8,
       "evaluation": "detailed evaluation of the participant's response to this question",
       "highlights": ["specific strength or notable point"],

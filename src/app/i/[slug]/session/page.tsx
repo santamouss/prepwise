@@ -229,6 +229,7 @@ export default function SlugSessionPage() {
           : {}),
       startQuestionIndex: isResuming ? resumeQuestionIndex : undefined,
       questions: interviewData.questions.map((q: any) => ({
+        id: q.id,
         text: q.text,
         type: q.type,
         description: q.description,

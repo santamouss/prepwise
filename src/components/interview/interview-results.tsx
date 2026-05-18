@@ -23,6 +23,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import {
+  isScorableQuestionStatus,
+  normalizeEvaluationStatus,
+  statusDisplayLabel,
+  type QuestionEvaluationStatus,
+} from "@/lib/session/question-evaluation";
 import { getSessionOverallScore } from "@/lib/session-score";
 import { trpc } from "@/lib/trpc/client";
 import type { SessionDeliveryInsights } from "@/lib/voice/delivery-analysis";
@@ -59,10 +65,58 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 interface QuestionEvaluation {
   question: string;
-  score: number;
+  score?: number | string | null;
   evaluation: string;
   highlights?: string[];
   improvements?: string[];
+  status?: QuestionEvaluationStatus | string | null;
+  excludedFromScore?: boolean;
+}
+
+const CONTEXT_PREVIEW_LINES = 3;
+
+function CollapsibleInterviewContext({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const lines = text.split(/\n/).filter((line) => line.trim().length > 0);
+  const hasMore = lines.length > CONTEXT_PREVIEW_LINES;
+  const preview = lines.slice(0, CONTEXT_PREVIEW_LINES).join("\n");
+  const displayText = open || !hasMore ? text : preview;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Interview Context</CardTitle>
+        <p className="text-xs text-muted-foreground">Role / Job Description</p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+          {displayText}
+          {!open && hasMore ? "…" : null}
+        </p>
+        {hasMore && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 px-2 text-xs"
+            onClick={() => setOpen((prev) => !prev)}
+          >
+            {open ? (
+              <>
+                <ChevronUp className="mr-1 h-3.5 w-3.5" />
+                Hide context
+              </>
+            ) : (
+              <>
+                <ChevronDown className="mr-1 h-3.5 w-3.5" />
+                Show full context
+              </>
+            )}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
 }
 
 interface ResearchFinding {
@@ -597,14 +651,6 @@ function SessionDetail({
                               </span>
                             )}
                           </div>
-                          {summary.data?.interviewObjective && (
-                            <p className="text-xs text-muted-foreground/80">
-                              <span className="font-medium text-muted-foreground">
-                                Objective:
-                              </span>{" "}
-                              {summary.data.interviewObjective}
-                            </p>
-                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -715,6 +761,12 @@ function SessionDetail({
               </Card>
             )}
 
+            {summary.data?.interviewObjective && (
+              <CollapsibleInterviewContext
+                text={summary.data.interviewObjective}
+              />
+            )}
+
             {/* Per-Question Evaluations */}
             {questionEvaluations.length > 0 && (
               <Card>
@@ -725,21 +777,56 @@ function SessionDetail({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {questionEvaluations.map((qe, i) => (
-                    <div key={i} className="space-y-3 rounded-lg border p-4">
+                  {questionEvaluations.map((qe, i) => {
+                    const status = normalizeEvaluationStatus(qe.status);
+                    const scorable =
+                      qe.excludedFromScore !== true &&
+                      isScorableQuestionStatus(status);
+                    const scoreNum =
+                      scorable && qe.score != null && qe.score !== ""
+                        ? Number(qe.score)
+                        : null;
+                    const statusLabel = statusDisplayLabel(status);
+                    const excluded = !scorable;
+
+                    return (
+                    <div
+                      key={i}
+                      className={cn(
+                        "space-y-3 rounded-lg border p-4",
+                        excluded && "border-muted bg-muted/30 opacity-80",
+                      )}
+                    >
                       <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
+                        <div className="flex-1 space-y-1.5">
                           <p className="text-sm font-medium">
                             Q{i + 1}. {qe.question}
                           </p>
+                          {statusLabel && (
+                            <Badge
+                              variant={excluded ? "secondary" : "outline"}
+                              className="text-[10px] font-normal"
+                            >
+                              {statusLabel}
+                            </Badge>
+                          )}
+                          {excluded && (
+                            <p className="text-xs text-muted-foreground">
+                              Excluded from score
+                            </p>
+                          )}
                         </div>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <span className="text-lg font-bold">
-                            {qe.score}/10
-                          </span>
-                        </div>
+                        {scoreNum != null && Number.isFinite(scoreNum) && (
+                          <div className="flex shrink-0 items-center gap-2">
+                            <span className="text-lg font-bold">
+                              {scoreNum}/10
+                            </span>
+                          </div>
+                        )}
                       </div>
-                      <Progress value={(qe.score || 0) * 10} className="h-2" />
+                      {scoreNum != null && Number.isFinite(scoreNum) && (
+                        <Progress value={scoreNum * 10} className="h-2" />
+                      )}
                       <p className="text-sm text-muted-foreground">
                         {qe.evaluation}
                       </p>
@@ -770,7 +857,8 @@ function SessionDetail({
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </CardContent>
               </Card>
             )}
@@ -1344,6 +1432,9 @@ function SessionDetail({
                   <CardTitle className="flex items-center gap-2">
                     <MessageCircle className="h-4 w-4" />
                     Transcript
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">
+                      (collapsed by default — full message text, no truncation)
+                    </span>
                     <Badge variant="secondary" className="ml-1 font-normal">
                       {summary.data?.messages.filter(
                         (m: any) =>

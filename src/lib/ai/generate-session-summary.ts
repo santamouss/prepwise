@@ -3,6 +3,11 @@ import { extractJson } from "@/lib/ai/extract-json";
 import { buildSummaryPrompt } from "@/lib/ai/prompts/summary";
 import { getProvider, REPORT_MODEL } from "@/lib/ai/registry";
 import { createLogger } from "@/lib/logger";
+import {
+  normalizeQuestionEvaluationsForSession,
+  type QuestionEvaluationRecord,
+  type SessionReachContext,
+} from "@/lib/session/question-evaluation";
 import { hasSessionFeedback } from "@/lib/session/session-has-feedback";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import type { SessionDeliveryInsights } from "@/lib/voice/delivery-analysis";
@@ -31,13 +36,23 @@ export async function generateSessionSummary(
   } = params;
 
   try {
-    const { data: existing } = await supabaseAdmin
+    const { data: sessionMeta } = await supabaseAdmin
       .from("sessions")
-      .select("summary, themes, insights")
+      .select(
+        `summary, themes, insights, currentQuestionId, totalDurationSeconds,
+        interview:interviews!inner(
+          timeLimitMinutes,
+          questions(id, text, order, type)
+        )`,
+      )
       .eq("id", sessionId)
+      .order("order", {
+        referencedTable: "interviews.questions",
+        ascending: true,
+      })
       .single();
 
-    if (existing && hasSessionFeedback(existing)) {
+    if (sessionMeta && hasSessionFeedback(sessionMeta)) {
       log.info(`Summary skipped for session ${sessionId}: feedback already present`);
       return;
     }
@@ -95,10 +110,42 @@ export async function generateSessionSummary(
       whiteboardDrawings.length > 0 ? whiteboardDrawings : null;
     const codeInput = codeSnippetsInput.length > 0 ? codeSnippetsInput : null;
 
-    const priorInsights = existing?.insights as {
+    const priorInsights = sessionMeta?.insights as {
       deliveryMetrics?: SessionDeliveryInsights;
+      sessionProgress?: { lastQuestionIndex?: number | null };
     } | null;
     const deliveryMetrics = priorInsights?.deliveryMetrics ?? null;
+
+    const interviewRaw = sessionMeta?.interview;
+    const interviewMeta = (
+      Array.isArray(interviewRaw) ? interviewRaw[0] : interviewRaw
+    ) as {
+      timeLimitMinutes: number | null;
+      questions: { id: string; text: string; order: number; type?: string }[];
+    } | null;
+
+    const reachContext: SessionReachContext | null = interviewMeta?.questions
+      ?.length
+      ? {
+          questions: interviewMeta.questions.map((q) => ({
+            id: q.id,
+            text: q.text,
+            order: q.order,
+          })),
+          currentQuestionId: sessionMeta?.currentQuestionId ?? null,
+          totalDurationSeconds: sessionMeta?.totalDurationSeconds ?? null,
+          timeLimitMinutes: interviewMeta.timeLimitMinutes ?? null,
+          messages: allMessages
+            .filter((m) => m.contentType === "TEXT")
+            .map((m) => ({
+              role: m.role === "USER" ? "user" : "assistant",
+              content: m.content,
+              questionId: m.questionId as string | null | undefined,
+            })),
+          lastQuestionIndex:
+            priorInsights?.sessionProgress?.lastQuestionIndex ?? null,
+        }
+      : null;
 
     const promptMessages = buildSummaryPrompt(
       interviewTitle,
@@ -175,7 +222,11 @@ export async function generateSessionSummary(
       insightsData.criteriaEvaluations = parsed.criteriaEvaluations;
     }
     if (parsed.questionEvaluations) {
-      insightsData.questionEvaluations = parsed.questionEvaluations;
+      const rawEvaluations = parsed.questionEvaluations as QuestionEvaluationRecord[];
+      insightsData.questionEvaluations =
+        reachContext != null
+          ? normalizeQuestionEvaluationsForSession(rawEvaluations, reachContext)
+          : rawEvaluations;
     }
     if (parsed.researchFindings) {
       insightsData.researchFindings = parsed.researchFindings;

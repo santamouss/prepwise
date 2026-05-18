@@ -48,3 +48,18 @@ test("getSessionOverallScore returns null when no valid scores exist", () => {
   assert.equal(getSessionOverallScore(insights), null);
   assert.equal(usesQuestionEvaluationScore(insights), false);
 });
+
+test("getSessionOverallScore excludes not_reached and timed_out questions", () => {
+  const insights = {
+    questionEvaluations: [
+      { score: 8, status: "answered" },
+      { score: 6, status: "answered" },
+      { score: 1, status: "not_reached", excludedFromScore: true },
+      { score: 2, status: "timed_out", excludedFromScore: true },
+    ],
+    criteriaEvaluations: [{ score: 3 }],
+  };
+
+  assert.equal(getSessionOverallScore(insights), 7);
+  assert.equal(usesQuestionEvaluationScore(insights), true);
+});

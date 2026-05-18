@@ -146,11 +146,19 @@ export async function handleVoiceSave(
         const now = ops.now();
         const duration = Math.round((now.getTime() - actualStart) / 1000);
 
+        let currentQuestionId: string | undefined;
+        if (typeof currentQuestionIndex === "number") {
+          const progressSession = await ops.loadSessionForProgress(sessionId);
+          const progressQuestions = progressSession?.interview?.questions ?? [];
+          currentQuestionId = progressQuestions[currentQuestionIndex]?.id;
+        }
+
         await ops.updateSession(sessionId, {
           status: "COMPLETED" as const,
           completedAt: now.toISOString(),
           startedAt: new Date(actualStart).toISOString(),
           totalDurationSeconds: duration,
+          ...(currentQuestionId ? { currentQuestionId } : {}),
         });
 
         ops.log.info(`Session ${sessionId} marked COMPLETED (${duration}s)`);
