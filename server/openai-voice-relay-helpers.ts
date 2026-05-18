@@ -156,6 +156,23 @@ export function readTranscriptCommitThresholds(
   return { minWords, minChars, fragmentMergeMs };
 }
 
+export { mergeAsrText } from "../src/lib/voice/merge-asr-text";
+
+export function isTranscriptReadyAfterSilence(
+  nowMs: number,
+  lastTranscriptUpdateAt: number,
+  lastSpeechStoppedAt: number,
+  stabilityMs: number,
+  minSilenceAfterStopMs: number,
+  maxWaitMs: number,
+): boolean {
+  if (lastSpeechStoppedAt <= 0) return false;
+  const sinceSpeechStop = nowMs - lastSpeechStoppedAt;
+  if (sinceSpeechStop < minSilenceAfterStopMs) return false;
+  const sinceUpdate = lastTranscriptUpdateAt > 0 ? nowMs - lastTranscriptUpdateAt : Number.POSITIVE_INFINITY;
+  return sinceUpdate >= stabilityMs || sinceSpeechStop >= maxWaitMs;
+}
+
 export function readVoiceTranscriptTiming(
   practiceMode?: "mock" | "coach",
 ): VoiceTranscriptTiming {

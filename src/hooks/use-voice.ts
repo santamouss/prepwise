@@ -1,6 +1,7 @@
 "use client";
 
 import { createLogger } from "@/lib/logger";
+import { mergeAsrText } from "@/lib/voice/merge-asr-text";
 import {
   buildRelayTargets,
   isRecoverableRelayErrorMessage,
@@ -470,8 +471,9 @@ export function useVoice({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sessionId, messages, currentQuestionIndex }),
         });
+        const totalChars = messages.reduce((sum, m) => sum + m.content.length, 0);
         log.info(
-          `Progress saved: ${messages.length} msgs, Q${currentQuestionIndex + 1}`
+          `Progress saved: ${messages.length} msgs (${totalChars} chars), Q${currentQuestionIndex + 1}`,
         );
       } catch (err) {
         log.error("Failed to save progress:", err);
@@ -507,9 +509,10 @@ export function useVoice({
           if (results.length > 0) {
             const text = (results[0].text as string) || "";
             if (text.trim()) {
-              asrBufferRef.current = text.trim();
-              setState((s) => ({ ...s, userTranscript: text }));
-              onTranscript?.(text, false);
+              const merged = mergeAsrText(asrBufferRef.current, text.trim());
+              asrBufferRef.current = merged;
+              setState((s) => ({ ...s, userTranscript: merged }));
+              onTranscript?.(merged, false);
             }
           }
           break;

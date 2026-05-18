@@ -46,6 +46,8 @@ import {
   isAllowedMockResponseCreateReason,
   isClearNextQuestionCommand,
   isNoisyEmbeddedNextCommandCandidate,
+  isTranscriptReadyAfterSilence,
+  mergeAsrText,
   MOCK_ANSWER_COMPLETION_REASON,
   shouldBlockMockAutoResponse,
   shouldBlockMockTranscriptCommit,
@@ -337,24 +339,6 @@ function looksLikeFarewell(text: string, isZh: boolean): boolean {
 
   const patterns = isZh ? [...zhPatterns, ...enPatterns] : [...enPatterns, ...zhPatterns];
   return patterns.some((pattern) => pattern.test(normalized));
-}
-
-function mergeAsrText(previous: string, incoming: string): string {
-  const prev = previous.trim();
-  const next = incoming.trim();
-  if (!next) return prev;
-  if (!prev) return next;
-
-  const prevLower = prev.toLowerCase();
-  const nextLower = next.toLowerCase();
-
-  if (nextLower.includes(prevLower)) return next;
-  if (prevLower.includes(nextLower)) return prev;
-
-  // Avoid regressing a long interim transcript into a tiny trailing fragment.
-  if (next.length + 8 < prev.length) return prev;
-
-  return next.length >= prev.length ? next : prev;
 }
 
 const FAST_PREV_PATTERNS = [
@@ -1467,6 +1451,24 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     return mergeAsrText(inputTranscriptBuffer, volcAsrAccumulator).trim();
   }
 
+  function mergePendingTranscript(
+    target: "whisper" | "volc",
+    incoming: string,
+    label: string,
+  ): void {
+    const before =
+      target === "whisper" ? inputTranscriptBuffer : volcAsrAccumulator;
+    const merged = mergeAsrText(before, incoming);
+    if (target === "whisper") {
+      inputTranscriptBuffer = merged;
+    } else {
+      volcAsrAccumulator = merged;
+    }
+    log.info(
+      `[voice-pipeline] ASR ${label} fragment len=${incoming.length} pending before=${before.length} after=${merged.length}`,
+    );
+  }
+
   function noteTranscriptUpdate() {
     const now = Date.now();
     lastTranscriptUpdateAt = now;
@@ -1484,20 +1486,25 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       }
       markPendingTurnActivity(now);
     }
-    if (!vadSpeechActive && !speechTranscriptCommitted && pending) {
-      if (ctx.practiceMode === "coach") {
-        scheduleSpeechFinalize("asr stability", USER_TRANSCRIPT_STABILITY_MS);
-      } else {
-        scheduleMockAnswerCompletion("asr stability", USER_TRANSCRIPT_STABILITY_MS);
-      }
+    if (!vadSpeechActive && !speechTranscriptCommitted && pending && ctx.practiceMode !== "coach") {
+      scheduleMockAnswerCompletion("asr stability", USER_TRANSCRIPT_STABILITY_MS);
     }
   }
 
   function transcriptLooksStable(now = Date.now()): boolean {
-    if (!lastTranscriptUpdateAt) return true;
-    const sinceUpdate = now - lastTranscriptUpdateAt;
-    const sinceSpeechStop = lastVadSpeechEnd ? now - lastVadSpeechEnd : Number.POSITIVE_INFINITY;
-    return sinceUpdate >= USER_TRANSCRIPT_STABILITY_MS || sinceSpeechStop >= USER_TRANSCRIPT_MAX_WAIT_MS;
+    if (ctx.practiceMode === "coach") {
+      if (!lastTranscriptUpdateAt) return true;
+      const sinceUpdate = now - lastTranscriptUpdateAt;
+      return sinceUpdate >= USER_TRANSCRIPT_STABILITY_MS;
+    }
+    return isTranscriptReadyAfterSilence(
+      now,
+      lastTranscriptUpdateAt,
+      lastVadSpeechEnd,
+      USER_TRANSCRIPT_STABILITY_MS,
+      DEFAULT_SPEECH_STARTED_RECENT_MS,
+      USER_TRANSCRIPT_MAX_WAIT_MS,
+    );
   }
 
   function commitUserTranscript(reason: string): string {
@@ -1539,7 +1546,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     noteMeaningfulUserActivity(`transcript committed (${reason})`);
     pushHistory("user", committedText);
     send({ type: "asr_ended", text: committedText });
-    log.info(`[voice-pipeline] committed substantive user answer (${reason})`);
+    log.info(
+      `[voice-pipeline] committed substantive user answer (${reason}) len=${committedText.length} words=${countTranscriptWords(committedText)}`,
+    );
     inputTranscriptBuffer = "";
     volcAsrAccumulator = "";
     lastTranscriptUpdateAt = 0;
@@ -1583,11 +1592,14 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return "";
     }
 
-    if (ctx.practiceMode !== "coach") {
-      if (reason !== MOCK_ANSWER_COMPLETION_REASON) {
-        scheduleMockAnswerCompletion(`${reason} deferred`);
+    if (ctx.practiceMode === "coach") {
+      if (reason !== "coach answer done" && reason !== "voice command") {
         return "";
       }
+    } else if (reason !== MOCK_ANSWER_COMPLETION_REASON) {
+      scheduleMockAnswerCompletion(`${reason} deferred`);
+      return "";
+    } else {
       const block = shouldBlockMockAutoResponse(getVoicePipelineBlockInput());
       if (block.block) {
         log.info(`[voice-pipeline] finalize deferred (${reason}) because ${block.reason}`);
@@ -1620,9 +1632,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   function handleVolcInterimText(text: string, label: string) {
     if (!tryAcceptFreshAsrText(text, label)) return;
-    volcAsrAccumulator = mergeAsrText(volcAsrAccumulator, text);
+    mergePendingTranscript("volc", text, label);
     noteTranscriptUpdate();
-    emitInterimUserTranscript(volcAsrAccumulator);
+    emitInterimUserTranscript(bestAvailableTranscript());
   }
 
   function handleVolcFinalText(reason: string, logLabel: string) {
@@ -1648,12 +1660,12 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   function handleWhisperDelta(delta: string) {
     if (!delta || !tryAcceptFreshAsrText(delta, "Whisper delta")) return;
-    inputTranscriptBuffer += delta;
+    mergePendingTranscript("whisper", delta, "whisper delta");
     noteTranscriptUpdate();
     if (pendingAsrUpdate) clearTimeout(pendingAsrUpdate);
     pendingAsrUpdate = setTimeout(() => {
       pendingAsrUpdate = null;
-      emitInterimUserTranscript(inputTranscriptBuffer, true);
+      emitInterimUserTranscript(bestAvailableTranscript(), true);
     }, 150);
     if (pendingInputFlush) scheduleInputFlush();
   }
@@ -1667,13 +1679,13 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return;
     }
 
-    log.info("[voice-pipeline] ASR completed");
-    inputTranscriptBuffer = mergeAsrText(inputTranscriptBuffer, transcript);
+    log.info(`[voice-pipeline] ASR completed fragment len=${transcript.length}`);
+    mergePendingTranscript("whisper", transcript, "whisper completed");
     noteTranscriptUpdate();
     if (pendingAsrUpdate) clearTimeout(pendingAsrUpdate);
     pendingAsrUpdate = null;
-    emitInterimUserTranscript(inputTranscriptBuffer, true);
-    scheduleInputFlush();
+    emitInterimUserTranscript(bestAvailableTranscript(), true);
+    if (pendingInputFlush) scheduleInputFlush();
   }
 
   function handleSpeechStartedEvent() {
@@ -1718,12 +1730,8 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     speechStopForwardGraceUntil = lastVadSpeechEnd + SPEECH_STOP_FORWARD_GRACE_MS;
     log.info("[voice-pipeline] speech_stopped");
     logVoicePipelineState("speech_stopped");
-    if (!speechTranscriptCommitted && bestAvailableTranscript()) {
-      if (ctx.practiceMode === "coach") {
-        scheduleSpeechFinalize("speech stop", USER_SPEECH_STOP_FINALIZE_MS);
-      } else {
-        scheduleMockAnswerCompletion("speech stop");
-      }
+    if (!speechTranscriptCommitted && bestAvailableTranscript() && ctx.practiceMode !== "coach") {
+      scheduleMockAnswerCompletion("speech stop");
     }
   }
 

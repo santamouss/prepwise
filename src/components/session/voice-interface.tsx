@@ -694,6 +694,10 @@ export function VoiceInterface({
     },
   });
 
+  const showLiveUserTranscript =
+    !!voice.userTranscript &&
+    (voice.isListening || (showCoachControls && coachPhase === "answering"));
+
   useEffect(() => {
     console.info("[coach-ui] practiceMode", interviewContext.practiceMode);
     console.info("[coach-ui] preview", preview);
@@ -1746,7 +1750,7 @@ export function VoiceInterface({
                       : "Voice disconnected"}
                   </span>
                 )}
-                {voice.isListening && voice.userTranscript && (
+                {showLiveUserTranscript && (
                   <span className="ml-auto max-w-[50%] truncate text-xs text-muted-foreground italic">
                     &ldquo;{voice.userTranscript}&rdquo;
                   </span>
@@ -2076,9 +2080,14 @@ export function VoiceInterface({
                 )}
 
                 {/* Live transcript while listening */}
-                {voice.isListening && voice.userTranscript && (
+                {showLiveUserTranscript && (
                   <p className="max-w-md text-center text-sm text-muted-foreground">
                     &ldquo;{voice.userTranscript}&rdquo;
+                    {showCoachControls && coachPhase === "answering" && (
+                      <span className="block text-xs text-muted-foreground/80">
+                        Parker hears this so far — click I&apos;m done answering when finished
+                      </span>
+                    )}
                   </p>
                 )}
 
@@ -2286,7 +2295,14 @@ export function VoiceInterface({
                                 <Mic className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
                                 <div>
                                   <span className="font-medium text-secondary-600 dark:text-secondary-400">You:</span>{" "}
-                                  <span className="text-muted-foreground">{voice.userTranscript}</span>
+                                  <span className="text-muted-foreground">
+                                    {voice.userTranscript}
+                                    {showCoachControls && coachPhase === "answering" && (
+                                      <span className="ml-1 text-xs text-muted-foreground/80">
+                                        (heard so far)
+                                      </span>
+                                    )}
+                                  </span>
                                 </div>
                               </div>
                             )}
@@ -2423,7 +2439,14 @@ export function VoiceInterface({
                             <Mic className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
                             <div>
                               <span className="font-medium text-secondary-600 dark:text-secondary-400">You:</span>{" "}
-                              <span className="text-muted-foreground">{voice.userTranscript}</span>
+                              <span className="text-muted-foreground">
+                                {voice.userTranscript}
+                                {showCoachControls && coachPhase === "answering" && (
+                                  <span className="ml-1 text-xs text-muted-foreground/80">
+                                    (heard so far)
+                                  </span>
+                                )}
+                              </span>
                             </div>
                           </div>
                         )}
@@ -2750,7 +2773,14 @@ export function VoiceInterface({
                         <Mic className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
                         <div>
                           <span className="font-medium text-secondary-600 dark:text-secondary-400">You:</span>{" "}
-                          <span className="text-muted-foreground">{voice.userTranscript}</span>
+                          <span className="text-muted-foreground">
+                            {voice.userTranscript}
+                            {showCoachControls && coachPhase === "answering" && (
+                              <span className="ml-1 text-xs text-muted-foreground/80">
+                                (heard so far)
+                              </span>
+                            )}
+                          </span>
                         </div>
                       </div>
                     )}
