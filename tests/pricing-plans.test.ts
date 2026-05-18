@@ -3,15 +3,27 @@ import test from "node:test";
 
 import { formatPlanPrice, MARKETING_PLANS } from "../src/components/marketing/pricing-plans";
 
-test("formatPlanPrice shows yearly prices when billing is yearly", () => {
+test("formatPlanPrice shows discounted monthly rate when billing is yearly", () => {
   const starter = MARKETING_PLANS.find((p) => p.id === "starter")!;
   assert.deepEqual(formatPlanPrice(starter, "yearly"), {
-    amount: "$190",
-    period: "/year",
+    amount: "$15",
+    period: "/mo",
+  });
+
+  const pro = MARKETING_PLANS.find((p) => p.id === "pro")!;
+  assert.deepEqual(formatPlanPrice(pro, "yearly"), {
+    amount: "$31",
+    period: "/mo",
   });
 });
 
-test("formatPlanPrice shows monthly prices when billing is monthly", () => {
+test("formatPlanPrice shows standard monthly prices when billing is monthly", () => {
+  const starter = MARKETING_PLANS.find((p) => p.id === "starter")!;
+  assert.deepEqual(formatPlanPrice(starter, "monthly"), {
+    amount: "$19",
+    period: "/mo",
+  });
+
   const pro = MARKETING_PLANS.find((p) => p.id === "pro")!;
   assert.deepEqual(formatPlanPrice(pro, "monthly"), {
     amount: "$39",

@@ -86,11 +86,6 @@ function PricingCard({ plan, billing }: { plan: MarketingPlan; billing: BillingP
             {amount}
             {period ? <span className="pk-price-per">{period}</span> : null}
           </div>
-          {!isFree && billing === "yearly" && plan.monthlyPrice != null && (
-            <p className="pk-price-billed">
-              ${plan.monthlyPrice}/mo billed annually
-            </p>
-          )}
         </div>
       </div>
 

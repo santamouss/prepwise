@@ -5,8 +5,10 @@ export type MarketingPlanId = "free" | "starter" | "pro";
 export type MarketingPlan = {
   id: MarketingPlanId;
   name: string;
+  /** Price shown when Monthly billing is selected */
   monthlyPrice: number | null;
-  yearlyPrice: number | null;
+  /** Per-month price shown when Yearly billing is selected (billed annually) */
+  yearlyMonthlyPrice: number | null;
   features: string[];
   ctaLabel: string;
   recommended?: boolean;
@@ -17,7 +19,7 @@ export const MARKETING_PLANS: MarketingPlan[] = [
     id: "free",
     name: "Free",
     monthlyPrice: 0,
-    yearlyPrice: 0,
+    yearlyMonthlyPrice: 0,
     features: ["3 sessions/month"],
     ctaLabel: "Start free",
   },
@@ -25,7 +27,7 @@ export const MARKETING_PLANS: MarketingPlan[] = [
     id: "starter",
     name: "Starter",
     monthlyPrice: 19,
-    yearlyPrice: 190,
+    yearlyMonthlyPrice: 15,
     recommended: true,
     features: [
       "25 sessions/month",
@@ -39,7 +41,7 @@ export const MARKETING_PLANS: MarketingPlan[] = [
     id: "pro",
     name: "Pro",
     monthlyPrice: 39,
-    yearlyPrice: 390,
+    yearlyMonthlyPrice: 31,
     features: [
       "Unlimited sessions",
       "Advanced coaching",
@@ -58,8 +60,8 @@ export function formatPlanPrice(
     return { amount: "$0", period: "" };
   }
 
-  if (billing === "yearly" && plan.yearlyPrice != null) {
-    return { amount: `$${plan.yearlyPrice}`, period: "/year" };
+  if (billing === "yearly" && plan.yearlyMonthlyPrice != null) {
+    return { amount: `$${plan.yearlyMonthlyPrice}`, period: "/mo" };
   }
 
   if (plan.monthlyPrice != null) {
