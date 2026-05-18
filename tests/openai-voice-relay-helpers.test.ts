@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildPracticeTurnDetection,
   buildRealtimeConversationCreateEvent,
   buildRealtimeTextContent,
+  COACH_SERVER_VAD_TURN_DETECTION,
   DEFAULT_MOCK_ANSWER_COMPLETION_MS,
   isAllowedMockResponseCreateReason,
   isClearNextQuestionCommand,
@@ -24,6 +26,14 @@ import {
   shouldDeferPreFlush,
   shouldSuppressEmptyResponseRetry,
 } from "../server/openai-voice-relay-helpers";
+
+test("buildPracticeTurnDetection uses stricter server_vad for coach mode", () => {
+  assert.deepEqual(buildPracticeTurnDetection("coach"), COACH_SERVER_VAD_TURN_DETECTION);
+  assert.equal(COACH_SERVER_VAD_TURN_DETECTION.threshold, 0.65);
+  assert.equal(COACH_SERVER_VAD_TURN_DETECTION.prefix_padding_ms, 400);
+  assert.equal(COACH_SERVER_VAD_TURN_DETECTION.silence_duration_ms, 700);
+  assert.equal(buildPracticeTurnDetection("mock").type, "semantic_vad");
+});
 
 test("buildRealtimeTextContent uses output_text for assistant and input_text otherwise", () => {
   assert.deepEqual(buildRealtimeTextContent("user", "hello"), [

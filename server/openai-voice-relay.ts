@@ -38,6 +38,7 @@ import {
   isCoachRetryPhrase,
 } from "../src/lib/practice/coach-mode-ui";
 import {
+  buildPracticeTurnDetection,
   buildRealtimeConversationCreateEvent,
   countTranscriptWords,
   createLiveTranscriptGateState,
@@ -1057,6 +1058,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   let lastTranscriptUpdateAt = 0;
   let pendingTurnAnchorAt = 0;
   let lastPendingFragmentUpdateAt = 0;
+  let lastParkerTurnAt = 0;
   const transcriptThresholds = readTranscriptCommitThresholds(
     process.env,
     ctx.practiceMode,
@@ -1113,6 +1115,22 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   function send(msg: Record<string, unknown>) {
     if (browserWs.readyState === WebSocket.OPEN)
       browserWs.send(JSON.stringify(msg));
+  }
+
+  function markParkerTurn(reason: string) {
+    lastParkerTurnAt = Date.now();
+    log.debug(`[voice-noise-filter] Parker turn marked (${reason})`);
+  }
+
+  function transcriptAcceptanceOptions(
+    extra?: { logprobs?: number[] },
+  ) {
+    return {
+      isFillerOnly: isFillerOnlyTranscript,
+      lastParkerTurnAtMs: lastParkerTurnAt,
+      nowMs: Date.now(),
+      ...extra,
+    };
   }
 
   function sendBinary(buf: Buffer) {
@@ -1369,7 +1387,13 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     if (!answerText && speechTranscriptCommitted) {
       answerText = lastCommittedUserAnswerText();
     }
-    if (!answerText || !isSubstantiveTranscript(answerText, transcriptThresholds)) {
+    if (
+      !answerText ||
+      !isSubstantiveTranscript(answerText, transcriptThresholds, {
+        lastParkerTurnAtMs: lastParkerTurnAt,
+        nowMs: Date.now(),
+      })
+    ) {
       send({ type: "coach_control_error", message: COACH_ANSWER_REQUIRED_MESSAGE });
       return;
     }
@@ -1607,7 +1631,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const commitAcceptance = evaluateTranscriptForAcceptance(
       committedText,
       transcriptThresholds,
-      { isFillerOnly: isFillerOnlyTranscript },
+      transcriptAcceptanceOptions(),
     );
     if (!commitAcceptance.accept && reason !== "voice command") {
       logNoiseFilterRejection(log, committedText, commitAcceptance);
@@ -1681,7 +1705,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       const pendingAcceptance = evaluateTranscriptForAcceptance(
         pending,
         transcriptThresholds,
-        { isFillerOnly: isFillerOnlyTranscript },
+        transcriptAcceptanceOptions(),
       );
       if (!pendingAcceptance.accept) {
         if (wantsResponse) {
@@ -1725,7 +1749,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const fragmentAcceptance = evaluateTranscriptForAcceptance(
       text,
       transcriptThresholds,
-      { isFillerOnly: isFillerOnlyTranscript },
+      transcriptAcceptanceOptions(),
     );
     if (!fragmentAcceptance.accept) {
       logNoiseFilterRejection(log, text, fragmentAcceptance);
@@ -1743,7 +1767,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
     const now = Date.now();
     updateLiveTranscriptGateState(liveTranscriptGate, trimmed, now);
-    if (!shouldSurfaceLiveTranscript(trimmed, liveTranscriptGate, now)) {
+    if (
+      !shouldSurfaceLiveTranscript(trimmed, liveTranscriptGate, now, {
+        lastParkerTurnAtMs: lastParkerTurnAt,
+      })
+    ) {
       return;
     }
 
@@ -1799,7 +1827,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const whisperAcceptance = evaluateTranscriptForAcceptance(
       transcript,
       transcriptThresholds,
-      { logprobs, isFillerOnly: isFillerOnlyTranscript },
+      transcriptAcceptanceOptions({ logprobs }),
     );
     if (!whisperAcceptance.accept) {
       logNoiseFilterRejection(log, transcript, whisperAcceptance);
@@ -1843,7 +1871,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       const pendingAcceptance = evaluateTranscriptForAcceptance(
         pending,
         transcriptThresholds,
-        { isFillerOnly: isFillerOnlyTranscript },
+        transcriptAcceptanceOptions(),
       );
       if (!pendingAcceptance.accept) {
         log.info("[voice-pipeline] pending fragment too short; buffering");
@@ -1885,7 +1913,12 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     const segmentMs =
       lastSpeechStartedAt > 0 ? now - lastSpeechStartedAt : 0;
     const pendingAfterStop = bestAvailableTranscript();
-    if (shouldIgnoreShortSpeechBurst(pendingAfterStop, segmentMs)) {
+    if (
+      shouldIgnoreShortSpeechBurst(pendingAfterStop, segmentMs, undefined, {
+        lastParkerTurnAtMs: lastParkerTurnAt,
+        nowMs: now,
+      })
+    ) {
       log.info(
         `[voice-noise-filter] ignored transient audio burst (${segmentMs}ms)`,
       );
@@ -1956,17 +1989,14 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     }
   }
 
-  function buildRealtimeAudioInputConfig() {
+  function buildRealtimeAudioInputConfig(includeTranscription = true) {
     return {
       format: { type: "audio/pcm", rate: 24000 as const },
       noise_reduction: { type: "far_field" as const },
-      transcription: { model: OPENAI_REALTIME_TRANSCRIPTION_MODEL },
-      turn_detection: {
-        type: "semantic_vad" as const,
-        eagerness: "low" as const,
-        create_response: false,
-        interrupt_response: true,
-      },
+      ...(includeTranscription
+        ? { transcription: { model: OPENAI_REALTIME_TRANSCRIPTION_MODEL } }
+        : {}),
+      turn_detection: buildPracticeTurnDetection(ctx.practiceMode),
     };
   }
 
@@ -1987,18 +2017,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       session: {
         type: "realtime",
         audio: {
-          input: enabled
-            ? buildRealtimeAudioInputConfig()
-            : {
-                format: { type: "audio/pcm", rate: 24000 },
-                noise_reduction: { type: "far_field" },
-                turn_detection: {
-                  type: "semantic_vad",
-                  eagerness: "low",
-                  create_response: false,
-                  interrupt_response: true,
-                },
-              },
+          input: buildRealtimeAudioInputConfig(enabled),
         },
       },
     }));
@@ -2216,7 +2235,10 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       ctx.practiceMode !== "coach" &&
       !speechTranscriptCommitted &&
       pendingForStall &&
-      isSubstantiveTranscript(pendingForStall, transcriptThresholds) &&
+      isSubstantiveTranscript(pendingForStall, transcriptThresholds, {
+        lastParkerTurnAtMs: lastParkerTurnAt,
+        nowMs: now,
+      }) &&
       !vadSpeechActive &&
       lastVadSpeechEnd > 0 &&
       (now - lastVadSpeechEnd) >= STALL_AFTER_COMMIT_MS &&
@@ -2503,6 +2525,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
               if (capturedModelText) {
                 log.info(`[voice-pipeline] response.done / TTS done (${responseTtsBytes}B sent)`);
                 pushHistory("assistant", capturedModelText);
+                markParkerTurn("assistant TTS completed");
                 lastTranscriptCommittedAt = 0;
               }
               send({ type: "tts_ended" });
@@ -2602,6 +2625,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       }
       if (outputTranscriptBuffer) {
         pushHistory("assistant", outputTranscriptBuffer);
+        markParkerTurn("assistant transcript on reconnect close");
         outputTranscriptBuffer = "";
       }
       modelIsSpeaking = false;

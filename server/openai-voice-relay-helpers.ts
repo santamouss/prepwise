@@ -71,6 +71,30 @@ export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 3000;
 export const DEFAULT_STRICT_NAV_MAX_WORDS = 6;
 export const DEFAULT_CLEAR_NEXT_COMMAND_MAX_WORDS = 10;
 
+/** Coach mode: stricter server VAD to reduce accidental turn commits. */
+export const COACH_SERVER_VAD_TURN_DETECTION = {
+  type: "server_vad" as const,
+  threshold: 0.65,
+  prefix_padding_ms: 400,
+  silence_duration_ms: 700,
+};
+
+/** Mock mode: semantic VAD with low eagerness; responses driven by relay logic. */
+export const MOCK_SEMANTIC_VAD_TURN_DETECTION = {
+  type: "semantic_vad" as const,
+  eagerness: "low" as const,
+  create_response: false,
+  interrupt_response: true,
+};
+
+export function buildPracticeTurnDetection(
+  practiceMode?: "mock" | "coach",
+): typeof COACH_SERVER_VAD_TURN_DETECTION | typeof MOCK_SEMANTIC_VAD_TURN_DETECTION {
+  return practiceMode === "coach"
+    ? COACH_SERVER_VAD_TURN_DETECTION
+    : MOCK_SEMANTIC_VAD_TURN_DETECTION;
+}
+
 export interface TranscriptCommitThresholds {
   minWords: number;
   minChars: number;
@@ -134,9 +158,11 @@ export function isFillerOnlyTranscript(text: string): boolean {
 export function isSubstantiveTranscript(
   text: string,
   thresholds: Pick<TranscriptCommitThresholds, "minWords" | "minChars">,
+  options?: Pick<TranscriptAcceptanceOptions, "lastParkerTurnAtMs" | "nowMs">,
 ): boolean {
   return evaluateTranscriptForAcceptance(text, thresholds, {
     isFillerOnly: isFillerOnlyTranscript,
+    ...options,
   }).accept;
 }
 
@@ -550,6 +576,8 @@ export const DEFAULT_LIVE_TRANSCRIPT_MIN_CHARS = 20;
 export const DEFAULT_LIVE_TRANSCRIPT_STABLE_MS = 1200;
 export const DEFAULT_MAX_NOISE_FRAGMENT_WORDS = 3;
 export const DEFAULT_LOW_CONFIDENCE_LOGPROB_THRESHOLD = -1.0;
+export const DEFAULT_SHORT_ANSWER_PARKER_TURN_MS = 30_000;
+export const SHORT_ANSWER_MAX_WORDS = 3;
 
 const NOISE_FRAGMENT_EXACT = new Set([
   "bye",
@@ -639,6 +667,38 @@ export function isCoachControlTranscript(text: string): boolean {
   const normalized = normalizeTranscriptForNoise(trimmed);
   return COACH_CONTROL_PATTERNS.some((pattern) => pattern.test(normalized));
 }
+
+export function isExemptFromParkerTurnWindow(text: string): boolean {
+  return (
+    isClearNextQuestionCommand(text).detected || isCoachControlTranscript(text)
+  );
+}
+
+export function isSubThreeWordTranscript(text: string): boolean {
+  return countTranscriptWords(text.trim()) < SHORT_ANSWER_MAX_WORDS;
+}
+
+export function hasRecentParkerTurn(
+  lastParkerTurnAtMs: number,
+  nowMs: number,
+  windowMs = DEFAULT_SHORT_ANSWER_PARKER_TURN_MS,
+): boolean {
+  return lastParkerTurnAtMs > 0 && nowMs - lastParkerTurnAtMs <= windowMs;
+}
+
+export function requiresRecentParkerTurnForShortAnswer(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (!isSubThreeWordTranscript(trimmed)) return false;
+  return !isExemptFromParkerTurnWindow(trimmed);
+}
+
+export type TranscriptAcceptanceOptions = {
+  logprobs?: number[] | null;
+  isFillerOnly?: (t: string) => boolean;
+  lastParkerTurnAtMs?: number;
+  nowMs?: number;
+};
 
 export function isProtectedShortTranscript(text: string): boolean {
   if (isClearNextQuestionCommand(text).detected) return true;
@@ -733,11 +793,24 @@ export function shouldSurfaceLiveTranscript(
   text: string,
   state: LiveTranscriptGateState,
   nowMs: number,
-  stableMs = DEFAULT_LIVE_TRANSCRIPT_STABLE_MS,
+  options?: {
+    stableMs?: number;
+    lastParkerTurnAtMs?: number;
+  },
 ): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
-  if (isProtectedShortTranscript(trimmed)) return true;
+  const stableMs = options?.stableMs ?? DEFAULT_LIVE_TRANSCRIPT_STABLE_MS;
+  const lastParkerTurnAtMs = options?.lastParkerTurnAtMs ?? 0;
+  if (isProtectedShortTranscript(trimmed)) {
+    if (
+      requiresRecentParkerTurnForShortAnswer(trimmed) &&
+      !hasRecentParkerTurn(lastParkerTurnAtMs, nowMs)
+    ) {
+      return false;
+    }
+    return true;
+  }
   if (meetsLiveTranscriptSizeThreshold(trimmed)) return true;
   if (state.stableSinceAt > 0 && nowMs - state.stableSinceAt >= stableMs) {
     return true;
@@ -749,27 +822,55 @@ export function shouldIgnoreShortSpeechBurst(
   pendingTranscript: string,
   segmentDurationMs: number,
   minSpeechMs = DEFAULT_MIN_SPEECH_SEGMENT_MS,
+  options?: { lastParkerTurnAtMs?: number; nowMs?: number },
 ): boolean {
   if (segmentDurationMs <= 0 || segmentDurationMs >= minSpeechMs) {
     return false;
   }
   const pending = pendingTranscript.trim();
   if (!pending) return true;
-  if (isProtectedShortTranscript(pending)) return false;
+  const nowMs = options?.nowMs ?? Date.now();
+  const lastParkerTurnAtMs = options?.lastParkerTurnAtMs ?? 0;
+  if (isProtectedShortTranscript(pending)) {
+    if (
+      requiresRecentParkerTurnForShortAnswer(pending) &&
+      !hasRecentParkerTurn(lastParkerTurnAtMs, nowMs)
+    ) {
+      return true;
+    }
+    return false;
+  }
   return isRejectableNoiseFragment(pending);
 }
 
 export type TranscriptAcceptanceResult =
   | { accept: true; reason: "protected-short" | "substantive" | "command" }
-  | { accept: false; reason: "noise-fragment" | "filler" | "too-short" | "low-confidence" };
+  | {
+      accept: false;
+      reason:
+        | "noise-fragment"
+        | "filler"
+        | "too-short"
+        | "low-confidence"
+        | "no-recent-parker-turn";
+    };
+
+function lacksRecentParkerTurnForShortAnswer(
+  text: string,
+  options?: TranscriptAcceptanceOptions,
+): boolean {
+  const nowMs = options?.nowMs ?? Date.now();
+  const lastParkerTurnAtMs = options?.lastParkerTurnAtMs ?? 0;
+  return (
+    requiresRecentParkerTurnForShortAnswer(text) &&
+    !hasRecentParkerTurn(lastParkerTurnAtMs, nowMs)
+  );
+}
 
 export function evaluateTranscriptForAcceptance(
   text: string,
   thresholds: Pick<TranscriptCommitThresholds, "minWords" | "minChars">,
-  options?: {
-    logprobs?: number[] | null;
-    isFillerOnly?: (t: string) => boolean;
-  },
+  options?: TranscriptAcceptanceOptions,
 ): TranscriptAcceptanceResult {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -777,6 +878,9 @@ export function evaluateTranscriptForAcceptance(
   }
 
   if (isProtectedShortTranscript(trimmed)) {
+    if (lacksRecentParkerTurnForShortAnswer(trimmed, options)) {
+      return { accept: false, reason: "no-recent-parker-turn" };
+    }
     return { accept: true, reason: "protected-short" };
   }
 
@@ -794,6 +898,10 @@ export function evaluateTranscriptForAcceptance(
   const fillerCheck = options?.isFillerOnly ?? isFillerOnlyTranscript;
   if (fillerCheck(trimmed)) {
     return { accept: false, reason: "filler" };
+  }
+
+  if (lacksRecentParkerTurnForShortAnswer(trimmed, options)) {
+    return { accept: false, reason: "no-recent-parker-turn" };
   }
 
   if (
@@ -818,6 +926,12 @@ export function logNoiseFilterRejection(
   }
   if (result.reason === "noise-fragment" || result.reason === "filler") {
     log.info(`[voice-noise-filter] rejected short noise fragment: "${snippet}"`);
+    return;
+  }
+  if (result.reason === "no-recent-parker-turn") {
+    log.info(
+      `[voice-noise-filter] rejected sub-3-word answer without recent Parker turn: "${snippet}"`,
+    );
     return;
   }
   log.info(`[voice-noise-filter] rejected short fragment (${result.reason}): "${snippet}"`);
