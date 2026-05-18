@@ -1,0 +1,941 @@
+/* ParkerHero marketing homepage — scoped to .parker-marketing */
+.parker-marketing {
+  --pk-blue: #3b6ff0;
+  --pk-blue-600: #2f5fe0;
+  --pk-blue-50: #eef3fe;
+  --pk-blue-100: #dce6fd;
+  --pk-ink-900: #0b1220;
+  --pk-ink-700: #2a3346;
+  --pk-ink-500: #5b647a;
+  --pk-ink-400: #8089a0;
+  --pk-ink-300: #b8bfcf;
+  --pk-line: #e7eaf1;
+  --pk-line-soft: #eef0f5;
+  --pk-bg: #ffffff;
+  --pk-bg-soft: #f7f8fb;
+  --pk-radius: 12px;
+  --pk-radius-lg: 16px;
+  --pk-radius-xl: 20px;
+  --pk-shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --pk-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+  --pk-shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+  --pk-shadow-blue: 0 1px 2px rgba(59, 111, 240, 0.18), 0 8px 24px rgba(59, 111, 240, 0.18);
+  --pk-container: 1120px;
+
+  color: var(--pk-ink-900);
+  background: var(--pk-bg);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+  line-height: 1.5;
+}
+
+.parker-marketing a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.parker-marketing .pk-container {
+  max-width: var(--pk-container);
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.parker-marketing .pk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    box-shadow 0.15s ease;
+  white-space: nowrap;
+}
+
+.parker-marketing .pk-btn-primary {
+  background: var(--pk-blue);
+  color: #fff;
+  box-shadow: var(--pk-shadow-blue);
+}
+
+.parker-marketing .pk-btn-primary:hover {
+  background: var(--pk-blue-600);
+}
+
+.parker-marketing .pk-btn-secondary {
+  background: #fff;
+  color: var(--pk-ink-900);
+  border-color: var(--pk-line);
+}
+
+.parker-marketing .pk-btn-secondary:hover {
+  border-color: var(--pk-ink-300);
+}
+
+.parker-marketing .pk-btn-sm {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13.5px;
+  border-radius: 8px;
+}
+
+.parker-marketing .pk-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+}
+
+.parker-marketing .pk-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: -0.02em;
+}
+
+.parker-marketing .pk-logo-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--pk-blue);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.04) inset, 0 1px 2px rgba(59, 111, 240, 0.25);
+}
+
+.parker-marketing .pk-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.parker-marketing .pk-nav a {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--pk-ink-700);
+  border-radius: 8px;
+}
+
+.parker-marketing .pk-nav a:hover {
+  color: var(--pk-ink-900);
+}
+
+.parker-marketing .pk-header-cta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.parker-marketing .pk-sign-in {
+  color: var(--pk-ink-700);
+  padding: 8px 12px;
+  font-size: 14px;
+  border-radius: 8px;
+}
+
+.parker-marketing .pk-sign-in:hover {
+  color: var(--pk-ink-900);
+}
+
+.parker-marketing .pk-hero {
+  padding: 88px 0 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+.parker-marketing .pk-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 72px;
+  align-items: center;
+}
+
+.parker-marketing .pk-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: var(--pk-blue-50);
+  color: var(--pk-blue-600);
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--pk-blue-100);
+}
+
+.parker-marketing .pk-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pk-blue);
+}
+
+.parker-marketing .pk-hero h1 {
+  font-size: 56px;
+  line-height: 1.06;
+  letter-spacing: -0.028em;
+  font-weight: 600;
+  margin: 20px 0 22px;
+  text-wrap: balance;
+}
+
+.parker-marketing .pk-hero h1 .pk-accent {
+  color: var(--pk-blue);
+}
+
+.parker-marketing .pk-hero-sub {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--pk-ink-500);
+  margin: 0 0 32px;
+  max-width: 520px;
+  text-wrap: pretty;
+}
+
+.parker-marketing .pk-hero-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.parker-marketing .pk-meta-row {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  color: var(--pk-ink-400);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.parker-marketing .pk-check {
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+.parker-marketing .pk-mock-wrap {
+  position: relative;
+}
+
+.parker-marketing .pk-mock-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -40px -20px;
+  background: radial-gradient(
+    60% 60% at 60% 40%,
+    rgba(59, 111, 240, 0.1),
+    transparent 70%
+  );
+  z-index: -1;
+  border-radius: 50%;
+  filter: blur(20px);
+}
+
+.parker-marketing .pk-mock {
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-xl);
+  box-shadow: var(--pk-shadow-md);
+  overflow: hidden;
+}
+
+.parker-marketing .pk-mock-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.parker-marketing .pk-dots span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e5e8ee;
+}
+
+.parker-marketing .pk-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--pk-ink-500);
+}
+
+.parker-marketing .pk-session-pill {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12);
+}
+
+.parker-marketing .pk-mock-body {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+}
+
+.parker-marketing .pk-mock-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.parker-marketing .pk-mock-title {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.parker-marketing .pk-mock-sub {
+  font-size: 12.5px;
+  color: var(--pk-ink-400);
+  margin-top: 2px;
+}
+
+.parker-marketing .pk-mock-timer {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  color: var(--pk-ink-500);
+  border: 1px solid var(--pk-line);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--pk-bg-soft);
+}
+
+.parker-marketing .pk-listening {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--pk-blue-50);
+  border: 1px solid var(--pk-blue-100);
+  border-radius: var(--pk-radius);
+}
+
+.parker-marketing .pk-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+
+.parker-marketing .pk-wave span {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--pk-blue);
+  animation: pk-wave 1.1s ease-in-out infinite;
+}
+
+.parker-marketing .pk-wave span:nth-child(1) {
+  height: 30%;
+  animation-delay: -1s;
+}
+.parker-marketing .pk-wave span:nth-child(2) {
+  height: 70%;
+  animation-delay: -0.8s;
+}
+.parker-marketing .pk-wave span:nth-child(3) {
+  height: 100%;
+  animation-delay: -0.6s;
+}
+.parker-marketing .pk-wave span:nth-child(4) {
+  height: 60%;
+  animation-delay: -0.4s;
+}
+.parker-marketing .pk-wave span:nth-child(5) {
+  height: 85%;
+  animation-delay: -0.2s;
+}
+.parker-marketing .pk-wave span:nth-child(6) {
+  height: 40%;
+  animation-delay: 0s;
+}
+.parker-marketing .pk-wave span:nth-child(7) {
+  height: 75%;
+  animation-delay: -0.5s;
+}
+
+@keyframes pk-wave {
+  0%,
+  100% {
+    transform: scaleY(0.4);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.parker-marketing .pk-listening-text {
+  font-size: 13.5px;
+  color: var(--pk-ink-700);
+  font-weight: 500;
+}
+
+.parker-marketing .pk-listening-text small {
+  display: block;
+  font-weight: 400;
+  color: var(--pk-ink-500);
+  margin-top: 2px;
+  font-size: 12.5px;
+}
+
+.parker-marketing .pk-transcript {
+  display: grid;
+  gap: 12px;
+}
+
+.parker-marketing .pk-bubble {
+  display: flex;
+  gap: 10px;
+}
+
+.parker-marketing .pk-who {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.parker-marketing .pk-bubble-parker .pk-who {
+  background: var(--pk-blue);
+  color: #fff;
+}
+
+.parker-marketing .pk-bubble-you .pk-who {
+  background: var(--pk-bg-soft);
+  color: var(--pk-ink-700);
+  border: 1px solid var(--pk-line);
+}
+
+.parker-marketing .pk-bubble-body {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--pk-ink-700);
+  padding-top: 3px;
+}
+
+.parker-marketing .pk-bubble-label {
+  display: block;
+  font-size: 11.5px;
+  color: var(--pk-ink-400);
+  font-weight: 500;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.parker-marketing .pk-feedback-inline {
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius);
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.parker-marketing .pk-feedback-inline-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--pk-blue-50);
+  color: var(--pk-blue);
+  display: grid;
+  place-items: center;
+}
+
+.parker-marketing .pk-feedback-inline-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--pk-ink-700);
+}
+
+.parker-marketing .pk-feedback-inline-text strong {
+  color: var(--pk-ink-900);
+  font-weight: 600;
+}
+
+.parker-marketing .pk-feedback-inline-text small {
+  display: block;
+  color: var(--pk-ink-400);
+  margin-top: 2px;
+  font-size: 11.5px;
+}
+
+.parker-marketing .pk-section {
+  padding: 96px 0;
+}
+
+.parker-marketing .pk-section-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 56px;
+}
+
+.parker-marketing .pk-section-tag {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--pk-blue);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.parker-marketing .pk-section-head h2 {
+  font-size: 38px;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+  margin: 0 0 14px;
+  text-wrap: balance;
+}
+
+.parker-marketing .pk-section-head p {
+  font-size: 17px;
+  color: var(--pk-ink-500);
+  margin: 0;
+}
+
+.parker-marketing .pk-how {
+  background: var(--pk-bg-soft);
+  border-top: 1px solid var(--pk-line-soft);
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+.parker-marketing .pk-step {
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-lg);
+  padding: 28px;
+  box-shadow: var(--pk-shadow-xs);
+}
+
+.parker-marketing .pk-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--pk-blue-50);
+  color: var(--pk-blue);
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: ui-monospace, monospace;
+  margin-bottom: 18px;
+}
+
+.parker-marketing .pk-step h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.parker-marketing .pk-step p {
+  font-size: 14.5px;
+  color: var(--pk-ink-500);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.parker-marketing .pk-features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+}
+
+.parker-marketing .pk-feature {
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-lg);
+  padding: 28px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.parker-marketing .pk-feature:hover {
+  border-color: var(--pk-ink-300);
+  box-shadow: var(--pk-shadow-sm);
+}
+
+.parker-marketing .pk-feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--pk-blue-50);
+  color: var(--pk-blue);
+  display: grid;
+  place-items: center;
+  margin-bottom: 18px;
+}
+
+.parker-marketing .pk-feature h3 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+.parker-marketing .pk-feature p {
+  font-size: 14.5px;
+  color: var(--pk-ink-500);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.parker-marketing .pk-feedback-section {
+  background: var(--pk-bg-soft);
+  border-top: 1px solid var(--pk-line-soft);
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-feedback-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-xl);
+  overflow: hidden;
+  box-shadow: var(--pk-shadow-sm);
+}
+
+.parker-marketing .pk-feedback-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--pk-line-soft);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.parker-marketing .pk-feedback-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--pk-blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.parker-marketing .pk-feedback-name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.parker-marketing .pk-feedback-role {
+  font-size: 12.5px;
+  color: var(--pk-ink-400);
+  margin-top: 1px;
+}
+
+.parker-marketing .pk-feedback-badge {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--pk-ink-500);
+  background: var(--pk-bg-soft);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--pk-line);
+  white-space: nowrap;
+}
+
+.parker-marketing .pk-feedback-body {
+  padding: 28px;
+}
+
+.parker-marketing .pk-quote {
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--pk-ink-900);
+  margin: 0 0 28px;
+}
+
+.parker-marketing .pk-quote-mark {
+  color: var(--pk-blue);
+  font-weight: 600;
+}
+
+.parker-marketing .pk-feedback-stats {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr 1fr;
+  border: 1px solid var(--pk-line-soft);
+  border-radius: var(--pk-radius);
+  overflow: hidden;
+  background: var(--pk-bg-soft);
+}
+
+.parker-marketing .pk-stat {
+  padding: 16px 20px;
+  border-right: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-stat:last-child {
+  border-right: none;
+}
+
+.parker-marketing .pk-stat-label {
+  font-size: 11.5px;
+  color: var(--pk-ink-400);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.parker-marketing .pk-stat-value {
+  font-size: 15px;
+  color: var(--pk-ink-900);
+  font-weight: 500;
+}
+
+.parker-marketing .pk-stat-score .pk-stat-value {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--pk-blue);
+  font-family: ui-monospace, monospace;
+}
+
+.parker-marketing .pk-stat-denom {
+  color: var(--pk-ink-300);
+  font-weight: 500;
+}
+
+.parker-marketing .pk-pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  max-width: 960px;
+  margin: 0 auto 40px;
+}
+
+.parker-marketing .pk-price {
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-lg);
+  padding: 28px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.parker-marketing .pk-price-featured {
+  border-color: var(--pk-blue);
+  box-shadow: 0 0 0 1px var(--pk-blue) inset, var(--pk-shadow-sm);
+}
+
+.parker-marketing .pk-price-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.parker-marketing .pk-price-tag {
+  font-size: 11px;
+  color: var(--pk-blue);
+  background: var(--pk-blue-50);
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.parker-marketing .pk-price-amount {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 6px 0 4px;
+}
+
+.parker-marketing .pk-price-per {
+  font-size: 14px;
+  color: var(--pk-ink-400);
+  font-weight: 400;
+}
+
+.parker-marketing .pk-price-desc {
+  font-size: 14px;
+  color: var(--pk-ink-500);
+  margin: 0 0 22px;
+}
+
+.parker-marketing .pk-price-cta {
+  margin-top: auto;
+}
+
+.parker-marketing .pk-pricing-cta {
+  text-align: center;
+}
+
+.parker-marketing .pk-pricing-note {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--pk-ink-400);
+}
+
+.parker-marketing .pk-recruiter {
+  padding: 64px 0;
+  background: var(--pk-bg-soft);
+  border-top: 1px solid var(--pk-line-soft);
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-recruiter-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-lg);
+  padding: 28px 32px;
+  box-shadow: var(--pk-shadow-xs);
+}
+
+.parker-marketing .pk-recruiter-inner h3 {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.parker-marketing .pk-recruiter-inner p {
+  font-size: 14.5px;
+  color: var(--pk-ink-500);
+  margin: 0;
+  max-width: 540px;
+}
+
+.parker-marketing .pk-final {
+  padding: 120px 0;
+  text-align: center;
+}
+
+.parker-marketing .pk-final h2 {
+  font-size: 44px;
+  line-height: 1.1;
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.parker-marketing .pk-final p {
+  font-size: 18px;
+  color: var(--pk-ink-500);
+  margin: 0 auto 32px;
+  max-width: 520px;
+}
+
+.parker-marketing .pk-footer {
+  border-top: 1px solid var(--pk-line-soft);
+  padding: 36px 0;
+}
+
+.parker-marketing .pk-footer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--pk-ink-400);
+  font-size: 13.5px;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.parker-marketing .pk-footer-nav {
+  display: flex;
+  gap: 22px;
+}
+
+.parker-marketing .pk-footer-nav a:hover {
+  color: var(--pk-ink-700);
+}
+
+@media (max-width: 960px) {
+  .parker-marketing .pk-hero {
+    padding: 64px 0 48px;
+  }
+  .parker-marketing .pk-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  .parker-marketing .pk-hero h1 {
+    font-size: 42px;
+  }
+  .parker-marketing .pk-section {
+    padding: 72px 0;
+  }
+  .parker-marketing .pk-steps,
+  .parker-marketing .pk-features-grid,
+  .parker-marketing .pk-pricing-grid {
+    grid-template-columns: 1fr;
+  }
+  .parker-marketing .pk-recruiter-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .parker-marketing .pk-section-head h2 {
+    font-size: 30px;
+  }
+  .parker-marketing .pk-final h2 {
+    font-size: 32px;
+  }
+  .parker-marketing .pk-feedback-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  .parker-marketing .pk-stat {
+    border-right: none;
+    border-bottom: 1px solid var(--pk-line-soft);
+  }
+}
+
+@media (max-width: 640px) {
+  .parker-marketing .pk-nav,
+  .parker-marketing .pk-sign-in {
+    display: none;
+  }
+  .parker-marketing .pk-hero h1 {
+    font-size: 34px;
+  }
+  .parker-marketing .pk-feedback-badge {
+    display: none;
+  }
+}
