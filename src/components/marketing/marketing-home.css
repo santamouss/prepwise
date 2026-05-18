@@ -741,12 +741,81 @@
   font-weight: 500;
 }
 
+.parker-marketing .pk-pricing-toggle-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.parker-marketing .pk-pricing-toggle {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--pk-line);
+  background: var(--pk-bg-soft);
+  min-width: min(100%, 320px);
+}
+
+.parker-marketing .pk-pricing-toggle-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  width: calc(50% - 4px);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--pk-shadow-sm);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+.parker-marketing .pk-pricing-toggle-indicator[data-billing="yearly"] {
+  transform: translateX(100%);
+}
+
+.parker-marketing .pk-pricing-toggle-option {
+  position: relative;
+  z-index: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pk-ink-500);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.parker-marketing .pk-pricing-toggle-option-active {
+  color: var(--pk-ink-900);
+}
+
+.parker-marketing .pk-pricing-save {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pk-blue);
+  background: var(--pk-blue-50);
+  padding: 2px 7px;
+  border-radius: 999px;
+  letter-spacing: 0;
+}
+
 .parker-marketing .pk-pricing-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   max-width: 960px;
   margin: 0 auto 40px;
+  align-items: stretch;
 }
 
 .parker-marketing .pk-price {
@@ -761,6 +830,33 @@
 .parker-marketing .pk-price-featured {
   border-color: var(--pk-blue);
   box-shadow: 0 0 0 1px var(--pk-blue) inset, var(--pk-shadow-sm);
+}
+
+.parker-marketing .pk-price-recommended {
+  position: relative;
+  padding-top: 36px;
+}
+
+@media (min-width: 961px) {
+  .parker-marketing .pk-price-recommended {
+    transform: translateY(-6px);
+    box-shadow: var(--pk-shadow-md), 0 0 0 1px var(--pk-blue) inset;
+  }
+}
+
+.parker-marketing .pk-price-ribbon {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--pk-blue);
+  padding: 8px 12px;
 }
 
 .parker-marketing .pk-price-name {
@@ -781,11 +877,37 @@
   font-weight: 500;
 }
 
+.parker-marketing .pk-price-amount-shell {
+  min-height: 76px;
+  margin-bottom: 8px;
+}
+
+.parker-marketing .pk-price-amount-inner {
+  animation: pk-price-enter 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes pk-price-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .parker-marketing .pk-price-amount {
   font-size: 32px;
   font-weight: 600;
   letter-spacing: -0.025em;
   margin: 6px 0 4px;
+}
+
+.parker-marketing .pk-price-billed {
+  font-size: 12.5px;
+  color: var(--pk-ink-400);
+  margin: 0;
 }
 
 .parker-marketing .pk-price-per {
@@ -798,6 +920,32 @@
   font-size: 14px;
   color: var(--pk-ink-500);
   margin: 0 0 22px;
+}
+
+.parker-marketing .pk-price-features {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  flex: 1;
+}
+
+.parker-marketing .pk-price-features li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--pk-ink-700);
+}
+
+.parker-marketing .pk-price-check {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--pk-blue);
 }
 
 .parker-marketing .pk-price-cta {
@@ -907,6 +1055,19 @@
   .parker-marketing .pk-features-grid,
   .parker-marketing .pk-pricing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .parker-marketing .pk-price-recommended {
+    transform: none;
+  }
+
+  .parker-marketing .pk-pricing-toggle {
+    width: 100%;
+  }
+
+  .parker-marketing .pk-pricing-toggle-option {
+    padding: 10px 12px;
+    font-size: 13px;
   }
   .parker-marketing .pk-recruiter-inner {
     flex-direction: column;

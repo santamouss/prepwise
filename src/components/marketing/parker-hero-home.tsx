@@ -6,6 +6,7 @@ import {
   MARKETING_LOGIN,
   MARKETING_PRACTICE_REGISTER,
 } from "./marketing-links";
+import { PricingSection } from "./pricing-section";
 import "./marketing-home.css";
 
 function CheckIcon() {
@@ -346,49 +347,7 @@ export function ParkerHeroHome() {
         </div>
       </section>
 
-      <section className="pk-section" id="pricing">
-        <div className="pk-container">
-          <div className="pk-section-head">
-            <div className="pk-section-tag">Pricing</div>
-            <h2>Start free. Upgrade when you&apos;re ready.</h2>
-            <p>Practice as much as you need before the interview that matters.</p>
-          </div>
-          <div className="pk-pricing-grid">
-            <PricingCard
-              name="Free"
-              amount="$0"
-              description="3 practice sessions per month with full feedback."
-              ctaLabel="Get started"
-              href={MARKETING_PRACTICE_REGISTER}
-              variant="secondary"
-            />
-            <PricingCard
-              name="Starter"
-              tag="Popular"
-              featured
-              amount="$15"
-              description="15 practice sessions per month and progress tracking."
-              ctaLabel="Choose Starter"
-              href={MARKETING_PRACTICE_REGISTER}
-              variant="primary"
-            />
-            <PricingCard
-              name="Pro"
-              amount="$29"
-              description="Unlimited practice, Coach Mode, and priority support."
-              ctaLabel="Choose Pro"
-              href={MARKETING_PRACTICE_REGISTER}
-              variant="secondary"
-            />
-          </div>
-          <div className="pk-pricing-cta">
-            <Link href={MARKETING_PRACTICE_REGISTER} className="pk-btn pk-btn-primary">
-              Start free practice
-            </Link>
-            <p className="pk-pricing-note">Cancel anytime. No credit card to start.</p>
-          </div>
-        </div>
-      </section>
+      <PricingSection />
 
       <section className="pk-recruiter" id="recruiter">
         <div className="pk-container">
@@ -448,46 +407,6 @@ function FeatureCard({
       <div className="pk-feature-icon">{icon}</div>
       <h3>{title}</h3>
       <p>{description}</p>
-    </div>
-  );
-}
-
-function PricingCard({
-  name,
-  tag,
-  featured,
-  amount,
-  description,
-  ctaLabel,
-  href,
-  variant,
-}: {
-  name: string;
-  tag?: string;
-  featured?: boolean;
-  amount: string;
-  description: string;
-  ctaLabel: string;
-  href: string;
-  variant: "primary" | "secondary";
-}) {
-  return (
-    <div className={featured ? "pk-price pk-price-featured" : "pk-price"}>
-      <div className="pk-price-name">
-        {name}
-        {tag ? <span className="pk-price-tag">{tag}</span> : null}
-      </div>
-      <div className="pk-price-amount">
-        {amount}
-        <span className="pk-price-per">/mo</span>
-      </div>
-      <p className="pk-price-desc">{description}</p>
-      <Link
-        href={href}
-        className={`pk-btn pk-price-cta ${variant === "primary" ? "pk-btn-primary" : "pk-btn-secondary"}`}
-      >
-        {ctaLabel}
-      </Link>
     </div>
   );
 }
