@@ -8,6 +8,7 @@ import React, {
     useMemo,
     useState,
 } from "react";
+import { isIntervieweeSessionTourEnabled } from "@/lib/tour/tour-flags";
 import {
     CHAT_TOUR_STEPS,
     markTourCompleted,
@@ -35,6 +36,19 @@ export function useIntervieweeTour() {
   return useContext(IntervieweeTourContext);
 }
 
+const DISABLED_INTERVIEWEE_TOUR: IntervieweeTourContextValue = {
+  active: false,
+  finished: true,
+  steps: [],
+  currentStep: null,
+  stepIndex: 0,
+  totalSteps: 0,
+  next: () => {},
+  prev: () => {},
+  skip: () => {},
+  restart: () => {},
+};
+
 export function IntervieweeTourProvider({
   mode,
   startImmediately = false,
@@ -45,6 +59,14 @@ export function IntervieweeTourProvider({
   startImmediately?: boolean;
   children: React.ReactNode;
 }) {
+  if (!isIntervieweeSessionTourEnabled()) {
+    return (
+      <IntervieweeTourContext.Provider value={DISABLED_INTERVIEWEE_TOUR}>
+        {children}
+      </IntervieweeTourContext.Provider>
+    );
+  }
+
   const steps = mode === "voice" ? VOICE_TOUR_STEPS : CHAT_TOUR_STEPS;
   const [active, setActive] = useState(false);
   const [finished, setFinished] = useState(false);

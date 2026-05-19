@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { isIntervieweeSessionTourEnabled } from "@/lib/tour/tour-flags";
 import { getStepIllustration } from "./interviewee-guide-content";
 import { useIntervieweeTour } from "./interviewee-tour-provider";
 
@@ -17,6 +18,8 @@ const TOOLTIP_GAP = 12;
 const TOOLTIP_WIDTH = 320;
 
 export function IntervieweeTourOverlay() {
+  if (!isIntervieweeSessionTourEnabled()) return null;
+
   const tour = useIntervieweeTour();
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
   const [tooltipPos, setTooltipPos] = useState({ top: 0, left: 0 });

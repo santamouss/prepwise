@@ -33,6 +33,7 @@ import {
   isChecklistItemRequired,
   resolveChecklistRequirements,
 } from "@/lib/session/checklist-requirements";
+import { isIntervieweeSessionTourEnabled } from "@/lib/tour/tour-flags";
 import { cn } from "@/lib/utils";
 import {
     AlertCircle,
@@ -97,7 +98,20 @@ export function PreviewWrapper({
   onReady: () => void;
   children: React.ReactNode;
 }) {
+  const tourEnabled = isIntervieweeSessionTourEnabled();
   const tour = useIntervieweeTour();
+
+  useEffect(() => {
+    if (!tourEnabled) {
+      onReady();
+    }
+  }, [tourEnabled, onReady]);
+
+  if (!tourEnabled) {
+    return (
+      <div className="relative flex h-screen flex-col bg-background">{children}</div>
+    );
+  }
   const tourDone = tour?.finished ?? false;
   const [welcomed, setWelcomed] = useState(false);
   const showWelcome = !welcomed && !tour?.active && !tourDone;
@@ -1240,7 +1254,7 @@ export function IntervieweeOnboarding({
       setStep("checklist");
       return;
     }
-    if (isPractice) {
+    if (isPractice || !isIntervieweeSessionTourEnabled()) {
       handleComplete();
       return;
     }
@@ -1248,7 +1262,7 @@ export function IntervieweeOnboarding({
   }, [showChecklist, isPractice, handleComplete]);
 
   const proceedAfterChecklist = useCallback(() => {
-    if (isPractice) {
+    if (isPractice || !isIntervieweeSessionTourEnabled()) {
       handleComplete();
       return;
     }
@@ -1412,7 +1426,7 @@ export function IntervieweeOnboarding({
     return <PreparingScreen />;
   }
 
-  if (step === "howItWorks") {
+  if (step === "howItWorks" && isIntervieweeSessionTourEnabled()) {
     const mode = voiceEnabled ? "voice" : "chat";
 
     const mockContext: InterviewContext = {

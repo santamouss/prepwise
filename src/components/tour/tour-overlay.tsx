@@ -56,24 +56,33 @@ export function TourOverlay() {
   // --- Input-fill check (Next stays disabled until requireInput is satisfied) ---
   useEffect(() => {
     const reqSel = tour?.currentStep?.requireInput;
-    if (!tour?.active || !reqSel) {
+    if (!tour?.active || !reqSel || typeof document === "undefined") {
       setInputFilled(false);
       return;
     }
     setInputFilled(false);
     const check = () => {
-      const el = document.querySelector(reqSel) as
-        | HTMLInputElement
-        | HTMLTextAreaElement
-        | null;
-      setInputFilled(!!el?.value?.trim());
+      if (typeof document === "undefined") return;
+      try {
+        const el = document.querySelector(reqSel) as
+          | HTMLInputElement
+          | HTMLTextAreaElement
+          | null;
+        setInputFilled(!!el?.value?.trim());
+      } catch {
+        // Ignore errors from querySelector in restricted environments
+      }
     };
     check();
     const handler = () => check();
-    document.addEventListener("input", handler, true);
+    if (typeof document !== "undefined" && document.addEventListener) {
+      document.addEventListener("input", handler, true);
+    }
     const iv = setInterval(check, 400);
     return () => {
-      document.removeEventListener("input", handler, true);
+      if (typeof document !== "undefined" && document.removeEventListener) {
+        document.removeEventListener("input", handler, true);
+      }
       clearInterval(iv);
     };
   }, [tour?.active, tour?.currentStep?.id, tour?.currentStep?.requireInput]);
@@ -179,14 +188,29 @@ export function TourOverlay() {
       return undefined;
     };
     let cleanup = attach();
-    const mo = new MutationObserver(() => {
-      cleanup?.();
-      cleanup = attach();
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
+    let mo: MutationObserver | null = null;
+
+    if (typeof MutationObserver !== "undefined" && document.body) {
+      try {
+        mo = new MutationObserver(() => {
+          cleanup?.();
+          cleanup = attach();
+        });
+        mo.observe(document.body, { childList: true, subtree: true });
+      } catch {
+        // Ignore MutationObserver errors
+      }
+    }
+
     return () => {
       cleanup?.();
-      mo.disconnect();
+      if (mo) {
+        try {
+          mo.disconnect();
+        } catch {
+          // Ignore disconnect errors
+        }
+      }
     };
   }, [
     tour?.active,
@@ -198,26 +222,47 @@ export function TourOverlay() {
 
   // --- Layout / resize / mutation listener ---
   useEffect(() => {
-    if (!tour?.active || !tour.currentStep) return;
+    if (!tour?.active || !tour.currentStep || typeof document === "undefined") {
+      return;
+    }
     findAndMeasure();
     const handleLayout = () => {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(findAndMeasure);
     };
-    window.addEventListener("resize", handleLayout);
-    window.addEventListener("scroll", handleLayout, true);
-    observerRef.current = new MutationObserver(handleLayout);
-    observerRef.current.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["class", "style", "data-tour"],
-    });
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", handleLayout);
+      window.addEventListener("scroll", handleLayout, true);
+    }
+
+    if (typeof MutationObserver !== "undefined" && document.body) {
+      try {
+        observerRef.current = new MutationObserver(handleLayout);
+        observerRef.current.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["class", "style", "data-tour"],
+        });
+      } catch {
+        // Ignore MutationObserver errors
+      }
+    }
+
     const interval = setInterval(findAndMeasure, 500);
     return () => {
-      window.removeEventListener("resize", handleLayout);
-      window.removeEventListener("scroll", handleLayout, true);
-      observerRef.current?.disconnect();
+      if (typeof window !== "undefined") {
+        window.removeEventListener("resize", handleLayout);
+        window.removeEventListener("scroll", handleLayout, true);
+      }
+      if (observerRef.current) {
+        try {
+          observerRef.current.disconnect();
+        } catch {
+          // Ignore disconnect errors
+        }
+      }
       cancelAnimationFrame(rafRef.current);
       clearInterval(interval);
     };

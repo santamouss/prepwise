@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ParkerHero — Practice interviews with Parker, your AI interview coach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --blue: #3B6FF0;
+    --blue-600: #2F5FE0;
+    --blue-50: #EEF3FE;
+    --blue-100: #DCE6FD;
+    --ink-900: #0B1220;
+    --ink-700: #2A3346;
+    --ink-500: #5B647A;
+    --ink-400: #8089A0;
+    --ink-300: #B8BFCF;
+    --line: #E7EAF1;
+    --line-soft: #EEF0F5;
+    --bg: #FFFFFF;
+    --bg-soft: #F7F8FB;
+    --bg-tint: #F4F7FE;
+    --radius-sm: 8px;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+    --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
+    --shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
+    --shadow-blue: 0 1px 2px rgba(59, 111, 240, 0.18), 0 8px 24px rgba(59, 111, 240, 0.18);
+    --container: 1120px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink-900);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .container {
+    max-width: var(--container);
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 42px;
+    padding: 0 18px;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    border: 1px solid transparent;
+    transition: background .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: var(--shadow-blue);
+  }
+  .btn-primary:hover { background: var(--blue-600); }
+  .btn-secondary {
+    background: #fff;
+    color: var(--ink-900);
+    border-color: var(--line);
+  }
+  .btn-secondary:hover { border-color: var(--ink-300); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-700);
+  }
+  .btn-ghost:hover { color: var(--ink-900); }
+  .btn-sm { height: 36px; padding: 0 14px; font-size: 13.5px; border-radius: 8px; }
+
+  /* ---------- Header ---------- */
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: saturate(140%) blur(10px);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: -0.02em;
+  }
+  .logo-mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--blue);
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04) inset, 0 1px 2px rgba(59,111,240,0.25);
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .nav a {
+    padding: 8px 12px;
+    font-size: 14px;
+    color: var(--ink-700);
+    border-radius: 8px;
+  }
+  .nav a:hover { color: var(--ink-900); }
+  .header-cta { display: flex; align-items: center; gap: 4px; }
+  .header-cta .sign-in { color: var(--ink-700); padding: 8px 12px; font-size: 14px; border-radius: 8px; }
+  .header-cta .sign-in:hover { color: var(--ink-900); }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 88px 0 64px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 72px;
+    align-items: center;
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 11px;
+    border-radius: 999px;
+    background: var(--blue-50);
+    color: var(--blue-600);
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    border: 1px solid var(--blue-100);
+  }
+  .eyebrow .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--blue);
+  }
+  .hero h1 {
+    font-size: 56px;
+    line-height: 1.06;
+    letter-spacing: -0.028em;
+    font-weight: 600;
+    margin: 20px 0 22px;
+    text-wrap: balance;
+  }
+  .hero h1 .accent { color: var(--blue); }
+  .hero p.sub {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-500);
+    margin: 0 0 32px;
+    max-width: 520px;
+    text-wrap: pretty;
+  }
+  .hero-cta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .meta-row {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    color: var(--ink-400);
+    font-size: 13px;
+  }
+  .meta-row .check {
+    width: 14px; height: 14px;
+    display: inline-block;
+    margin-right: 6px;
+    vertical-align: -2px;
+  }
+
+  /* ---------- Hero product mock ---------- */
+  .mock-wrap {
+    position: relative;
+  }
+  .mock-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -40px -20px;
+    background:
+      radial-gradient(60% 60% at 60% 40%, rgba(59, 111, 240, 0.10), transparent 70%);
+    z-index: -1;
+    border-radius: 50%;
+    filter: blur(20px);
+  }
+  .mock {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .mock-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line-soft);
+    background: #fff;
+  }
+  .mock-bar .dots {
+    display: flex; gap: 6px;
+  }
+  .mock-bar .dots span {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #E5E8EE;
+  }
+  .mock-bar .session {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--ink-500);
+  }
+  .mock-bar .session .pill {
+    width: 8px; height: 8px; border-radius: 50%; background: #10B981;
+    box-shadow: 0 0 0 3px rgba(16,185,129,0.12);
+  }
+  .mock-body {
+    padding: 22px 22px 24px;
+    display: grid;
+    gap: 18px;
+  }
+  .mock-head {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .mock-title {
+    font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .mock-sub {
+    font-size: 12.5px; color: var(--ink-400); margin-top: 2px;
+  }
+  .mock-timer {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px; color: var(--ink-500);
+    border: 1px solid var(--line);
+    padding: 4px 8px; border-radius: 6px;
+    background: var(--bg-soft);
+  }
+
+  .listening {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 16px;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-100);
+    border-radius: var(--radius);
+  }
+  .wave { display: flex; align-items: center; gap: 3px; height: 22px; }
+  .wave span {
+    display: block; width: 3px; border-radius: 2px;
+    background: var(--blue);
+    animation: wave 1.1s ease-in-out infinite;
+  }
+  .wave span:nth-child(1) { height: 30%; animation-delay: -1.0s; }
+  .wave span:nth-child(2) { height: 70%; animation-delay: -0.8s; }
+  .wave span:nth-child(3) { height: 100%; animation-delay: -0.6s; }
+  .wave span:nth-child(4) { height: 60%; animation-delay: -0.4s; }
+  .wave span:nth-child(5) { height: 85%; animation-delay: -0.2s; }
+  .wave span:nth-child(6) { height: 40%; animation-delay: 0s; }
+  .wave span:nth-child(7) { height: 75%; animation-delay: -0.5s; }
+  @keyframes wave {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+  .listening-text { font-size: 13.5px; color: var(--ink-700); font-weight: 500; }
+  .listening-text small { display: block; font-weight: 400; color: var(--ink-500); margin-top: 2px; font-size: 12.5px; }
+
+  .transcript {
+    display: grid; gap: 12px;
+  }
+  .bubble {
+    display: flex; gap: 10px;
+  }
+  .bubble .who {
+    flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 7px;
+    display: grid; place-items: center;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .bubble.parker .who { background: var(--blue); color: #fff; }
+  .bubble.you .who { background: var(--bg-soft); color: var(--ink-700); border: 1px solid var(--line); }
+  .bubble .body {
+    font-size: 13.5px; line-height: 1.5; color: var(--ink-700);
+    padding-top: 3px;
+  }
+  .bubble .body .label {
+    display: block; font-size: 11.5px; color: var(--ink-400);
+    font-weight: 500; margin-bottom: 2px;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  .bubble.you .body .body-text {
+    color: var(--ink-700);
+  }
+
+  .feedback-inline {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    background: #fff;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .feedback-inline .icon {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: var(--blue-50);
+    color: var(--blue);
+    display: grid; place-items: center;
+  }
+  .feedback-inline .text { font-size: 13px; line-height: 1.5; color: var(--ink-700); }
+  .feedback-inline .text strong { color: var(--ink-900); font-weight: 600; }
+  .feedback-inline .text small { display: block; color: var(--ink-400); margin-top: 2px; font-size: 11.5px; }
+
+  /* ---------- Section base ---------- */
+  section { padding: 96px 0; }
+  .section-head {
+    text-align: center;
+    max-width: 640px;
+    margin: 0 auto 56px;
+  }
+  .section-tag {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--blue);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .section-head h2 {
+    font-size: 38px;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .section-head p {
+    font-size: 17px;
+    color: var(--ink-500);
+    margin: 0;
+    text-wrap: pretty;
+  }
+
+  /* ---------- How it works ---------- */
+  .how {
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+  .step {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow-xs);
+  }
+  .step-num {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: var(--blue-50);
+    color: var(--blue);
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 600;
+    font-family: "JetBrains Mono", monospace;
+    margin-bottom: 18px;
+  }
+  .step h3 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
+  }
+  .step p {
+    font-size: 14.5px;
+    color: var(--ink-500);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* ---------- Features ---------- */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+  .feature {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    background: #fff;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .feature:hover { border-color: var(--ink-300); box-shadow: var(--shadow-sm); }
+  .feature-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--blue-50);
+    color: var(--blue);
+    display: grid; place-items: center;
+    margin-bottom: 18px;
+  }
+  .feature h3 {
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 6px;
+  }
+  .feature p {
+    font-size: 14.5px;
+    color: var(--ink-500);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* ---------- Feedback example ---------- */
+  .feedback-section {
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .feedback-card {
+    max-width: 720px;
+    margin: 0 auto;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .feedback-head {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line-soft);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .feedback-head .avatar {
+    width: 32px; height: 32px;
+    border-radius: 9px;
+    background: var(--blue);
+    color: #fff;
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 600;
+  }
+  .feedback-head .who-text { display: flex; flex-direction: column; }
+  .feedback-head .name { font-size: 14px; font-weight: 600; }
+  .feedback-head .role { font-size: 12.5px; color: var(--ink-400); margin-top: 1px; }
+  .feedback-head .badge {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--ink-500);
+    background: var(--bg-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+  .feedback-body {
+    padding: 28px;
+  }
+  .quote {
+    font-size: 19px;
+    line-height: 1.5;
+    color: var(--ink-900);
+    letter-spacing: -0.015em;
+    margin: 0 0 28px;
+    text-wrap: pretty;
+  }
+  .quote::before {
+    content: "“";
+    color: var(--blue);
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .quote::after { content: "”"; color: var(--blue); }
+
+  .feedback-stats {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg-soft);
+  }
+  .stat {
+    padding: 16px 20px;
+    border-right: 1px solid var(--line-soft);
+  }
+  .stat:last-child { border-right: none; }
+  .stat .label {
+    font-size: 11.5px;
+    color: var(--ink-400);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+  .stat .value {
+    font-size: 15px;
+    color: var(--ink-900);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .stat.score .value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--blue);
+    font-family: "JetBrains Mono", monospace;
+    letter-spacing: -0.02em;
+  }
+  .stat.score .value .denom { color: var(--ink-300); font-weight: 500; }
+
+  /* ---------- Pricing ---------- */
+  .pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    max-width: 960px;
+    margin: 0 auto 40px;
+  }
+  .price {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    background: #fff;
+    display: flex; flex-direction: column;
+  }
+  .price.featured {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 1px var(--blue) inset, var(--shadow-sm);
+    position: relative;
+  }
+  .price .name {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .price .name .tag {
+    font-size: 11px;
+    color: var(--blue);
+    background: var(--blue-50);
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+  .price .amount {
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    margin: 6px 0 4px;
+  }
+  .price .amount .per {
+    font-size: 14px;
+    color: var(--ink-400);
+    font-weight: 400;
+    margin-left: 2px;
+  }
+  .price .desc {
+    font-size: 14px;
+    color: var(--ink-500);
+    margin: 0 0 22px;
+  }
+  .pricing-cta {
+    text-align: center;
+  }
+  .pricing-cta .note {
+    margin-top: 12px;
+    font-size: 13px;
+    color: var(--ink-400);
+  }
+
+  /* ---------- Recruiter strip ---------- */
+  .recruiter {
+    padding: 64px 0;
+    background: var(--bg-soft);
+    border-top: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .recruiter-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    padding: 28px 32px;
+    box-shadow: var(--shadow-xs);
+  }
+  .recruiter-text h3 {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 4px;
+  }
+  .recruiter-text p {
+    font-size: 14.5px;
+    color: var(--ink-500);
+    margin: 0;
+    max-width: 540px;
+  }
+
+  /* ---------- Final CTA ---------- */
+  .final {
+    padding: 120px 0;
+    text-align: center;
+  }
+  .final h2 {
+    font-size: 44px;
+    line-height: 1.1;
+    letter-spacing: -0.028em;
+    font-weight: 600;
+    margin: 0 0 16px;
+  }
+  .final p {
+    font-size: 18px;
+    color: var(--ink-500);
+    margin: 0 0 32px;
+    max-width: 520px;
+    margin-left: auto; margin-right: auto;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    border-top: 1px solid var(--line-soft);
+    padding: 36px 0;
+  }
+  .footer-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink-400);
+    font-size: 13.5px;
+  }
+  .footer-nav { display: flex; gap: 22px; }
+  .footer-nav a:hover { color: var(--ink-700); }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 960px) {
+    .hero { padding: 64px 0 48px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+    .hero h1 { font-size: 42px; }
+    section { padding: 72px 0; }
+    .steps { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .recruiter-inner { flex-direction: column; align-items: flex-start; }
+    .section-head h2 { font-size: 30px; }
+    .final h2 { font-size: 32px; }
+    .feedback-stats { grid-template-columns: 1fr 1fr; }
+    .stat { border-right: none; border-bottom: 1px solid var(--line-soft); }
+  }
+  @media (max-width: 640px) {
+    .nav { display: none; }
+    .header-cta .sign-in { display: none; }
+    .hero h1 { font-size: 34px; }
+    .footer-inner { flex-direction: column; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header" data-screen-label="Header">
+  <div class="container header-inner">
+    <a href="#" class="logo">
+      <span class="logo-mark">P</span>
+      <span>ParkerHero</span>
+    </a>
+    <nav class="nav">
+      <a href="#how">How it works</a>
+      <a href="#coach">Coach Mode</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+    <div class="header-cta">
+      <a href="#" class="sign-in">Sign in</a>
+      <a href="#" class="btn btn-primary btn-sm">Start free practice</a>
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" data-screen-label="Hero">
+  <div class="container hero-grid">
+    <div class="hero-text">
+      <span class="eyebrow"><span class="dot"></span> Now with voice interviews</span>
+      <h1>Practice interviews with <span class="accent">Parker</span>, your AI interview coach.</h1>
+      <p class="sub">Run realistic voice mock interviews, get instant feedback, and improve before the real thing.</p>
+      <div class="hero-cta">
+        <a href="#" class="btn btn-primary">Start free practice</a>
+        <a href="#recruiter" class="btn btn-secondary">I'm hiring candidates</a>
+      </div>
+      <div class="meta-row">
+        <span>
+          <svg class="check" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8.5L6.5 12L13 5" stroke="#3B6FF0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Free to start
+        </span>
+        <span>
+          <svg class="check" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 8.5L6.5 12L13 5" stroke="#3B6FF0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          No credit card
+        </span>
+      </div>
+    </div>
+
+    <!-- PRODUCT MOCK -->
+    <div class="mock-wrap">
+      <div class="mock">
+        <div class="mock-bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="session"><span class="pill"></span> Live session</div>
+        </div>
+        <div class="mock-body">
+          <div class="mock-head">
+            <div>
+              <div class="mock-title">Product Manager Interview</div>
+              <div class="mock-sub">Round 2 · Behavioral</div>
+            </div>
+            <div class="mock-timer">12:04</div>
+          </div>
+
+          <div class="listening">
+            <div class="wave">
+              <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <div class="listening-text">
+              Parker is listening…
+              <small>Take your time. Speak naturally.</small>
+            </div>
+          </div>
+
+          <div class="transcript">
+            <div class="bubble parker">
+              <div class="who">P</div>
+              <div class="body">
+                <span class="label">Parker</span>
+                Tell me about a time you led a product launch that didn't go as planned.
+              </div>
+            </div>
+            <div class="bubble you">
+              <div class="who">You</div>
+              <div class="body">
+                <span class="label">You</span>
+                <span class="body-text">At my last role, we launched a new onboarding flow. We ran A/B tests for two weeks, but activation actually dropped 8%. So we paused the rollout, dug into session recordings, and found a gap in the empty state…</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="feedback-inline">
+            <div class="icon">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 1.5l1.8 4 4.4.6-3.2 3 .8 4.4L8 11.4 4.2 13.5 5 9.1 1.8 6.1l4.4-.6L8 1.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            </div>
+            <div class="text">
+              <strong>Add a measurable result</strong> to make this answer stronger.
+              <small>Try ending with the metric you moved or what you learned.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how" data-screen-label="How it works">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">How it works</div>
+      <h2>Three steps to a better interview.</h2>
+      <p>From job description to feedback in under five minutes.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>Choose your role</h3>
+        <p>Tell Parker what role, company, or job description you're preparing for.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>Practice with Parker</h3>
+        <p>Answer realistic interview questions by voice, with natural follow-ups.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>Get feedback</h3>
+        <p>Review your score, strengths, gaps, and delivery tips after each session.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="coach" data-screen-label="Features">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">What you get</div>
+      <h2>Built for the way real interviews go.</h2>
+      <p>Tools that meet you where you are — from your first practice to your final round.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 13a3 3 0 003-3V5a3 3 0 10-6 0v5a3 3 0 003 3z" stroke="currentColor" stroke-width="1.6"/><path d="M5 10a5 5 0 0010 0M10 15v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Mock Interviews</h3>
+        <p>Simulate a real interview with natural follow-ups across behavioral, technical, and case formats.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M3 10h14M3 15h9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Coach Mode</h3>
+        <p>Practice one question at a time. Retry your answer, refine your story, and build confidence.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 16l4-4 3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 8h3v3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Delivery Feedback</h3>
+        <p>See pacing, filler words, hedging, and clarity suggestions — not just what you said, but how.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M7 13V9M10 13V7M13 13v-2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Progress Tracking</h3>
+        <p>Track sessions, scores, and improvement areas over time — so you can see what's working.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEEDBACK EXAMPLE -->
+<section class="feedback-section" data-screen-label="Feedback example">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Feedback that's actually useful</div>
+      <h2>Specific notes, not generic praise.</h2>
+      <p>Parker tells you exactly what to change, and why it matters.</p>
+    </div>
+    <div class="feedback-card">
+      <div class="feedback-head">
+        <div class="avatar">P</div>
+        <div class="who-text">
+          <span class="name">Parker</span>
+          <span class="role">Reviewing: "Tell me about a product launch…"</span>
+        </div>
+        <div class="badge">Behavioral · Q3</div>
+      </div>
+      <div class="feedback-body">
+        <p class="quote">Good structure. One thing missing is the outcome. Try adding a measurable result, like adoption, revenue impact, time saved, or customer feedback.</p>
+        <div class="feedback-stats">
+          <div class="stat score">
+            <div class="label">Score</div>
+            <div class="value">7<span class="denom">/10</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">Strength</div>
+            <div class="value">Clear context</div>
+          </div>
+          <div class="stat">
+            <div class="label">Improve</div>
+            <div class="value">Add measurable impact</div>
+          </div>
+          <div class="stat">
+            <div class="label">Try again with</div>
+            <div class="value">Situation → Action → Result</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" data-screen-label="Pricing">
+  <div class="container">
+    <div class="section-head">
+      <div class="section-tag">Pricing</div>
+      <h2>Start free. Upgrade when you're ready.</h2>
+      <p>Practice as much as you need before the interview that matters.</p>
+    </div>
+    <div class="pricing-grid">
+      <div class="price">
+        <div class="name">Free</div>
+        <div class="amount">$0<span class="per">/mo</span></div>
+        <p class="desc">3 practice sessions per month with full feedback.</p>
+        <a href="#" class="btn btn-secondary" style="margin-top:auto">Get started</a>
+      </div>
+      <div class="price featured">
+        <div class="name">Starter <span class="tag">Popular</span></div>
+        <div class="amount">$15<span class="per">/mo</span></div>
+        <p class="desc">15 practice sessions per month and progress tracking.</p>
+        <a href="#" class="btn btn-primary" style="margin-top:auto">Choose Starter</a>
+      </div>
+      <div class="price">
+        <div class="name">Pro</div>
+        <div class="amount">$29<span class="per">/mo</span></div>
+        <p class="desc">Unlimited practice, Coach Mode, and priority support.</p>
+        <a href="#" class="btn btn-secondary" style="margin-top:auto">Choose Pro</a>
+      </div>
+    </div>
+    <div class="pricing-cta">
+      <a href="#" class="btn btn-primary">Start free practice</a>
+      <div class="note">Cancel anytime. No credit card to start.</div>
+    </div>
+  </div>
+</section>
+
+<!-- RECRUITER -->
+<section class="recruiter" id="recruiter" data-screen-label="Recruiter">
+  <div class="container">
+    <div class="recruiter-inner">
+      <div class="recruiter-text">
+        <h3>Hiring candidates?</h3>
+        <p>Create structured AI interviews, share interview links, and review candidate reports — all in one place.</p>
+      </div>
+      <a href="#" class="btn btn-secondary">Explore hiring tools →</a>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final" data-screen-label="Final CTA">
+  <div class="container">
+    <h2>Ready for your next interview?</h2>
+    <p>Start with a free practice session and get feedback from Parker in minutes.</p>
+    <a href="#" class="btn btn-primary">Start free practice</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container footer-inner">
+    <div class="logo">
+      <span class="logo-mark">P</span>
+      <span>ParkerHero</span>
+    </div>
+    <nav class="footer-nav">
+      <a href="#">Privacy</a>
+      <a href="#">Terms</a>
+      <a href="#">Contact</a>
+    </nav>
+    <div>© 2026 ParkerHero, Inc.</div>
+  </div>
+</footer>
+
+</body>
+</html>

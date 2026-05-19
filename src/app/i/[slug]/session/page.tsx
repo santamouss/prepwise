@@ -12,6 +12,7 @@ import type { InterviewContext } from "@/hooks/use-voice";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
 import { getPracticeInterviewType, getPracticeMode } from "@/lib/practice/practice-mode";
 import { shouldSkipCandidatePracticeOnboarding } from "@/lib/session/skip-practice-onboarding";
+import { isIntervieweeSessionTourEnabled } from "@/lib/tour/tour-flags";
 import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
 import { trpc } from "@/lib/trpc/client";
 import dynamic from "next/dynamic";
@@ -155,7 +156,8 @@ export default function SlugSessionPage() {
 
   const useVoice = interviewData.voiceEnabled;
 
-  const showPreviewTour = isPreview && !previewTourDone;
+  const showPreviewTour =
+    isPreview && !previewTourDone && isIntervieweeSessionTourEnabled();
 
   if (showPreviewTour) {
     const mode = useVoice ? "voice" : "chat";

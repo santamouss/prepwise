@@ -6,9 +6,11 @@ import { ChevronDown, Compass, Plus, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { useOrg } from "@/components/org-provider";
 import { useProject } from "@/components/project-provider";
 import { useTourSafe } from "@/components/tour/tour-provider";
+import { isRecruiterDashboardTourEnabled } from "@/lib/tour/tour-flags";
 import { TourChecklist } from "@/components/tour/tour-checklist";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -315,26 +317,45 @@ export function Header({ sidebarToggle }: { sidebarToggle?: React.ReactNode }) {
 
 function TourHeaderButton() {
   const tour = useTourSafe();
+  const pathname = usePathname();
+  const { profile } = useAuth();
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const handleClose = useCallback(() => setChecklistOpen(false), []);
   const { t } = useAppLocale();
 
   useEffect(() => {
+    // Guard against SSR or missing document/body
+    if (typeof document === "undefined" || !document.body) {
+      return;
+    }
+
     const check = () => {
-      setSheetOpen(
-        !!document.querySelector('[role="dialog"][data-state="open"]'),
-      );
+      if (document.querySelector) {
+        setSheetOpen(
+          !!document.querySelector('[role="dialog"][data-state="open"]'),
+        );
+      }
     };
+
     check();
-    const mo = new MutationObserver(check);
-    mo.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-state"],
-    });
-    return () => mo.disconnect();
+
+    // Use MutationObserver if available (all modern browsers)
+    if (typeof MutationObserver !== "undefined") {
+      try {
+        const mo = new MutationObserver(check);
+        mo.observe(document.body, {
+          childList: true,
+          subtree: true,
+          attributes: true,
+          attributeFilter: ["data-state"],
+        });
+        return () => mo.disconnect();
+      } catch {
+        // Fail silently if MutationObserver fails (e.g., in restricted environment)
+        return;
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -343,7 +364,13 @@ function TourHeaderButton() {
     return () => clearTimeout(timer);
   }, [tour]);
 
-  if (!tour || sheetOpen) return null;
+  if (
+    !tour ||
+    sheetOpen ||
+    !isRecruiterDashboardTourEnabled(profile?.user_type, pathname)
+  ) {
+    return null;
+  }
   const showDot = !tour.completed;
 
   const handleIconClick = () => {
