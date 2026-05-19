@@ -1,6 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   MARKETING_HIRING_REGISTER,
   MARKETING_LOGIN,
@@ -46,6 +48,8 @@ function Logo({ showWordmark = true }: { showWordmark?: boolean }) {
 }
 
 export function ParkerHeroHome() {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="parker-marketing min-h-screen">
       <header className="pk-header">
@@ -66,7 +70,47 @@ export function ParkerHeroHome() {
               Start free practice
             </Link>
           </div>
+          {/* Mobile hamburger menu button */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="pk-menu-toggle"
+            aria-label="Toggle navigation menu"
+            aria-expanded={menuOpen}
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile menu dropdown */}
+        {menuOpen && (
+          <div className="pk-mobile-menu">
+            <nav className="pk-mobile-nav">
+              <Link href="#how" onClick={() => setMenuOpen(false)}>
+                How it works
+              </Link>
+              <Link href="#coach" onClick={() => setMenuOpen(false)}>
+                Coach Mode
+              </Link>
+              <Link href="#pricing" onClick={() => setMenuOpen(false)}>
+                Pricing
+              </Link>
+              <Link href={MARKETING_LOGIN} onClick={() => setMenuOpen(false)}>
+                Sign in
+              </Link>
+            </nav>
+            <Link
+              href={MARKETING_PRACTICE_REGISTER}
+              className="pk-btn pk-btn-primary pk-mobile-cta"
+              onClick={() => setMenuOpen(false)}
+            >
+              Start free practice
+            </Link>
+          </div>
+        )}
       </header>
 
       <section className="pk-hero">
