@@ -1645,52 +1645,53 @@ export function VoiceInterface({
       )}
 
       {/* Header */}
-      <div className="ph-voice-header">
-        <div className="flex items-center justify-between">
+      <div className="ph-voice-header px-3 sm:px-6 py-2 sm:py-4">
+        <div className="flex items-center justify-between gap-2">
           <div className="mr-2 min-w-0 flex-1">
-            <h1 className="truncate text-sm font-semibold md:text-base">{interviewTitle}</h1>
+            <h1 className="truncate text-xs sm:text-sm md:text-base font-semibold">{interviewTitle}</h1>
             <p className="hidden text-xs text-muted-foreground md:block">
               Voice Interview with {aiName}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {videoMode && recording.isRecording && (
-              <div className="flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5">
+              <div className="flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 sm:px-2.5 py-0.5 shrink-0">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-destructive" />
-                <span className="text-[10px] font-medium text-destructive">REC</span>
+                <span className="text-[9px] sm:text-[10px] font-medium text-destructive">REC</span>
               </div>
             )}
-            <Badge variant={preview ? "outline" : voice.isConnected ? "default" : "secondary"}>
+            <Badge variant={preview ? "outline" : voice.isConnected ? "default" : "secondary"} className="text-xs">
               {preview ? "Preview" : voice.isConnected ? "Connected" : "Disconnected"}
             </Badge>
             <IntervieweeHelpPopover mode="voice" />
           </div>
         </div>
         {/* Question progress + timer (mobile: timer in header to avoid blocking bottom buttons) */}
-        <div className="mt-2 flex items-center gap-3">
-          <Progress value={progress} className="h-1.5 flex-1" />
-          <span className="shrink-0 text-xs font-medium text-muted-foreground">
+        <div className="mt-2 flex items-center gap-2 sm:gap-3">
+          <Progress value={progress} className="h-1 sm:h-1.5 flex-1" />
+          <span className="shrink-0 text-xs font-medium text-muted-foreground whitespace-nowrap">
             Q{voice.currentQuestionIndex + 1} / {voice.totalQuestions}
           </span>
           {remainingSeconds !== null && isMobile && (
-            <div className={`flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium tabular-nums ${isTimeLow ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
-              <Clock className="h-3 w-3" />
-              <span>{formatTime(remainingSeconds)} left</span>
+            <div className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 sm:px-2 py-0.5 text-xs font-medium tabular-nums whitespace-nowrap ${isTimeLow ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
+              <Clock className="h-3 w-3 shrink-0" />
+              <span className="hidden sm:inline">{formatTime(remainingSeconds)} left</span>
+              <span className="sm:hidden">{formatTime(remainingSeconds)}</span>
             </div>
           )}
         </div>
         {/* Current question text */}
         {voice.isConnected && currentQuestionText && !showPracticeQuestionDetails && (
-          <p className="mt-1.5 text-xs text-muted-foreground line-clamp-1">
+          <p className="mt-2 text-xs sm:text-sm text-muted-foreground line-clamp-1">
             {currentQuestionText}
           </p>
         )}
         {voice.isConnected && showPracticeQuestionDetails && (
-          <div className="ph-voice-question-card">
+          <div className="ph-voice-question-card mt-2">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Current question
             </p>
-            <p className="mt-1.5 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+            <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-foreground whitespace-pre-wrap">
               {currentQuestionText}
             </p>
             {currentQVoice.description?.trim() &&
@@ -2582,7 +2583,7 @@ export function VoiceInterface({
 
       {/* ── Bottom control bar (Zoom-like) ──────────────────── */}
       {(voice.isConnected || preview) && (
-        <div className={`relative flex items-center justify-center gap-2 border-t bg-card px-3 py-2 md:gap-6 md:px-6${preview ? " pointer-events-none" : ""}`}>
+        <div className={`relative flex flex-wrap items-center justify-center gap-1 sm:gap-2 border-t bg-card px-2 sm:px-3 py-2 md:gap-6 md:px-6${preview ? " pointer-events-none" : ""}`}>
           {/* Timer — right-aligned on desktop only (mobile shows it in header) */}
           {remainingSeconds !== null && !isMobile && (
             <div className={`absolute right-3 flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium tabular-nums md:right-6 md:px-2.5 ${isTimeLow ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"}`}>
@@ -2595,7 +2596,7 @@ export function VoiceInterface({
             <Button
               size="icon"
               variant={voice.isListening ? "default" : "secondary"}
-              className={`h-9 w-9 rounded-full transition-all ${
+              className={`h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full transition-all ${
                 voice.isListening
                   ? "bg-secondary-500 hover:bg-secondary-600 border-secondary-500"
                   : ""
@@ -2625,7 +2626,7 @@ export function VoiceInterface({
               <Button
                 size="icon"
                 variant={chatOpen ? "default" : "secondary"}
-                className="h-9 w-9 rounded-full"
+                className="h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full"
                 onClick={() => setChatOpen((prev) => !prev)}
               >
                 <MessageSquare className="h-4 w-4" />
@@ -2635,12 +2636,12 @@ export function VoiceInterface({
           )}
 
           {/* Whiteboard + Code Editor toggles */}
-          <div data-tour="voice-tools" className="flex items-center gap-2 md:gap-6">
+          <div data-tour="voice-tools" className="flex items-center gap-1 sm:gap-2 md:gap-6">
             <div className="flex flex-col items-center gap-0.5">
               <Button
                 size="icon"
                 variant={whiteboardActive ? "default" : "secondary"}
-                className="h-9 w-9 rounded-full"
+                className="h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full"
                 onClick={handleToggleWhiteboard}
               >
                 <PenLine className="h-4 w-4" />
@@ -2652,7 +2653,7 @@ export function VoiceInterface({
               <Button
                 size="icon"
                 variant={codeEditorActive ? "default" : "secondary"}
-                className="h-9 w-9 rounded-full"
+                className="h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full"
                 onClick={handleToggleCodeEditor}
               >
                 <Code2 className="h-4 w-4" />
@@ -2662,12 +2663,12 @@ export function VoiceInterface({
           </div>
 
           {/* Previous / Next / End */}
-          <div data-tour="voice-progress" className="flex items-center gap-2 md:gap-6">
+          <div data-tour="voice-progress" className="flex items-center gap-1 sm:gap-2 md:gap-6">
             <div className="flex flex-col items-center gap-0.5">
               <Button
                 size="icon"
                 variant="secondary"
-                className="h-9 w-9 rounded-full"
+                className="h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full"
                 onClick={handlePreviousQuestion}
                 disabled={
                   voice.isTransitioning ||
@@ -2688,7 +2689,7 @@ export function VoiceInterface({
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="h-9 w-9 rounded-full"
+                  className="h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full"
                   onClick={handleNextQuestion}
                   disabled={
                     voice.isTransitioning ||
@@ -2709,7 +2710,7 @@ export function VoiceInterface({
               <Button
                 size="icon"
                 variant="destructive"
-                className="h-9 w-9 rounded-full"
+                className="h-10 sm:h-9 w-10 sm:w-9 md:h-11 md:w-11 rounded-full"
                 onClick={() => setShowEndDialog(true)}
               >
                 <PhoneOff className="h-4 w-4" />
