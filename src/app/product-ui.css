@@ -1,5 +1,48 @@
 /* ParkerHero — shared product UI polish (candidate surfaces) */
 
+/* Guest /practice setup — marketing-adjacent backdrop */
+.practice-guest-setup {
+  background-color: #f7f8fb;
+  background-image:
+    radial-gradient(ellipse 80% 55% at 50% -8%, rgba(59, 111, 240, 0.14), transparent 58%),
+    radial-gradient(ellipse 45% 40% at 92% 18%, rgba(59, 111, 240, 0.08), transparent 50%),
+    radial-gradient(ellipse 40% 35% at 4% 72%, rgba(59, 111, 240, 0.06), transparent 48%),
+    linear-gradient(to bottom, #ffffff 0%, #f7f8fb 42%, #eef3fe 100%),
+    linear-gradient(to right, rgba(59, 111, 240, 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(59, 111, 240, 0.06) 1px, transparent 1px);
+  background-size:
+    auto,
+    auto,
+    auto,
+    auto,
+    48px 48px,
+    48px 48px;
+}
+
+.practice-guest-setup-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.practice-guest-setup-glow::before {
+  content: "";
+  position: absolute;
+  top: -12%;
+  left: 50%;
+  width: min(720px, 90vw);
+  height: min(420px, 55vh);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(59, 111, 240, 0.12),
+    transparent 72%
+  );
+  filter: blur(2px);
+}
+
 .ph-page-header h1 {
   font-size: 1.875rem;
   font-weight: 600;

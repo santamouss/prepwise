@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth-provider";
+import { ParkerLogo } from "@/components/ui/parker-logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,21 +88,6 @@ const DURATIONS: {
 ];
 
 type JobUrlFetchStatus = "idle" | "loading" | "success" | "error";
-
-const GUEST_DESKTOP_BENEFITS = [
-  {
-    title: "Voice practice",
-    description: "Realistic questions with natural follow-ups.",
-  },
-  {
-    title: "Coach Mode",
-    description: "Coaching after each answer, then retry or move on.",
-  },
-  {
-    title: "Session report",
-    description: "Scores, strengths, and delivery tips when you finish.",
-  },
-] as const;
 
 function applyPendingToForm(
   pending: PendingPracticeForm,
@@ -368,50 +354,48 @@ function PracticePageContent() {
   };
 
   const isLoggedIn = Boolean(user);
-  const showGuestDesktopMarketing = !isLoggedIn && !authLoading;
+  const isGuestSetup = !isLoggedIn && !authLoading;
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-b from-background to-muted/20 lg:min-h-0">
-      <div className={cn(
-        "mx-auto px-4 sm:px-6 pb-12 pt-8 sm:pt-12",
-        isLoggedIn
-          ? "max-w-[800px] lg:px-8 lg:pt-14 lg:pb-16"
-          : "max-w-7xl lg:px-8 lg:pt-12",
-      )}>
-        {isLoggedIn && (
-          <header className="mb-8 hidden text-center lg:block">
-            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-              Practice with Parker
-            </h1>
-            <p className="mx-auto mt-2 max-w-lg text-base text-muted-foreground">
-              Set up a calm voice session tailored to your target role.
-            </p>
-            {monthlyUsage && (
-              <div className="mx-auto mt-4 inline-flex flex-col items-center rounded-lg border border-border/70 bg-muted/30 px-4 py-2.5 text-sm">
-                <p className="font-medium text-foreground">
-                  {formatPracticeUsageSummary(monthlyUsage)}
+    <div
+      className={cn(
+        "relative w-full min-h-screen",
+        isGuestSetup
+          ? "practice-guest-setup"
+          : "bg-gradient-to-b from-background to-muted/20 lg:min-h-0",
+      )}
+    >
+      {isGuestSetup && <div className="practice-guest-setup-glow" aria-hidden />}
+      <div className="relative mx-auto max-w-[800px] px-4 pb-12 pt-8 sm:px-6 sm:pt-12 lg:px-8 lg:pb-16 lg:pt-14">
+        <header className="mb-8 hidden text-center lg:block">
+          <ParkerLogo height={52} className="mx-auto object-center" />
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-foreground">
+            Practice with Parker
+          </h1>
+          <p className="mx-auto mt-2 max-w-lg text-base leading-relaxed text-muted-foreground">
+            Run realistic voice interviews, get direct coaching after each answer, and receive a
+            full report when you finish.
+          </p>
+          {isLoggedIn && monthlyUsage && (
+            <div className="mx-auto mt-4 inline-flex flex-col items-center rounded-lg border border-border/70 bg-muted/30 px-4 py-2.5 text-sm">
+              <p className="font-medium text-foreground">
+                {formatPracticeUsageSummary(monthlyUsage)}
+              </p>
+              {remainingLabel && (
+                <p
+                  className={cn(
+                    "mt-0.5 text-xs",
+                    atMonthlyLimit ? "font-medium text-amber-600" : "text-muted-foreground",
+                  )}
+                >
+                  {remainingLabel}
                 </p>
-                {remainingLabel && (
-                  <p
-                    className={cn(
-                      "mt-0.5 text-xs",
-                      atMonthlyLimit ? "font-medium text-amber-600" : "text-muted-foreground",
-                    )}
-                  >
-                    {remainingLabel}
-                  </p>
-                )}
-              </div>
-            )}
-          </header>
-        )}
-
-        <div
-          className={cn(
-            "mb-6 sm:mb-8",
-            (isLoggedIn || showGuestDesktopMarketing) && "lg:hidden",
+              )}
+            </div>
           )}
-        >
+        </header>
+
+        <div className="mb-6 sm:mb-8 lg:hidden">
           <p className="mb-2 text-xs font-medium text-primary sm:text-sm">
             <span className="mr-2 inline-block">🎤</span>Candidate Practice
           </p>
@@ -426,38 +410,10 @@ function PracticePageContent() {
 
         <div
           className={cn(
-            "grid grid-cols-1 gap-6 lg:gap-10",
-            showGuestDesktopMarketing && "lg:grid-cols-5 lg:items-start",
+            "rounded-xl border border-border p-6 shadow-sm sm:p-8",
+            isGuestSetup ? "bg-card/95 shadow-md backdrop-blur-[2px]" : "bg-card",
           )}
         >
-          {showGuestDesktopMarketing && (
-            <aside className="hidden lg:col-span-2 lg:block">
-              <div className="sticky top-8 space-y-6 pr-4">
-                <div>
-                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
-                    Practice with Parker
-                  </h2>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    Voice mock interviews with coaching and a report when you finish.
-                  </p>
-                </div>
-                <ul className="space-y-3">
-                  {GUEST_DESKTOP_BENEFITS.map((benefit) => (
-                    <li
-                      key={benefit.title}
-                      className="rounded-lg border border-border/70 bg-card/80 px-4 py-3 shadow-sm"
-                    >
-                      <p className="text-sm font-medium text-foreground">{benefit.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">{benefit.description}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </aside>
-          )}
-
-          <div className={cn(showGuestDesktopMarketing ? "lg:col-span-3" : "w-full")}>
-            <div className="bg-card rounded-xl border border-border shadow-sm p-6 sm:p-8">
               {/* Mobile: show benefits as collapse-friendly summary */}
               <div className="lg:hidden mb-6 pb-6 border-b">
                 {monthlyUsage && (
@@ -777,8 +733,6 @@ function PracticePageContent() {
                   )}
                 </Button>
               </form>
-            </div>
-          </div>
         </div>
       </div>
     </div>
