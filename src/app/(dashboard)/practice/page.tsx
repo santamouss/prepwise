@@ -88,6 +88,21 @@ const DURATIONS: {
 
 type JobUrlFetchStatus = "idle" | "loading" | "success" | "error";
 
+const GUEST_DESKTOP_BENEFITS = [
+  {
+    title: "Voice practice",
+    description: "Realistic questions with natural follow-ups.",
+  },
+  {
+    title: "Coach Mode",
+    description: "Coaching after each answer, then retry or move on.",
+  },
+  {
+    title: "Session report",
+    description: "Scores, strengths, and delivery tips when you finish.",
+  },
+] as const;
+
 function applyPendingToForm(
   pending: PendingPracticeForm,
   setters: {
@@ -352,93 +367,96 @@ function PracticePageContent() {
     }
   };
 
+  const isLoggedIn = Boolean(user);
+  const showGuestDesktopMarketing = !isLoggedIn && !authLoading;
+
   return (
-    <div className="w-full min-h-screen bg-gradient-to-b from-background to-muted/20">
-      {/* Hero section with top spacing */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 lg:pt-16">
-        {/* Breadcrumb / intro */}
-        <div className="mb-6 sm:mb-8">
-          <p className="text-xs sm:text-sm font-medium text-primary mb-2">
-            <span className="inline-block mr-2">🎤</span>Candidate Practice
+    <div className="w-full min-h-screen bg-gradient-to-b from-background to-muted/20 lg:min-h-0">
+      <div className={cn(
+        "mx-auto px-4 sm:px-6 pb-12 pt-8 sm:pt-12",
+        isLoggedIn
+          ? "max-w-[800px] lg:px-8 lg:pt-14 lg:pb-16"
+          : "max-w-7xl lg:px-8 lg:pt-12",
+      )}>
+        {isLoggedIn && (
+          <header className="mb-8 hidden text-center lg:block">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              Practice with Parker
+            </h1>
+            <p className="mx-auto mt-2 max-w-lg text-base text-muted-foreground">
+              Set up a calm voice session tailored to your target role.
+            </p>
+            {monthlyUsage && (
+              <div className="mx-auto mt-4 inline-flex flex-col items-center rounded-lg border border-border/70 bg-muted/30 px-4 py-2.5 text-sm">
+                <p className="font-medium text-foreground">
+                  {formatPracticeUsageSummary(monthlyUsage)}
+                </p>
+                {remainingLabel && (
+                  <p
+                    className={cn(
+                      "mt-0.5 text-xs",
+                      atMonthlyLimit ? "font-medium text-amber-600" : "text-muted-foreground",
+                    )}
+                  >
+                    {remainingLabel}
+                  </p>
+                )}
+              </div>
+            )}
+          </header>
+        )}
+
+        <div
+          className={cn(
+            "mb-6 sm:mb-8",
+            (isLoggedIn || showGuestDesktopMarketing) && "lg:hidden",
+          )}
+        >
+          <p className="mb-2 text-xs font-medium text-primary sm:text-sm">
+            <span className="mr-2 inline-block">🎤</span>Candidate Practice
           </p>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-2">
+          <h1 className="mb-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl lg:text-4xl">
             Practice with Parker
           </h1>
-          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl">
-            Run realistic voice mock interviews, get instant feedback, and improve your interview skills before the real thing.
+          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">
+            Run realistic voice mock interviews, get instant feedback, and improve your interview
+            skills before the real thing.
           </p>
         </div>
 
-        {/* Two-column layout: desktop; single-column: mobile */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 pb-12">
-          {/* Left column: Benefits & info (hidden on mobile, visible on desktop) */}
-          <div className="lg:col-span-2 hidden lg:block">
-            <div className="sticky top-8 space-y-8">
-              {/* Benefits */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-foreground">What you'll get</h3>
+        <div
+          className={cn(
+            "grid grid-cols-1 gap-6 lg:gap-10",
+            showGuestDesktopMarketing && "lg:grid-cols-5 lg:items-start",
+          )}
+        >
+          {showGuestDesktopMarketing && (
+            <aside className="hidden lg:col-span-2 lg:block">
+              <div className="sticky top-8 space-y-6 pr-4">
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                    Practice with Parker
+                  </h2>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                    Voice mock interviews with coaching and a report when you finish.
+                  </p>
+                </div>
                 <ul className="space-y-3">
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
-                    <span className="text-sm text-muted-foreground">Real-time voice interviews with natural follow-ups</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
-                    <span className="text-sm text-muted-foreground">Instant AI coaching and detailed feedback</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
-                    <span className="text-sm text-muted-foreground">Delivery metrics and improvement areas</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
-                    <span className="text-sm text-muted-foreground">Coach Mode for deliberate practice and retries</span>
-                  </li>
+                  {GUEST_DESKTOP_BENEFITS.map((benefit) => (
+                    <li
+                      key={benefit.title}
+                      className="rounded-lg border border-border/70 bg-card/80 px-4 py-3 shadow-sm"
+                    >
+                      <p className="text-sm font-medium text-foreground">{benefit.title}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{benefit.description}</p>
+                    </li>
+                  ))}
                 </ul>
               </div>
+            </aside>
+          )}
 
-              {/* How it works */}
-              <div className="space-y-4 pt-4 border-t">
-                <h3 className="text-sm font-semibold text-foreground">How it works</h3>
-                <ol className="space-y-3">
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">1</span>
-                    <span className="text-sm text-muted-foreground">Tell Parker your target role and optionally add a job description</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">2</span>
-                    <span className="text-sm text-muted-foreground">Speak naturally in Coach Mode or go straight to a Mock Interview</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">3</span>
-                    <span className="text-sm text-muted-foreground">Get instant feedback and a full report on your performance</span>
-                  </li>
-                </ol>
-              </div>
-
-              {/* Usage info */}
-              {monthlyUsage && (
-                <div className="pt-4 border-t">
-                  <div className="bg-accent/40 rounded-lg p-4">
-                    <p className="text-xs font-medium text-foreground mb-2">
-                      {formatPracticeUsageSummary(monthlyUsage)}
-                    </p>
-                    {remainingLabel && (
-                      <p className={cn(
-                        "text-xs",
-                        atMonthlyLimit ? "text-amber-600 font-medium" : "text-muted-foreground",
-                      )}>
-                        {remainingLabel}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right column: Form (full width on mobile, col-span-3 on desktop) */}
-          <div className="lg:col-span-3">
+          <div className={cn(showGuestDesktopMarketing ? "lg:col-span-3" : "w-full")}>
             <div className="bg-card rounded-xl border border-border shadow-sm p-6 sm:p-8">
               {/* Mobile: show benefits as collapse-friendly summary */}
               <div className="lg:hidden mb-6 pb-6 border-b">
