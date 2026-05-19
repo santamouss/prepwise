@@ -7,7 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import type { PracticeDuration, PracticeInterviewType } from "@/lib/practice/constants";
-import type { PracticeMode } from "@/lib/practice/practice-mode";
+import {
+  DEFAULT_CANDIDATE_PRACTICE_MODE,
+  type PracticeMode,
+} from "@/lib/practice/practice-mode";
 import {
   formatPracticeRemaining,
   formatPracticeUsageSummary,
@@ -50,16 +53,18 @@ const PRACTICE_STYLES: {
   value: PracticeMode;
   label: string;
   helper: string;
+  badge?: string;
 }[] = [
-  {
-    value: "mock",
-    label: "Mock Interview",
-    helper: "Simulate the real interview and get feedback at the end.",
-  },
   {
     value: "coach",
     label: "Coach Mode",
     helper: "Get coaching after each answer and retry before moving on.",
+    badge: "Recommended",
+  },
+  {
+    value: "mock",
+    label: "Mock Interview",
+    helper: "Simulate the real interview and get feedback at the end.",
   },
 ];
 
@@ -94,7 +99,9 @@ export default function PracticePage() {
   const [showContext, setShowContext] = useState(false);
   const [interviewType, setInterviewType] = useState<PracticeInterviewType>("BEHAVIORAL");
   const [durationMinutes, setDurationMinutes] = useState<PracticeDuration>(10);
-  const [practiceMode, setPracticeMode] = useState<PracticeMode>("mock");
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>(
+    DEFAULT_CANDIDATE_PRACTICE_MODE,
+  );
 
   const resumeFileRef = useRef<HTMLInputElement>(null);
   const isStarting = startPractice.isPending;
@@ -228,7 +235,7 @@ export default function PracticePage() {
           Practice Interview
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Set up a voice mock interview and practice speaking with Parker
+          Set up a voice practice session with Parker
         </p>
         {monthlyUsage && (
           <p className="mt-2 text-sm font-medium text-foreground">
@@ -452,7 +459,14 @@ export default function PracticePage() {
                           : "border-border hover:border-[#3B6FF0]/40",
                       )}
                     >
-                      <span className="text-sm font-medium">{style.label}</span>
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium">{style.label}</span>
+                        {style.badge && (
+                          <span className="rounded-full bg-[#3B6FF0]/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#3B6FF0]">
+                            {style.badge}
+                          </span>
+                        )}
+                      </span>
                       <span className="text-xs text-muted-foreground">{style.helper}</span>
                     </button>
                   );

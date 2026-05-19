@@ -5,6 +5,9 @@ export type PracticeMode = "mock" | "coach";
 
 export const PRACTICE_MODES = ["mock", "coach"] as const;
 
+/** Default for new candidate practice on /practice (UI + practice.start). */
+export const DEFAULT_CANDIDATE_PRACTICE_MODE: PracticeMode = "coach";
+
 export function normalizePracticeMode(value: unknown): PracticeMode {
   return value === "coach" ? "coach" : "mock";
 }

@@ -11,6 +11,7 @@ import {
 } from "@/lib/practice/constants";
 import {
   buildPracticeCustomBranding,
+  DEFAULT_CANDIDATE_PRACTICE_MODE,
   normalizePracticeMode,
 } from "@/lib/practice/practice-mode";
 import { resolvePracticeJobDescription } from "@/lib/practice/job-description-context";
@@ -38,7 +39,9 @@ const startInput = z.object({
     "LEADERSHIP",
   ]),
   durationMinutes: z.union([z.literal(5), z.literal(10), z.literal(15)]),
-  practiceMode: z.enum(["mock", "coach"]).default("mock"),
+  practiceMode: z
+    .enum(["mock", "coach"])
+    .default(DEFAULT_CANDIDATE_PRACTICE_MODE),
 });
 
 type PracticeSessionRow = {

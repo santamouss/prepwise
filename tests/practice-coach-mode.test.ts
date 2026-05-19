@@ -11,11 +11,14 @@ import {
 } from "../src/lib/practice/coach-mode-prompt";
 import {
   buildPracticeCustomBranding,
+  DEFAULT_CANDIDATE_PRACTICE_MODE,
   getPracticeMode,
   normalizePracticeMode,
 } from "../src/lib/practice/practice-mode";
 
-const practiceModeInput = z.enum(["mock", "coach"]).default("mock");
+const practiceModeInput = z
+  .enum(["mock", "coach"])
+  .default(DEFAULT_CANDIDATE_PRACTICE_MODE);
 
 describe("getPracticeMode", () => {
   it("defaults to mock for practice interviews without practiceMode", () => {
@@ -55,7 +58,8 @@ describe("getPracticeMode", () => {
 
 describe("practice.start branding", () => {
   it("accepts coach in input schema and stores practiceMode in customBranding", () => {
-    assert.equal(practiceModeInput.parse(undefined), "mock");
+    assert.equal(DEFAULT_CANDIDATE_PRACTICE_MODE, "coach");
+    assert.equal(practiceModeInput.parse(undefined), "coach");
     assert.equal(practiceModeInput.parse("coach"), "coach");
 
     assert.deepEqual(buildPracticeCustomBranding("coach"), {
