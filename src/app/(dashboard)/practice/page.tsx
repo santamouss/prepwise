@@ -352,22 +352,22 @@ function PracticePageContent() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-10 pb-8">
+    <div className="mx-auto max-w-2xl space-y-6 sm:space-y-10 px-4 sm:px-0 pb-8">
       <div className="ph-page-header">
-        <h1>Practice with Parker</h1>
-        <p>
+        <h1 className="text-xl sm:text-2xl">Practice with Parker</h1>
+        <p className="text-sm sm:text-base">
           A calm voice session tailored to your target role. Add optional context when you want
           sharper questions.
         </p>
         {monthlyUsage && (
-          <p className="mt-3 text-sm font-medium text-foreground">
+          <p className="mt-3 text-xs sm:text-sm font-medium text-foreground">
             {formatPracticeUsageSummary(monthlyUsage)}
           </p>
         )}
         {remainingLabel && (
           <p
             className={cn(
-              "mt-1 text-sm",
+              "mt-1 text-xs sm:text-sm",
               atMonthlyLimit ? "text-amber-600" : "text-muted-foreground",
             )}
           >
@@ -376,9 +376,9 @@ function PracticePageContent() {
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="ph-surface space-y-3 p-6">
-          <Label htmlFor="role" className="text-base font-medium">
+      <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
+        <div className="ph-surface space-y-3 p-4 sm:p-6">
+          <Label htmlFor="role" className="text-sm sm:text-base font-medium">
             What role are you interviewing for?{" "}
             <span className="text-destructive">*</span>
           </Label>
@@ -389,7 +389,7 @@ function PracticePageContent() {
             onChange={(e) => setRole(e.target.value)}
             placeholder="e.g. Product Manager, Software Engineer, BDR"
             disabled={isStarting}
-            className="h-12 border-border/80 text-base shadow-sm"
+            className="h-10 sm:h-12 border-border/80 text-sm sm:text-base shadow-sm"
           />
           <p className="text-xs leading-relaxed text-muted-foreground">
             Parker uses this as the anchor for your questions and coaching.
@@ -397,8 +397,8 @@ function PracticePageContent() {
         </div>
 
         <div className="space-y-3">
-          <Label className="text-sm font-medium text-foreground">How do you want to practice?</Label>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <Label className="text-xs sm:text-sm font-medium text-foreground">How do you want to practice?</Label>
+          <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
             {PRACTICE_STYLES.map((style) => {
               const selected = practiceMode === style.value;
               return (
@@ -410,8 +410,8 @@ function PracticePageContent() {
                   className={cn("ph-option-card", selected && "ph-option-card-selected")}
                 >
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold">{style.label}</span>
-                    {style.badge && <span className="ph-option-badge">{style.badge}</span>}
+                    <span className="text-xs sm:text-sm font-semibold">{style.label}</span>
+                    {style.badge && <span className="ph-option-badge text-xs">{style.badge}</span>}
                   </span>
                   <span className="text-xs leading-relaxed text-muted-foreground">
                     {style.helper}
@@ -422,10 +422,10 @@ function PracticePageContent() {
           </div>
         </div>
 
-        <div className="space-y-6 rounded-xl border border-border/60 bg-muted/20 p-5">
+        <div className="space-y-4 sm:space-y-6 rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5">
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-foreground">Interview type</Label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <Label className="text-xs sm:text-sm font-medium text-foreground">Interview type</Label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {INTERVIEW_TYPES.map((type) => {
                 const Icon = type.icon;
                 const selected = interviewType === type.value;
@@ -436,12 +436,12 @@ function PracticePageContent() {
                     disabled={isStarting}
                     onClick={() => setInterviewType(type.value)}
                     className={cn(
-                      "ph-option-card items-center gap-2 p-3",
+                      "ph-option-card items-center gap-2 p-2 sm:p-3",
                       selected && "ph-option-card-selected",
                     )}
                   >
-                    <Icon className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium">{type.label}</span>
+                    <Icon className="h-4 w-4 text-primary shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium">{type.label}</span>
                   </button>
                 );
               })}
@@ -449,7 +449,7 @@ function PracticePageContent() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-sm font-medium text-foreground">Session length</Label>
+            <Label className="text-xs sm:text-sm font-medium text-foreground">Session length</Label>
             <div className="grid grid-cols-3 gap-2">
               {DURATIONS.map((d) => {
                 const selected = durationMinutes === d.value;
@@ -460,11 +460,11 @@ function PracticePageContent() {
                     disabled={isStarting}
                     onClick={() => setDurationMinutes(d.value)}
                     className={cn(
-                      "ph-option-card items-center p-3 text-center",
+                      "ph-option-card items-center p-2 sm:p-3 text-center",
                       selected && "ph-option-card-selected",
                     )}
                   >
-                    <p className="text-sm font-semibold">{d.label}</p>
+                    <p className="text-xs sm:text-sm font-semibold">{d.label}</p>
                     <p className="mt-1 text-xs text-muted-foreground">{d.questions} questions</p>
                   </button>
                 );
@@ -477,7 +477,7 @@ function PracticePageContent() {
           {!showContext ? (
             <button
               type="button"
-              className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-primary transition-colors hover:text-primary/80"
               onClick={() => setShowContext(true)}
               disabled={isStarting}
             >
@@ -485,9 +485,9 @@ function PracticePageContent() {
               <ChevronDown className="h-4 w-4" />
             </button>
           ) : (
-            <div className="ph-surface space-y-4 p-5">
+            <div className="ph-surface space-y-3 sm:space-y-4 p-4 sm:p-5">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium text-foreground">Optional context</p>
+                <p className="text-xs sm:text-sm font-medium text-foreground">Optional context</p>
                 <button
                   type="button"
                   className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
@@ -500,20 +500,20 @@ function PracticePageContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="company">Company or industry</Label>
+                <Label htmlFor="company" className="text-xs sm:text-sm">Company or industry</Label>
                 <Input
                   id="company"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="e.g. Google, SaaS startup, Healthcare"
                   disabled={isStarting}
-                  className="border-border/80"
+                  className="border-border/80 text-sm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="jobDescriptionUrl">Job posting URL</Label>
-                <div className="flex gap-2">
+                <Label htmlFor="jobDescriptionUrl" className="text-xs sm:text-sm">Job posting URL</Label>
+                <div className="flex gap-2 flex-col sm:flex-row">
                   <Input
                     id="jobDescriptionUrl"
                     type="url"
@@ -527,12 +527,12 @@ function PracticePageContent() {
                     }}
                     placeholder="https://company.com/careers/role"
                     disabled={isStarting || isFetchingJobUrl}
-                    className="border-border/80"
+                    className="border-border/80 text-sm"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    className="shrink-0"
+                    className="shrink-0 sm:w-auto w-full h-10"
                     disabled={isStarting || isFetchingJobUrl || !jobDescriptionUrl.trim()}
                     onClick={() => void handleFetchJobUrl()}
                     aria-label="Fetch job posting"
@@ -568,7 +568,7 @@ function PracticePageContent() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="jobDescription">Pasted job description</Label>
+                <Label htmlFor="jobDescription" className="text-xs sm:text-sm">Pasted job description</Label>
                 <Textarea
                   id="jobDescription"
                   rows={4}
@@ -576,12 +576,12 @@ function PracticePageContent() {
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste the job description here for tailored questions..."
                   disabled={isStarting}
-                  className="border-border/80"
+                  className="border-border/80 text-sm"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Resume (PDF, optional)</Label>
+                <Label className="text-xs sm:text-sm">Resume (PDF, optional)</Label>
                 <input
                   ref={resumeFileRef}
                   type="file"
@@ -591,18 +591,18 @@ function PracticePageContent() {
                   disabled={isStarting || resumeLoading}
                 />
                 {resumeLoading && (
-                  <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <p className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Extracting resume…
                   </p>
                 )}
                 {resumeText && !resumeLoading && (
-                  <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-sm">
+                  <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-xs sm:text-sm">
                     <FileText className="h-4 w-4 shrink-0 text-primary" />
                     <span className="min-w-0 flex-1 truncate">{resumeFileName}</span>
                     <button
                       type="button"
-                      className="text-muted-foreground transition-colors hover:text-foreground"
+                      className="text-muted-foreground transition-colors hover:text-foreground shrink-0"
                       onClick={() => {
                         setResumeText("");
                         setResumeFileName("");
@@ -619,7 +619,7 @@ function PracticePageContent() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full border-border/80"
+                    className="w-full border-border/80 h-10"
                     disabled={isStarting}
                     onClick={() => resumeFileRef.current?.click()}
                   >
@@ -633,8 +633,8 @@ function PracticePageContent() {
           )}
         </div>
 
-        <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-accent/40 px-4 py-3.5 text-sm text-foreground">
-          <Mic className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-accent/40 px-3 sm:px-4 py-3 sm:py-3.5 text-xs sm:text-sm text-foreground">
+          <Mic className="mt-0.5 h-4 sm:h-5 w-4 sm:w-5 shrink-0 text-primary" />
           <p className="leading-relaxed text-muted-foreground">
             Voice practice only — you&apos;ll speak with Parker out loud. Microphone permission may
             be requested before your session begins.
@@ -643,13 +643,14 @@ function PracticePageContent() {
 
         <Button
           type="submit"
-          className="ph-primary-cta"
+          className="ph-primary-cta w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-base"
           disabled={isStarting || authLoading || !role.trim() || atMonthlyLimit}
         >
           {isStarting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Parker is preparing your voice interview…
+              <span className="hidden sm:inline">Parker is preparing your voice interview…</span>
+              <span className="sm:hidden">Preparing…</span>
             </>
           ) : (
             <>Start voice practice</>

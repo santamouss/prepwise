@@ -6,6 +6,7 @@ import { TourCelebration } from "@/components/tour/tour-celebration";
 import { TourOverlay } from "@/components/tour/tour-overlay";
 import { TourProvider } from "@/components/tour/tour-provider";
 import { TourWelcome } from "@/components/tour/tour-welcome";
+import { isRecruiterDashboardTourEnabled } from "@/lib/tour/tour-flags";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -182,7 +183,7 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex flex-col border-r border-border bg-sidebar transition-all duration-200",
+        "hidden sm:flex flex-col border-r border-border bg-sidebar transition-all duration-200",
         collapsed ? "w-24" : "w-[240px]",
       )}
     >
@@ -477,28 +478,42 @@ export function SidebarToggle({
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const pathname = usePathname();
+  const { profile } = useAuth();
+  const recruiterTourEnabled = isRecruiterDashboardTourEnabled(
+    profile?.user_type,
+    pathname,
+  );
+
+  const shell = (
+    <div className="dashboard-shell flex h-screen overflow-hidden">
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(!collapsed)}
+      />
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+        <Header
+          sidebarToggle={
+            <SidebarToggle
+              collapsed={collapsed}
+              onToggle={() => setCollapsed(!collapsed)}
+            />
+          }
+        />
+        <main className="code-scrollbar flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-[1200px] px-4 sm:px-8 py-4 sm:py-8">{children}</div>
+        </main>
+      </div>
+    </div>
+  );
+
+  if (!recruiterTourEnabled) {
+    return shell;
+  }
 
   return (
     <TourProvider>
-      <div className="dashboard-shell flex h-screen overflow-hidden">
-        <Sidebar
-          collapsed={collapsed}
-          onToggle={() => setCollapsed(!collapsed)}
-        />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
-          <Header
-            sidebarToggle={
-              <SidebarToggle
-                collapsed={collapsed}
-                onToggle={() => setCollapsed(!collapsed)}
-              />
-            }
-          />
-          <main className="code-scrollbar flex-1 overflow-y-auto">
-            <div className="mx-auto max-w-[1200px] px-8 py-8">{children}</div>
-          </main>
-        </div>
-      </div>
+      {shell}
       <TourOverlay />
       <TourWelcome />
       <TourCelebration />
