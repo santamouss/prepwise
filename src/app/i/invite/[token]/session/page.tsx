@@ -8,10 +8,11 @@ import { PreparingScreen } from "@/components/session/preparing-screen";
 import { SessionCompletionScreen } from "@/components/session/session-completion-screen";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
 import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
+import { safeReplace } from "@/lib/navigation/safe-router";
 import { trpc } from "@/lib/trpc/client";
 import dynamic from "next/dynamic";
-import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 const ChatInterface = dynamic(
   () => import("@/components/session/chat-interface").then((m) => m.ChatInterface),
@@ -25,7 +26,10 @@ const VoiceInterface = dynamic(
 export default function InviteSessionPage() {
   const params = useParams();
   const token = params.token as string;
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const router = useRouter();
+  const inviteExitRedirectedRef = useRef(false);
 
   const [completed, setCompleted] = useState(false);
   const [completionPayload, setCompletionPayload] =
@@ -45,16 +49,18 @@ export default function InviteSessionPage() {
   );
 
   useEffect(() => {
-    if (candidate.isError) {
-      router.replace(`/i/invite/${token}`);
-    }
-    if (candidate.data) {
-      const session = (candidate.data as any).session;
-      if (!session) {
-        router.replace(`/i/invite/${token}`);
-      }
-    }
-  }, [candidate.data, candidate.isError, token, router]);
+    if (inviteExitRedirectedRef.current) return;
+
+    const target = `/i/invite/${token}`;
+    const shouldRedirect =
+      candidate.isError ||
+      (candidate.data && !(candidate.data as { session?: unknown }).session);
+
+    if (!shouldRedirect) return;
+
+    safeReplace(router, pathname, searchParams, target);
+    inviteExitRedirectedRef.current = true;
+  }, [candidate.data, candidate.isError, pathname, router, searchParams, token]);
 
   if (candidate.isLoading || !candidate.data) {
     return <PreparingScreen />;

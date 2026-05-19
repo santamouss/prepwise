@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ProfileUserType } from "@/lib/profile-user-type";
 import { hasPendingPracticeForm } from "@/lib/practice/pending-practice-form";
+import { safeReplace } from "@/lib/navigation/safe-router";
 import { trpc } from "@/lib/trpc/client";
 import { Briefcase, Loader2, Target } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useRef, useState } from "react";
 
 type OnboardingChoice = ProfileUserType;
 
@@ -35,16 +36,22 @@ const OPTIONS: Array<{
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { refreshProfile } = useAuth();
   const [selected, setSelected] = useState<OnboardingChoice | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const postOnboardingRedirectedRef = useRef(false);
 
   const setUserType = trpc.user.setUserType.useMutation({
     onSuccess: async () => {
+      if (postOnboardingRedirectedRef.current) return;
+      postOnboardingRedirectedRef.current = true;
+
       await refreshProfile();
-      router.replace(
-        hasPendingPracticeForm() ? "/practice?autoStart=true" : "/dashboard",
-      );
+      const target = hasPendingPracticeForm()
+        ? "/practice?autoStart=true"
+        : "/dashboard";
+      safeReplace(router, pathname, "", target);
       router.refresh();
     },
     onError: (err) => {

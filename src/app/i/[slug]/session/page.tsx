@@ -14,10 +14,11 @@ import { getPracticeInterviewType, getPracticeMode } from "@/lib/practice/practi
 import { shouldSkipCandidatePracticeOnboarding } from "@/lib/session/skip-practice-onboarding";
 import { isIntervieweeSessionTourEnabled } from "@/lib/tour/tour-flags";
 import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
+import { safeReplace } from "@/lib/navigation/safe-router";
 import { trpc } from "@/lib/trpc/client";
 import dynamic from "next/dynamic";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const STORAGE_PREFIX = "parker_session_";
 
@@ -32,8 +33,10 @@ const VoiceInterface = dynamic(
 
 export default function SlugSessionPage() {
   const params = useParams();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const sessionExitRedirectedRef = useRef(false);
   const slug = params.slug as string;
   const sidParam = searchParams.get("sid");
   const isPreview = searchParams.get("preview") === "true";
@@ -67,10 +70,12 @@ export default function SlugSessionPage() {
   );
 
   useEffect(() => {
+    if (sessionExitRedirectedRef.current) return;
     if (!sessionId || session.isError) {
-      router.replace(`/i/${slug}`);
+      safeReplace(router, pathname, searchParams, `/i/${slug}`);
+      sessionExitRedirectedRef.current = true;
     }
-  }, [sessionId, session.isError, slug, router]);
+  }, [sessionId, session.isError, slug, pathname, router, searchParams]);
 
 
   const interviewData = interview.data;

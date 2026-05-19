@@ -6,27 +6,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { safePush, safeReplace } from "@/lib/navigation/safe-router";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2, Link2Off, Loader2, Lock, MessageSquare, Mic, Plus, RotateCcw } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const STORAGE_PREFIX = "parker_session_";
 
 export default function PublicInterviewPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const previewRedirectedRef = useRef(false);
   const isPreview = searchParams.get("preview") === "true";
   const sidParam = searchParams.get("sid");
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isPreview && sidParam) {
-      router.replace(`/i/${slug}/session?sid=${sidParam}&preview=true`);
-    }
-  }, [isPreview, sidParam, slug, router]);
+    if (!isPreview || !sidParam || previewRedirectedRef.current) return;
+    const target = `/i/${slug}/session?sid=${sidParam}&preview=true`;
+    safeReplace(router, pathname, searchParams, target);
+    previewRedirectedRef.current = true;
+  }, [isPreview, sidParam, slug, pathname, router, searchParams]);
 
   const [participantName, setParticipantName] = useState("");
   const [participantEmail, setParticipantEmail] = useState("");
@@ -79,9 +83,12 @@ export default function PublicInterviewPage() {
     router.prefetch(`/i/${slug}/session`);
   }, [router, slug]);
 
-  const goToSession = useCallback((sid: string) => {
-    router.push(`/i/${slug}/session?sid=${sid}`);
-  }, [router, slug]);
+  const goToSession = useCallback(
+    (sid: string) => {
+      safePush(router, pathname, searchParams, `/i/${slug}/session?sid=${sid}`);
+    },
+    [router, pathname, searchParams, slug],
+  );
 
   // ── Resume / Start-new handlers ────────────────────────────────
   const handleResume = useCallback(() => {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { safePush } from "@/lib/navigation/safe-router";
+import { useParams, usePathname, useRouter } from "next/navigation";
 import { trpc } from "@/lib/trpc/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link2Off, CheckCircle2 } from "lucide-react";
@@ -11,9 +12,11 @@ export default function InvitePage() {
   const params = useParams();
   const token = params.token as string;
   const router = useRouter();
+  const pathname = usePathname();
 
   const [completed, setCompleted] = useState(false);
   const sessionCreationAttempted = useRef(false);
+  const sessionNavigationAttempted = useRef(false);
 
   const candidate = trpc.candidate.getByToken.useQuery(
     { token },
@@ -33,8 +36,10 @@ export default function InvitePage() {
   }, [router, sessionPath]);
 
   const goToSession = useCallback(() => {
-    router.push(sessionPath);
-  }, [router, sessionPath]);
+    if (sessionNavigationAttempted.current) return;
+    sessionNavigationAttempted.current = true;
+    safePush(router, pathname, "", sessionPath);
+  }, [router, pathname, sessionPath]);
 
   useEffect(() => {
     if (!candidate.data || completed) return;

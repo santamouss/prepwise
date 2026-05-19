@@ -19,11 +19,12 @@ import {
   type CompletionFlowBranch,
   type CompletionPhase,
 } from "@/lib/session/session-completion-flow";
+import { safePush } from "@/lib/navigation/safe-router";
 import { resolvePostInterviewRedirect } from "@/lib/session/post-interview-redirect";
 import { trpc } from "@/lib/trpc/client";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_DISPLAY_MS = 2500;
@@ -60,6 +61,8 @@ export function SessionCompletionScreen({
   saveSucceeded = true,
 }: SessionCompletionScreenProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { user, profile, loading: authLoading } = useAuth();
   const utils = trpc.useUtils();
   const completeSession = trpc.session.complete.useMutation();
@@ -71,6 +74,7 @@ export function SessionCompletionScreen({
   const flowBranchRef = useRef<CompletionFlowBranch | null>(null);
   const activeRunKeyRef = useRef<string | null>(null);
   const completedRunKeyRef = useRef<string | null>(null);
+  const redirectPushedRef = useRef(false);
   const phaseRef = useRef<CompletionPhase>(phase);
   const authWaitStartedRef = useRef(Date.now());
   const [authTimedOut, setAuthTimedOut] = useState(false);
@@ -390,8 +394,10 @@ export function SessionCompletionScreen({
     isInviteFlow,
     plan.redirectPath,
     profile?.user_type,
+    pathname,
     router,
     saveSucceeded,
+    searchParams,
     sessionId,
     setPhaseSafe,
     user,

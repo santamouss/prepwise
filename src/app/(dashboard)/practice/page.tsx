@@ -27,6 +27,11 @@ import {
   jobPostingFetchErrorMessage,
   validateJobPostingExtractedText,
 } from "@/lib/practice/validate-job-posting-text";
+import {
+  safePush,
+  safeReplace,
+  stripSearchParams,
+} from "@/lib/navigation/safe-router";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -43,7 +48,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 const INTERVIEW_TYPES: {
@@ -125,6 +130,7 @@ function applyPendingToForm(
 
 function PracticePageContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
@@ -134,6 +140,7 @@ function PracticePageContent() {
   });
   const autoStartRequested = searchParams.get("autoStart") === "true";
   const autoStartAttemptedRef = useRef(false);
+  const autoStartQueryCleanedRef = useRef(false);
 
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
@@ -336,7 +343,7 @@ function PracticePageContent() {
 
     if (!user) {
       savePendingPracticeForm(payload);
-      router.push(buildPracticeLoginUrl());
+      safePush(router, pathname, searchParams, buildPracticeLoginUrl());
       return;
     }
 
