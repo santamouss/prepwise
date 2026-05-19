@@ -36,6 +36,7 @@ import {
   Link2,
   Loader2,
   Mic,
+  Plus,
   Users,
   Wrench,
   X,
@@ -352,311 +353,416 @@ function PracticePageContent() {
   };
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 sm:space-y-10 px-4 sm:px-0 pb-8">
-      <div className="ph-page-header">
-        <h1 className="text-xl sm:text-2xl">Practice with Parker</h1>
-        <p className="text-sm sm:text-base">
-          A calm voice session tailored to your target role. Add optional context when you want
-          sharper questions.
-        </p>
-        {monthlyUsage && (
-          <p className="mt-3 text-xs sm:text-sm font-medium text-foreground">
-            {formatPracticeUsageSummary(monthlyUsage)}
+    <div className="w-full min-h-screen bg-gradient-to-b from-background to-muted/20">
+      {/* Hero section with top spacing */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 lg:pt-16">
+        {/* Breadcrumb / intro */}
+        <div className="mb-6 sm:mb-8">
+          <p className="text-xs sm:text-sm font-medium text-primary mb-2">
+            <span className="inline-block mr-2">🎤</span>Candidate Practice
           </p>
-        )}
-        {remainingLabel && (
-          <p
-            className={cn(
-              "mt-1 text-xs sm:text-sm",
-              atMonthlyLimit ? "text-amber-600" : "text-muted-foreground",
-            )}
-          >
-            {remainingLabel}
-          </p>
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
-        <div className="ph-surface space-y-3 p-4 sm:p-6">
-          <Label htmlFor="role" className="text-sm sm:text-base font-medium">
-            What role are you interviewing for?{" "}
-            <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="role"
-            required
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="e.g. Product Manager, Software Engineer, BDR"
-            disabled={isStarting}
-            className="h-10 sm:h-12 border-border/80 text-sm sm:text-base shadow-sm"
-          />
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Parker uses this as the anchor for your questions and coaching.
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-2">
+            Practice with Parker
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-2xl">
+            Run realistic voice mock interviews, get instant feedback, and improve your interview skills before the real thing.
           </p>
         </div>
 
-        <div className="space-y-3">
-          <Label className="text-xs sm:text-sm font-medium text-foreground">How do you want to practice?</Label>
-          <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2">
-            {PRACTICE_STYLES.map((style) => {
-              const selected = practiceMode === style.value;
-              return (
-                <button
-                  key={style.value}
-                  type="button"
-                  disabled={isStarting}
-                  onClick={() => setPracticeMode(style.value)}
-                  className={cn("ph-option-card", selected && "ph-option-card-selected")}
-                >
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-xs sm:text-sm font-semibold">{style.label}</span>
-                    {style.badge && <span className="ph-option-badge text-xs">{style.badge}</span>}
-                  </span>
-                  <span className="text-xs leading-relaxed text-muted-foreground">
-                    {style.helper}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-4 sm:space-y-6 rounded-xl border border-border/60 bg-muted/20 p-4 sm:p-5">
-          <div className="space-y-3">
-            <Label className="text-xs sm:text-sm font-medium text-foreground">Interview type</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {INTERVIEW_TYPES.map((type) => {
-                const Icon = type.icon;
-                const selected = interviewType === type.value;
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    disabled={isStarting}
-                    onClick={() => setInterviewType(type.value)}
-                    className={cn(
-                      "ph-option-card items-center gap-2 p-2 sm:p-3",
-                      selected && "ph-option-card-selected",
-                    )}
-                  >
-                    <Icon className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium">{type.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Label className="text-xs sm:text-sm font-medium text-foreground">Session length</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {DURATIONS.map((d) => {
-                const selected = durationMinutes === d.value;
-                return (
-                  <button
-                    key={d.value}
-                    type="button"
-                    disabled={isStarting}
-                    onClick={() => setDurationMinutes(d.value)}
-                    className={cn(
-                      "ph-option-card items-center p-2 sm:p-3 text-center",
-                      selected && "ph-option-card-selected",
-                    )}
-                  >
-                    <p className="text-xs sm:text-sm font-semibold">{d.label}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{d.questions} questions</p>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {!showContext ? (
-            <button
-              type="button"
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-primary transition-colors hover:text-primary/80"
-              onClick={() => setShowContext(true)}
-              disabled={isStarting}
-            >
-              Add company, job description, or resume (optional)
-              <ChevronDown className="h-4 w-4" />
-            </button>
-          ) : (
-            <div className="ph-surface space-y-3 sm:space-y-4 p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <p className="text-xs sm:text-sm font-medium text-foreground">Optional context</p>
-                <button
-                  type="button"
-                  className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-                  onClick={() => setShowContext(false)}
-                  disabled={isStarting}
-                >
-                  Hide
-                  <ChevronUp className="h-3 w-3" />
-                </button>
+        {/* Two-column layout: desktop; single-column: mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 pb-12">
+          {/* Left column: Benefits & info (hidden on mobile, visible on desktop) */}
+          <div className="lg:col-span-2 hidden lg:block">
+            <div className="sticky top-8 space-y-8">
+              {/* Benefits */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-foreground">What you'll get</h3>
+                <ul className="space-y-3">
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
+                    <span className="text-sm text-muted-foreground">Real-time voice interviews with natural follow-ups</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
+                    <span className="text-sm text-muted-foreground">Instant AI coaching and detailed feedback</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
+                    <span className="text-sm text-muted-foreground">Delivery metrics and improvement areas</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-xs text-primary font-semibold">✓</span>
+                    <span className="text-sm text-muted-foreground">Coach Mode for deliberate practice and retries</span>
+                  </li>
+                </ul>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="company" className="text-xs sm:text-sm">Company or industry</Label>
-                <Input
-                  id="company"
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  placeholder="e.g. Google, SaaS startup, Healthcare"
-                  disabled={isStarting}
-                  className="border-border/80 text-sm"
-                />
+              {/* How it works */}
+              <div className="space-y-4 pt-4 border-t">
+                <h3 className="text-sm font-semibold text-foreground">How it works</h3>
+                <ol className="space-y-3">
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">1</span>
+                    <span className="text-sm text-muted-foreground">Tell Parker your target role and optionally add a job description</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">2</span>
+                    <span className="text-sm text-muted-foreground">Speak naturally in Coach Mode or go straight to a Mock Interview</span>
+                  </li>
+                  <li className="flex gap-3">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-semibold">3</span>
+                    <span className="text-sm text-muted-foreground">Get instant feedback and a full report on your performance</span>
+                  </li>
+                </ol>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="jobDescriptionUrl" className="text-xs sm:text-sm">Job posting URL</Label>
-                <div className="flex gap-2 flex-col sm:flex-row">
-                  <Input
-                    id="jobDescriptionUrl"
-                    type="url"
-                    value={jobDescriptionUrl}
-                    onChange={(e) => {
-                      setJobDescriptionUrl(e.target.value);
-                      if (!isFetchingJobUrl) {
-                        setJobUrlFetchStatus("idle");
-                        setJobUrlFetchMessage("");
-                      }
-                    }}
-                    placeholder="https://company.com/careers/role"
-                    disabled={isStarting || isFetchingJobUrl}
-                    className="border-border/80 text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="shrink-0 sm:w-auto w-full h-10"
-                    disabled={isStarting || isFetchingJobUrl || !jobDescriptionUrl.trim()}
-                    onClick={() => void handleFetchJobUrl()}
-                    aria-label="Fetch job posting"
-                  >
-                    {isFetchingJobUrl ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Link2 className="h-4 w-4" />
+              {/* Usage info */}
+              {monthlyUsage && (
+                <div className="pt-4 border-t">
+                  <div className="bg-accent/40 rounded-lg p-4">
+                    <p className="text-xs font-medium text-foreground mb-2">
+                      {formatPracticeUsageSummary(monthlyUsage)}
+                    </p>
+                    {remainingLabel && (
+                      <p className={cn(
+                        "text-xs",
+                        atMonthlyLimit ? "text-amber-600 font-medium" : "text-muted-foreground",
+                      )}>
+                        {remainingLabel}
+                      </p>
                     )}
-                  </Button>
+                  </div>
                 </div>
-                {jobUrlFetchStatus !== "idle" && jobUrlFetchMessage && (
-                  <p
-                    role="status"
-                    className={cn(
-                      "text-xs",
-                      jobUrlFetchStatus === "loading" &&
-                        "flex items-center gap-1.5 text-muted-foreground",
-                      jobUrlFetchStatus === "success" && "text-green-700 dark:text-green-400",
-                      jobUrlFetchStatus === "error" && "text-amber-600 dark:text-amber-500",
-                    )}
-                  >
-                    {jobUrlFetchStatus === "loading" && (
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
-                    )}
-                    {jobUrlFetchMessage}
-                  </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Fetch loads the posting into the field below. A failed link won&apos;t block you
-                  if you enter a role or paste the description.
-                </p>
-              </div>
+              )}
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="jobDescription" className="text-xs sm:text-sm">Pasted job description</Label>
-                <Textarea
-                  id="jobDescription"
-                  rows={4}
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Paste the job description here for tailored questions..."
-                  disabled={isStarting}
-                  className="border-border/80 text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs sm:text-sm">Resume (PDF, optional)</Label>
-                <input
-                  ref={resumeFileRef}
-                  type="file"
-                  accept=".pdf,application/pdf"
-                  className="hidden"
-                  onChange={handleResumeFile}
-                  disabled={isStarting || resumeLoading}
-                />
-                {resumeLoading && (
-                  <p className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Extracting resume…
-                  </p>
-                )}
-                {resumeText && !resumeLoading && (
-                  <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-xs sm:text-sm">
-                    <FileText className="h-4 w-4 shrink-0 text-primary" />
-                    <span className="min-w-0 flex-1 truncate">{resumeFileName}</span>
-                    <button
-                      type="button"
-                      className="text-muted-foreground transition-colors hover:text-foreground shrink-0"
-                      onClick={() => {
-                        setResumeText("");
-                        setResumeFileName("");
-                        setResumeError("");
-                      }}
-                      disabled={isStarting}
-                      aria-label="Remove resume"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+          {/* Right column: Form (full width on mobile, col-span-3 on desktop) */}
+          <div className="lg:col-span-3">
+            <div className="bg-card rounded-xl border border-border shadow-sm p-6 sm:p-8">
+              {/* Mobile: show benefits as collapse-friendly summary */}
+              <div className="lg:hidden mb-6 pb-6 border-b">
+                {monthlyUsage && (
+                  <div className="bg-accent/40 rounded-lg p-4 mb-4">
+                    <p className="text-xs font-medium text-foreground">
+                      {formatPracticeUsageSummary(monthlyUsage)}
+                    </p>
+                    {remainingLabel && (
+                      <p className={cn(
+                        "text-xs mt-1",
+                        atMonthlyLimit ? "text-amber-600 font-medium" : "text-muted-foreground",
+                      )}>
+                        {remainingLabel}
+                      </p>
+                    )}
                   </div>
                 )}
-                {!resumeText && !resumeLoading && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full border-border/80 h-10"
-                    disabled={isStarting}
-                    onClick={() => resumeFileRef.current?.click()}
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    Upload resume (PDF)
-                  </Button>
-                )}
-                {resumeError && <p className="text-xs text-destructive">{resumeError}</p>}
               </div>
+
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="role" className="text-sm font-semibold flex items-center gap-1">
+                    What role are you interviewing for?
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="role"
+                    required
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    placeholder="e.g. Product Manager, Software Engineer, BDR"
+                    disabled={isStarting}
+                    className="h-11 border-border/80 text-base"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Parker will tailor questions to this role.
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-sm font-semibold">How do you want to practice?</Label>
+                  <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                    {PRACTICE_STYLES.map((style) => {
+                      const selected = practiceMode === style.value;
+                      return (
+                        <button
+                          key={style.value}
+                          type="button"
+                          disabled={isStarting}
+                          onClick={() => setPracticeMode(style.value)}
+                          className={cn(
+                            "relative rounded-lg border-2 p-4 text-left transition-all",
+                            selected
+                              ? "border-primary bg-primary/5"
+                              : "border-border/50 bg-muted/30 hover:border-border"
+                          )}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="min-w-0 flex-1">
+                              <span className="text-sm font-semibold text-foreground">{style.label}</span>
+                              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                                {style.helper}
+                              </p>
+                            </div>
+                            {style.badge && (
+                              <span className="ml-2 flex-shrink-0 inline-block px-2 py-1 text-xs font-medium bg-primary/10 text-primary rounded">
+                                {style.badge}
+                              </span>
+                            )}
+                          </div>
+                          {selected && (
+                            <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-6 border-t pt-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Interview type</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {INTERVIEW_TYPES.map((type) => {
+                        const Icon = type.icon;
+                        const selected = interviewType === type.value;
+                        return (
+                          <button
+                            key={type.value}
+                            type="button"
+                            disabled={isStarting}
+                            className={cn(
+                              "rounded-lg border-2 p-3 text-center transition-all flex flex-col items-center gap-2",
+                              selected
+                                ? "border-primary bg-primary/5"
+                                : "border-border/50 bg-muted/20 hover:border-border"
+                            )}
+                            onClick={() => setInterviewType(type.value)}
+                          >
+                            <Icon className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium">{type.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Session length</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {DURATIONS.map((d) => {
+                        const selected = durationMinutes === d.value;
+                        return (
+                          <button
+                            key={d.value}
+                            type="button"
+                            disabled={isStarting}
+                            className={cn(
+                              "rounded-lg border-2 p-3 text-center transition-all",
+                              selected
+                                ? "border-primary bg-primary/5"
+                                : "border-border/50 bg-muted/20 hover:border-border"
+                            )}
+                            onClick={() => setDurationMinutes(d.value)}
+                          >
+                            <p className="text-sm font-semibold">{d.label}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{d.questions}Q</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3 border-t pt-6">
+                  {!showContext ? (
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 text-sm font-medium text-primary transition-colors hover:text-primary/80"
+                      onClick={() => setShowContext(true)}
+                      disabled={isStarting}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add job description or resume (optional)
+                      <ChevronDown className="h-3 w-3 ml-auto" />
+                    </button>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">Optional context</p>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                          onClick={() => setShowContext(false)}
+                          disabled={isStarting}
+                        >
+                          Hide
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="company">Company or industry</Label>
+                        <Input
+                          id="company"
+                          value={company}
+                          onChange={(e) => setCompany(e.target.value)}
+                          placeholder="e.g. Google, SaaS startup, Healthcare"
+                          disabled={isStarting}
+                          className="h-10"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="jobDescriptionUrl">Job posting URL</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            id="jobDescriptionUrl"
+                            type="url"
+                            value={jobDescriptionUrl}
+                            onChange={(e) => {
+                              setJobDescriptionUrl(e.target.value);
+                              if (!isFetchingJobUrl) {
+                                setJobUrlFetchStatus("idle");
+                                setJobUrlFetchMessage("");
+                              }
+                            }}
+                            placeholder="https://company.com/careers/role"
+                            disabled={isStarting || isFetchingJobUrl}
+                            className="h-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="shrink-0 h-10 w-10 p-0"
+                            disabled={isStarting || isFetchingJobUrl || !jobDescriptionUrl.trim()}
+                            onClick={() => void handleFetchJobUrl()}
+                            aria-label="Fetch job posting"
+                          >
+                            {isFetchingJobUrl ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Link2 className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        {jobUrlFetchStatus !== "idle" && jobUrlFetchMessage && (
+                          <p
+                            role="status"
+                            className={cn(
+                              "text-xs",
+                              jobUrlFetchStatus === "loading" &&
+                                "flex items-center gap-1.5 text-muted-foreground",
+                              jobUrlFetchStatus === "success" && "text-green-700 dark:text-green-400",
+                              jobUrlFetchStatus === "error" && "text-amber-600 dark:text-amber-500",
+                            )}
+                          >
+                            {jobUrlFetchStatus === "loading" && (
+                              <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+                            )}
+                            {jobUrlFetchMessage}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          Fetch loads the posting below. A failed link won't block you.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="jobDescription">Pasted job description</Label>
+                        <Textarea
+                          id="jobDescription"
+                          rows={3}
+                          value={jobDescription}
+                          onChange={(e) => setJobDescription(e.target.value)}
+                          placeholder="Paste the job description here..."
+                          disabled={isStarting}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Resume (PDF)</Label>
+                        <input
+                          ref={resumeFileRef}
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          onChange={handleResumeFile}
+                          disabled={isStarting || resumeLoading}
+                        />
+                        {resumeLoading && (
+                          <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Extracting…
+                          </p>
+                        )}
+                        {resumeText && !resumeLoading && (
+                          <div className="flex items-center gap-2 rounded-lg border border-border/80 bg-muted/40 px-3 py-2 text-sm">
+                            <FileText className="h-4 w-4 shrink-0 text-primary" />
+                            <span className="min-w-0 flex-1 truncate text-xs">{resumeFileName}</span>
+                            <button
+                              type="button"
+                              className="text-muted-foreground transition-colors hover:text-foreground shrink-0"
+                              onClick={() => {
+                                setResumeText("");
+                                setResumeFileName("");
+                                setResumeError("");
+                              }}
+                              disabled={isStarting}
+                              aria-label="Remove resume"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        )}
+                        {!resumeText && !resumeLoading && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full h-10"
+                            disabled={isStarting}
+                            onClick={() => resumeFileRef.current?.click()}
+                          >
+                            <FileText className="mr-2 h-4 w-4" />
+                            Upload resume
+                          </Button>
+                        )}
+                        {resumeError && <p className="text-xs text-destructive">{resumeError}</p>}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">
+                  <Mic className="h-4 w-4 shrink-0 text-primary mt-0.5" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    You'll speak with Parker out loud. Microphone permission will be requested when your session starts.
+                  </p>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-base font-semibold"
+                  disabled={isStarting || authLoading || !role.trim() || atMonthlyLimit}
+                >
+                  {isStarting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Preparing your session…
+                    </>
+                  ) : (
+                    <>Start voice practice</>
+                  )}
+                </Button>
+              </form>
             </div>
-          )}
+          </div>
         </div>
-
-        <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-accent/40 px-3 sm:px-4 py-3 sm:py-3.5 text-xs sm:text-sm text-foreground">
-          <Mic className="mt-0.5 h-4 sm:h-5 w-4 sm:w-5 shrink-0 text-primary" />
-          <p className="leading-relaxed text-muted-foreground">
-            Voice practice only — you&apos;ll speak with Parker out loud. Microphone permission may
-            be requested before your session begins.
-          </p>
-        </div>
-
-        <Button
-          type="submit"
-          className="ph-primary-cta w-full sm:w-auto h-10 sm:h-11 text-sm sm:text-base"
-          disabled={isStarting || authLoading || !role.trim() || atMonthlyLimit}
-        >
-          {isStarting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              <span className="hidden sm:inline">Parker is preparing your voice interview…</span>
-              <span className="sm:hidden">Preparing…</span>
-            </>
-          ) : (
-            <>Start voice practice</>
-          )}
-        </Button>
-      </form>
+      </div>
     </div>
   );
 }
