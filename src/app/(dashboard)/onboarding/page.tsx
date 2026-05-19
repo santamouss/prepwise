@@ -5,6 +5,7 @@ import { ParkerLogo } from "@/components/ui/parker-logo";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ProfileUserType } from "@/lib/profile-user-type";
+import { hasPendingPracticeForm } from "@/lib/practice/pending-practice-form";
 import { trpc } from "@/lib/trpc/client";
 import { Briefcase, Loader2, Target } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -41,7 +42,9 @@ export default function OnboardingPage() {
   const setUserType = trpc.user.setUserType.useMutation({
     onSuccess: async () => {
       await refreshProfile();
-      router.replace("/dashboard");
+      router.replace(
+        hasPendingPracticeForm() ? "/practice?autoStart=true" : "/dashboard",
+      );
       router.refresh();
     },
     onError: (err) => {

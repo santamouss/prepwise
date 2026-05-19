@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,13 @@ import {
   DEFAULT_CANDIDATE_PRACTICE_MODE,
   type PracticeMode,
 } from "@/lib/practice/practice-mode";
+import {
+  buildPracticeLoginUrl,
+  clearPendingPracticeForm,
+  loadPendingPracticeForm,
+  savePendingPracticeForm,
+  type PendingPracticeForm,
+} from "@/lib/practice/pending-practice-form";
 import {
   jobPostingFetchErrorMessage,
   validateJobPostingExtractedText,
@@ -33,8 +41,8 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 const INTERVIEW_TYPES: {
   value: PracticeInterviewType;
@@ -79,11 +87,51 @@ const DURATIONS: {
 
 type JobUrlFetchStatus = "idle" | "loading" | "success" | "error";
 
-export default function PracticePage() {
+function applyPendingToForm(
+  pending: PendingPracticeForm,
+  setters: {
+    setRole: (v: string) => void;
+    setCompany: (v: string) => void;
+    setJobDescription: (v: string) => void;
+    setJobDescriptionUrl: (v: string) => void;
+    setResumeText: (v: string) => void;
+    setResumeFileName: (v: string) => void;
+    setInterviewType: (v: PracticeInterviewType) => void;
+    setDurationMinutes: (v: PracticeDuration) => void;
+    setPracticeMode: (v: PracticeMode) => void;
+    setShowContext: (v: boolean) => void;
+  },
+) {
+  setters.setRole(pending.role);
+  setters.setCompany(pending.company ?? "");
+  setters.setJobDescription(pending.jobDescription ?? "");
+  setters.setJobDescriptionUrl(pending.jobDescriptionUrl ?? "");
+  setters.setResumeText(pending.resumeText ?? "");
+  setters.setResumeFileName(pending.resumeFileName ?? "");
+  setters.setInterviewType(pending.interviewType);
+  setters.setDurationMinutes(pending.durationMinutes);
+  setters.setPracticeMode(pending.practiceMode);
+  setters.setShowContext(
+    Boolean(
+      pending.company?.trim() ||
+        pending.jobDescription?.trim() ||
+        pending.jobDescriptionUrl?.trim() ||
+        pending.resumeText?.trim(),
+    ),
+  );
+}
+
+function PracticePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const startPractice = trpc.practice.start.useMutation();
-  const { data: monthlyUsage } = trpc.practice.getMonthlyUsage.useQuery();
+  const { data: monthlyUsage } = trpc.practice.getMonthlyUsage.useQuery(undefined, {
+    enabled: Boolean(user),
+  });
+  const autoStartRequested = searchParams.get("autoStart") === "true";
+  const autoStartAttemptedRef = useRef(false);
 
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
@@ -177,34 +225,47 @@ export default function PracticePage() {
     [extractText],
   );
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isStarting) return;
+  const buildFormPayload = useCallback((): PendingPracticeForm | null => {
+    const trimmedRole = role.trim();
+    if (!trimmedRole) return null;
+    return {
+      role: trimmedRole,
+      company: company.trim() || undefined,
+      jobDescription: jobDescription.trim() || undefined,
+      jobDescriptionUrl: jobDescriptionUrl.trim() || undefined,
+      resumeText: resumeText.trim() || undefined,
+      resumeFileName: resumeFileName || undefined,
+      interviewType,
+      durationMinutes,
+      practiceMode,
+    };
+  }, [
+    role,
+    company,
+    jobDescription,
+    jobDescriptionUrl,
+    resumeText,
+    resumeFileName,
+    interviewType,
+    durationMinutes,
+    practiceMode,
+  ]);
 
-    if (!role.trim()) {
-      toast({
-        title: "Role title needed",
-        description:
-          jobDescription.trim()
-            ? "Enter a role title to start practice. Your pasted job description will still be used."
-            : "Enter a role title, or add a job description under optional context.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
+  const startPracticeSession = useCallback(
+    async (payload: PendingPracticeForm) => {
       const result = await startPractice.mutateAsync({
-        role: role.trim(),
-        company: company.trim() || undefined,
-        jobDescription: jobDescription.trim() || undefined,
-        jobDescriptionUrl: jobDescriptionUrl.trim() || undefined,
-        resumeText: resumeText.trim() || undefined,
-        resumeFileName: resumeFileName || undefined,
-        interviewType,
-        durationMinutes,
-        practiceMode,
+        role: payload.role,
+        company: payload.company,
+        jobDescription: payload.jobDescription,
+        jobDescriptionUrl: payload.jobDescriptionUrl,
+        resumeText: payload.resumeText,
+        resumeFileName: payload.resumeFileName,
+        interviewType: payload.interviewType,
+        durationMinutes: payload.durationMinutes,
+        practiceMode: payload.practiceMode,
       });
+
+      clearPendingPracticeForm();
 
       if (result.warnings?.length) {
         for (const message of result.warnings) {
@@ -216,6 +277,69 @@ export default function PracticePage() {
       }
 
       router.push(result.redirectUrl);
+    },
+    [router, startPractice, toast],
+  );
+
+  useEffect(() => {
+    if (authLoading || !autoStartRequested || !user || autoStartAttemptedRef.current) {
+      return;
+    }
+
+    const pending = loadPendingPracticeForm();
+    if (!pending) return;
+
+    autoStartAttemptedRef.current = true;
+    applyPendingToForm(pending, {
+      setRole,
+      setCompany,
+      setJobDescription,
+      setJobDescriptionUrl,
+      setResumeText,
+      setResumeFileName,
+      setInterviewType,
+      setDurationMinutes,
+      setPracticeMode,
+      setShowContext,
+    });
+
+    void startPracticeSession(pending).catch((error) => {
+      autoStartAttemptedRef.current = false;
+      const message =
+        error instanceof Error ? error.message : "Could not start practice. Please try again.";
+      toast({
+        title: "Could not start voice practice",
+        description: message,
+        variant: "destructive",
+      });
+    });
+  }, [authLoading, autoStartRequested, user, startPracticeSession, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isStarting || authLoading) return;
+
+    const payload = buildFormPayload();
+    if (!payload) {
+      toast({
+        title: "Role title needed",
+        description:
+          jobDescription.trim()
+            ? "Enter a role title to start practice. Your pasted job description will still be used."
+            : "Enter a role title, or add a job description under optional context.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      savePendingPracticeForm(payload);
+      router.push(buildPracticeLoginUrl());
+      return;
+    }
+
+    try {
+      await startPracticeSession(payload);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not start practice. Please try again.";
@@ -520,7 +644,7 @@ export default function PracticePage() {
         <Button
           type="submit"
           className="ph-primary-cta"
-          disabled={isStarting || !role.trim() || atMonthlyLimit}
+          disabled={isStarting || authLoading || !role.trim() || atMonthlyLimit}
         >
           {isStarting ? (
             <>
@@ -533,5 +657,21 @@ export default function PracticePage() {
         </Button>
       </form>
     </div>
+  );
+}
+
+function PracticePageFallback() {
+  return (
+    <div className="mx-auto flex max-w-2xl items-center justify-center py-24">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  );
+}
+
+export default function PracticePage() {
+  return (
+    <Suspense fallback={<PracticePageFallback />}>
+      <PracticePageContent />
+    </Suspense>
   );
 }

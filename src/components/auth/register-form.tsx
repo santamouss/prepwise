@@ -16,12 +16,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { getPostLoginPath } from "@/lib/auth/post-login-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function RegisterForm() {
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  const autoStart = searchParams.get("autoStart");
+  const postAuthPath = getPostLoginPath(redirect, autoStart);
   const { toast } = useToast();
   const { t } = useAppLocale();
   const [loading, setLoading] = useState(false);
@@ -63,7 +69,7 @@ export function RegisterForm() {
       }
 
       if (data.session) {
-        window.location.href = "/dashboard";
+        window.location.href = postAuthPath;
         return;
       }
 
@@ -82,7 +88,7 @@ export function RegisterForm() {
         return;
       }
 
-      window.location.href = "/dashboard";
+      window.location.href = postAuthPath;
     } finally {
       setLoading(false);
     }
@@ -139,7 +145,17 @@ export function RegisterForm() {
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
           {t("auth.haveAccount")}{" "}
-          <Link href="/login" className="text-primary hover:underline">
+          <Link
+            href={
+              redirect || autoStart
+                ? `/login?${new URLSearchParams({
+                    ...(redirect ? { redirect } : {}),
+                    ...(autoStart === "true" ? { autoStart: "true" } : {}),
+                  }).toString()}`
+                : "/login"
+            }
+            className="text-primary hover:underline"
+          >
             {t("auth.signIn")}
           </Link>
         </p>

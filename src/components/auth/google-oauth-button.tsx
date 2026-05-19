@@ -3,9 +3,11 @@
 import { useAppLocale } from "@/components/app-locale-provider";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { getOAuthNextParam } from "@/lib/auth/post-login-redirect";
 import { getOAuthCallbackUrl } from "@/lib/auth/oauth-callback-url";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 function GoogleGlyph({ className }: { className?: string }) {
@@ -38,6 +40,7 @@ function GoogleGlyph({ className }: { className?: string }) {
 }
 
 export function GoogleOAuthButton() {
+  const searchParams = useSearchParams();
   const { t } = useAppLocale();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -46,10 +49,15 @@ export function GoogleOAuthButton() {
   const handleClick = async () => {
     setLoading(true);
     try {
+      const next = getOAuthNextParam(
+        searchParams.get("redirect"),
+        searchParams.get("autoStart"),
+      );
+      const callbackUrl = `${getOAuthCallbackUrl()}?next=${encodeURIComponent(next)}`;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: getOAuthCallbackUrl(),
+          redirectTo: callbackUrl,
         },
       });
 

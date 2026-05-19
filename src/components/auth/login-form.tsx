@@ -16,14 +16,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { getPostLoginPath, getRegisterHref } from "@/lib/auth/post-login-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirect = searchParams.get("redirect");
+  const autoStart = searchParams.get("autoStart");
   const { toast } = useToast();
   const { t } = useAppLocale();
   const [loading, setLoading] = useState(false);
@@ -49,7 +53,7 @@ export function LoginForm() {
         });
         setLoading(false);
       } else {
-        router.push("/dashboard");
+        router.push(getPostLoginPath(redirect, autoStart));
         router.refresh();
       }
     } catch {
@@ -106,7 +110,10 @@ export function LoginForm() {
       <CardFooter className="justify-center">
         <p className="text-sm text-muted-foreground">
           {t("auth.noAccount")}{" "}
-          <Link href="/register" className="text-primary hover:underline">
+          <Link
+            href={getRegisterHref(redirect, autoStart)}
+            className="text-primary hover:underline"
+          >
             {t("auth.signUp")}
           </Link>
         </p>

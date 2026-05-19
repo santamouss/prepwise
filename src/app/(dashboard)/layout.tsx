@@ -17,7 +17,14 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = headers().get("x-pathname") ?? "";
+  const isGuestPractice =
+    pathname === "/practice" || pathname.startsWith("/practice/");
+
   if (!user) {
+    if (isGuestPractice) {
+      return <>{children}</>;
+    }
     redirect("/login");
   }
 
@@ -27,7 +34,6 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
-  const pathname = headers().get("x-pathname") ?? "";
   const onOnboarding =
     pathname === "/onboarding" || pathname.startsWith("/onboarding/");
 
