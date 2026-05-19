@@ -16,7 +16,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createClient } from "@/lib/supabase/client";
+import { signOutAndRedirect } from "@/lib/auth/sign-out";
 import { cn } from "@/lib/utils";
 import {
     ArrowUpRight,
@@ -425,16 +425,7 @@ export function Sidebar({
               onSelect={async (e) => {
                 e.preventDefault();
                 setSigningOut(true);
-                const supabase = createClient();
-                try {
-                  await supabase.auth.signOut();
-                } catch {
-                  // Session may have expired; clear local state instead
-                  await supabase.auth
-                    .signOut({ scope: "local" })
-                    .catch(() => {});
-                }
-                window.location.href = "/login";
+                await signOutAndRedirect("/login");
               }}
             >
               {signingOut ? (

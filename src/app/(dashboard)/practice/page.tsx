@@ -504,61 +504,6 @@ function PracticePageContent() {
                   </div>
                 </div>
 
-                <div className="space-y-6 border-t pt-6">
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold">Interview type</Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {INTERVIEW_TYPES.map((type) => {
-                        const Icon = type.icon;
-                        const selected = interviewType === type.value;
-                        return (
-                          <button
-                            key={type.value}
-                            type="button"
-                            disabled={isStarting}
-                            className={cn(
-                              "rounded-lg border-2 p-3 text-center transition-all flex flex-col items-center gap-2",
-                              selected
-                                ? "border-primary bg-primary/5"
-                                : "border-border/50 bg-muted/20 hover:border-border"
-                            )}
-                            onClick={() => setInterviewType(type.value)}
-                          >
-                            <Icon className="h-4 w-4 text-primary" />
-                            <span className="text-xs font-medium">{type.label}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-semibold">Session length</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {DURATIONS.map((d) => {
-                        const selected = durationMinutes === d.value;
-                        return (
-                          <button
-                            key={d.value}
-                            type="button"
-                            disabled={isStarting}
-                            className={cn(
-                              "rounded-lg border-2 p-3 text-center transition-all",
-                              selected
-                                ? "border-primary bg-primary/5"
-                                : "border-border/50 bg-muted/20 hover:border-border"
-                            )}
-                            onClick={() => setDurationMinutes(d.value)}
-                          >
-                            <p className="text-sm font-semibold">{d.label}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{d.questions}Q</p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
                 <div className="space-y-3 border-t pt-6">
                   {!showContext ? (
                     <button
@@ -716,6 +661,61 @@ function PracticePageContent() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                <div className="space-y-6 border-t pt-6">
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Interview type</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {INTERVIEW_TYPES.map((type) => {
+                        const Icon = type.icon;
+                        const selected = interviewType === type.value;
+                        return (
+                          <button
+                            key={type.value}
+                            type="button"
+                            disabled={isStarting}
+                            className={cn(
+                              "rounded-lg border-2 p-3 text-center transition-all flex flex-col items-center gap-2",
+                              selected
+                                ? "border-primary bg-primary/5"
+                                : "border-border/50 bg-muted/20 hover:border-border"
+                            )}
+                            onClick={() => setInterviewType(type.value)}
+                          >
+                            <Icon className="h-4 w-4 text-primary" />
+                            <span className="text-xs font-medium">{type.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-sm font-semibold">Session length</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {DURATIONS.map((d) => {
+                        const selected = durationMinutes === d.value;
+                        return (
+                          <button
+                            key={d.value}
+                            type="button"
+                            disabled={isStarting}
+                            className={cn(
+                              "rounded-lg border-2 p-3 text-center transition-all",
+                              selected
+                                ? "border-primary bg-primary/5"
+                                : "border-border/50 bg-muted/20 hover:border-border"
+                            )}
+                            onClick={() => setDurationMinutes(d.value)}
+                          >
+                            <p className="text-sm font-semibold">{d.label}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{d.questions}Q</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 text-sm">

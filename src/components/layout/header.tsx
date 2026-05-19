@@ -2,7 +2,8 @@
 
 import { useAppLocale } from "@/components/app-locale-provider";
 import { trpc } from "@/lib/trpc/client";
-import { ChevronDown, Compass, Plus, Search, Settings } from "lucide-react";
+import { MobileNavSheet } from "@/components/layout/mobile-nav-sheet";
+import { ChevronDown, Compass, Menu, Plus, Search, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState } from "react";
@@ -156,7 +157,10 @@ function ProjectSwitcher() {
 
 export function Header({ sidebarToggle }: { sidebarToggle?: React.ReactNode }) {
   const pathname = usePathname();
+  const { profile } = useAuth();
   const { t } = useAppLocale();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isCandidate = profile?.user_type === "candidate";
   const SEGMENT_LABELS: Record<string, string> = {
     dashboard: t("header.dashboard"),
     interviews: t("header.interviews"),
@@ -251,11 +255,21 @@ export function Header({ sidebarToggle }: { sidebarToggle?: React.ReactNode }) {
 
   return (
     <header className="shrink-0 border-b border-border bg-background">
-      <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-3 px-8 py-2.5 md:flex-nowrap md:gap-4">
+      <div className="mx-auto flex max-w-[1200px] flex-wrap items-center gap-3 px-4 py-2.5 sm:px-8 md:flex-nowrap md:gap-4">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1 md:gap-1.5">
-          {sidebarToggle}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 sm:hidden"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open navigation menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          {sidebarToggle ? <div className="hidden sm:block">{sidebarToggle}</div> : null}
 
-          {!isOrgLevelPage ? (
+          {!isOrgLevelPage && !isCandidate ? (
             <>
               <OrgSwitcher />
               <ProjectSwitcher />
@@ -311,6 +325,7 @@ export function Header({ sidebarToggle }: { sidebarToggle?: React.ReactNode }) {
           <TourHeaderButton />
         </div>
       </div>
+      <MobileNavSheet open={mobileNavOpen} onOpenChange={setMobileNavOpen} />
     </header>
   );
 }
