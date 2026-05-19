@@ -99,14 +99,47 @@ export function buildSummaryPrompt(
   // ── Per-question evaluation section ────────────────────────────
   const questionEvalInstruction =
     questions && questions.length > 0
-      ? `6. For EACH interview question listed above, evaluate the participant's response when they actually reached and answered it.
+      ? `6. For EACH interview question listed above, evaluate the participant's response using STRICT SCORING STANDARDS (below).
 - Set "status" to one of: "answered", "partial", "skipped", "timed_out", "not_reached".
 - Use "not_reached" when the session ended (especially on a timer) before that question was asked or discussed — do NOT assign a low score.
 - Use "timed_out" when the question was started but time expired before a substantive answer.
 - Use "partial" only when the participant began answering but the response was too brief to judge fairly.
 - Use "answered" when they gave a substantive response.
 - Only assign "score" (1-10) for "answered" or "skipped". For "not_reached", "timed_out", and "partial", set "score" to null.
-- Do NOT penalize the candidate for questions they never had time to reach.\n`
+- Do NOT penalize the candidate for questions they never had time to reach.
+
+STRICT SCORING STANDARDS:
+
+BEHAVIORAL QUESTIONS (STAR framework):
+- 1–2/10: Buzzwords only, no concrete example. ("I have good communication", "I work well under pressure")
+- 3–4/10: Partial example, missing candidate's specific action OR outcome
+- 5–6/10: Has situation+action but weak/missing outcome or impact
+- 7–8/10: Clear STAR with specific situation, personal action, measurable outcome
+- 9–10/10: Exceptional, strong story, quantified impact
+HARD RULE: One-sentence answers and pure buzzwords cannot score above 3/10 under any circumstances.
+
+TECHNICAL/SYSTEM DESIGN QUESTIONS:
+- 1–2/10: Buzzwords only, no architecture or decisions. ("Use microservices", "Cache it")
+- 3–4/10: High-level approach mentioned but no depth, no tradeoffs, no reasoning
+- 5–6/10: Reasonable approach but missing reliability, scaling, security, or key design tradeoffs
+- 7–8/10: Clear architecture with specific tech choices, tradeoffs explained
+- 9–10/10: Exceptional depth, edge cases considered, strong reasoning
+HARD RULE: Buzzword answers cannot score above 2/10. High-level without reasoning cannot exceed 4/10.
+
+WEAK ANSWER DETECTION: If answer exhibits ANY of these, score strictly (1–4/10):
+- One sentence only
+- Generic/buzzword heavy without concrete examples
+- Missing specific company, project, person, or measurable detail
+- Missing candidate's personal action (uses "we" instead of "I")
+- Missing outcome, result, or impact
+- Not answering the specific question asked
+
+WHEN AN ANSWER IS WEAK:
+- Be honest about the score (1–4/10)
+- Explicitly state what is missing in the "improvements" section
+- Never praise weak answers in "highlights" — only note what exists
+- Offer specific structure for improvement (STAR for behavioral, architecture+decisions for technical)
+- Give a concrete example of a stronger answer\n`
       : "";
 
   const questionEvalJsonField =
@@ -143,7 +176,11 @@ export function buildSummaryPrompt(
     ? "\n- Use the measured delivery signals below when commenting on pace, filler words, hedging, answer length, and pauses. Do not invent emotion or personality claims."
     : "";
 
-  const systemPrompt = `You are an expert interview analyst. Evaluate and summarize the following interview transcript. Focus on the participant's responses — their depth, relevance, and quality.
+  const systemPrompt = `You are an expert interview analyst. Evaluate and summarize the following interview transcript with HONESTY AND RIGOR.
+
+Your job is NOT to be kind — it is to be accurate and fair. Do NOT overpraise vague or generic answers.
+Do NOT give high scores to buzzword-filled responses without concrete examples.
+Answers must be evaluated by consistent, strict standards regardless of how confident they sound.
 
 Interview: "${interviewTitle}"${objectiveSection}${criteriaSection}${questionsSection}${whiteboardSection}${codeSection}
 
@@ -152,10 +189,10 @@ ${transcript}
 
 Your analysis should:
 1. Summarize the key points from the participant's answers
-2. Evaluate how well the participant addressed each topic
+2. Evaluate how well the participant addressed each topic — be direct about gaps
 3. Identify recurring themes and notable insights
 4. Assess the overall sentiment and engagement level
-5. Highlight any particularly strong or weak responses${whiteboardInstruction}${codeInstruction}${deliveryInstruction}
+5. Highlight any particularly strong or weak responses (weak answers should be noted clearly)${whiteboardInstruction}${codeInstruction}${deliveryInstruction}
 ${questionEvalInstruction}${criteriaEvalInstruction}${toneInstruction}${researchInstruction}${languageInstruction}${deliverySection}
 
 Provide a structured analysis as VALID JSON ONLY (use only standard ASCII double-quotes, never Unicode smart quotes like \u201C \u201D):
