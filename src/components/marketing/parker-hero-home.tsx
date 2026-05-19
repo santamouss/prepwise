@@ -71,7 +71,7 @@ export function ParkerHeroHome() {
 
       <section className="pk-hero">
         <div className="pk-container pk-hero-grid">
-          <div>
+          <div className="pk-animate-in">
             <span className="pk-eyebrow">
               <span className="pk-eyebrow-dot" aria-hidden />
               Now with voice interviews
@@ -104,7 +104,7 @@ export function ParkerHeroHome() {
             </div>
           </div>
 
-          <div className="pk-mock-wrap">
+          <div className="pk-mock-wrap pk-animate-in pk-animate-delay-1">
             <div className="pk-mock">
               <div className="pk-mock-bar">
                 <div className="pk-dots" aria-hidden>

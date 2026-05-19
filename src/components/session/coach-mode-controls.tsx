@@ -42,12 +42,12 @@ export function CoachModeControls({
   const doneDisabled = disabled || doneAnsweringDisabled;
 
   return (
-    <div className="mx-4 mt-3 space-y-3 rounded-lg border border-[#3B6FF0]/25 bg-[#EEF2FF] px-4 py-3 text-[#1e3a8a]">
+    <div className="ph-coach-panel">
       <div>
-        <p className="text-sm font-semibold">{COACH_UI_TITLE}</p>
-        <p className="mt-0.5 text-xs text-[#1e3a8a]/80">{COACH_UI_SUBTITLE}</p>
+        <p className="text-sm font-semibold text-foreground">{COACH_UI_TITLE}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{COACH_UI_SUBTITLE}</p>
         {attempt > 1 && (
-          <p className="mt-1 text-xs font-medium">Attempt {attempt}</p>
+          <p className="mt-1.5 text-xs font-medium text-muted-foreground">Attempt {attempt}</p>
         )}
       </div>
 
@@ -58,7 +58,7 @@ export function CoachModeControls({
       {phase === "answering" && (
         <Button
           type="button"
-          className="w-full bg-[#3B6FF0] hover:bg-[#3B6FF0]/90"
+          className="ph-primary-cta h-11"
           disabled={doneDisabled}
           onClick={onDoneAnswering}
         >
@@ -67,22 +67,20 @@ export function CoachModeControls({
       )}
 
       {phase === "coaching" && (
-        <div className="flex items-center justify-center gap-2 text-sm text-[#1e3a8a]/90">
-          <Loader2 className="h-4 w-4 animate-spin" />
+        <div className="flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-background/60 py-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
           {COACH_UI_COACHING_STATUS}
         </div>
       )}
 
       {phase === "waiting_for_choice" && (
-        <div className="space-y-2">
-          <p className="text-center text-xs text-[#1e3a8a]/85">
-            Choose your next step:
-          </p>
+        <div className="space-y-2.5">
+          <p className="text-center text-xs text-muted-foreground">Choose your next step</p>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
               variant="outline"
-              className={cn("flex-1 border-[#3B6FF0]/40 bg-white/70")}
+              className={cn("flex-1 border-border/80 bg-background/80")}
               disabled={disabled}
               onClick={onTryAgain}
             >
@@ -90,7 +88,7 @@ export function CoachModeControls({
             </Button>
             <Button
               type="button"
-              className="flex-1 bg-[#3B6FF0] hover:bg-[#3B6FF0]/90"
+              className="flex-1"
               disabled={disabled || !canGoNext}
               onClick={onNextQuestion}
             >

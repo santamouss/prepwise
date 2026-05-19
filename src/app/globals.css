@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "./product-ui.css";
+
 @layer base {
   :root {
     /* Otter-style light theme: #FFFFFF, #111827, #6B7280, #3B6FF0 */
@@ -37,7 +39,7 @@
     --chart-2: 226 70% 62%;
     --chart-3: 172 45% 42%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
   }
 
   .dark {

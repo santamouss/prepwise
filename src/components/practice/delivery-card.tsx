@@ -1,8 +1,8 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { SessionDeliveryInsights } from "@/lib/voice/delivery-analysis";
-import { Gauge, MessageCircleWarning, Mic } from "lucide-react";
+import { Gauge, MessageCircleWarning, Mic, Sparkles } from "lucide-react";
 
 function paceLabel(wpm: number): string {
   if (wpm >= 170) return "Fast";
@@ -26,12 +26,15 @@ export function DeliveryCard({
     "Keep answers structured with a clear result or takeaway.";
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Mic className="h-4 w-4" />
-          Delivery
+    <div className="ph-delivery-card">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Mic className="h-4 w-4 text-primary" />
+          Delivery coaching
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          How you sounded — pace, clarity, and confidence signals from your session.
+        </p>
       </CardHeader>
       <CardContent className="grid gap-4 sm:grid-cols-2">
         <DeliveryMetric
@@ -57,13 +60,13 @@ export function DeliveryCard({
           }
         />
         <DeliveryMetric
-          icon={<Mic className="h-4 w-4 text-secondary-600" />}
-          label="Suggested improvement"
+          icon={<Sparkles className="h-4 w-4 text-primary" />}
+          label="Coach tip"
           detail={suggestion}
-          className="sm:col-span-2"
+          className="sm:col-span-2 rounded-lg border border-primary/15 bg-primary/5 p-4"
         />
       </CardContent>
-    </Card>
+    </div>
   );
 }
 
@@ -81,13 +84,15 @@ function DeliveryMetric({
   className?: string;
 }) {
   return (
-    <div className={className}>
-      <div className="flex items-start gap-2">
+    <div className={className ?? "rounded-lg border border-border/60 bg-background/60 p-3"}>
+      <div className="flex items-start gap-2.5">
         {icon}
         <div className="min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">{label}</p>
-          {value ? <p className="text-lg font-semibold">{value}</p> : null}
-          <p className="text-sm text-muted-foreground">{detail}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
+          {value ? <p className="mt-0.5 text-lg font-semibold tabular-nums">{value}</p> : null}
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{detail}</p>
         </div>
       </div>
     </div>

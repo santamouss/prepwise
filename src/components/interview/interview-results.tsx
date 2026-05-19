@@ -518,6 +518,22 @@ function SessionDetail({
   const avgQuestionScore =
     overallScore !== null ? overallScore.toFixed(1) : null;
 
+  const topStrengths = Array.from(
+    new Set(
+      questionEvaluations.flatMap((qe) =>
+        (qe.highlights ?? []).map((h) => String(h)),
+      ),
+    ),
+  ).slice(0, 5);
+
+  const topImprovements = Array.from(
+    new Set(
+      questionEvaluations.flatMap((qe) =>
+        (qe.improvements ?? []).map((imp) => String(imp)),
+      ),
+    ),
+  ).slice(0, 5);
+
   return (
     <div className="space-y-6">
       {/* Top bar */}
@@ -581,15 +597,50 @@ function SessionDetail({
                 "Anonymous";
 
               return (
-                <div className="space-y-4">
-                  <h1 className="text-2xl font-bold">
-                    {summary.data?.interviewTitle ?? "Interview"} — Session
-                    Report
-                  </h1>
+                <div className="space-y-6">
+                  <div className="ph-report-hero">
+                    <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 space-y-2">
+                        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                          Session report
+                        </p>
+                        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                          {summary.data?.interviewTitle ?? "Interview"}
+                        </h1>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">{participantName}</span>
+                          {summary.data?.createdAt && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5" />
+                              {new Date(summary.data.createdAt).toLocaleDateString(undefined, {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                              })}
+                            </span>
+                          )}
+                          {summary.data?.totalDurationSeconds != null && (
+                            <span>
+                              {Math.round(summary.data.totalDurationSeconds / 60)} min
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {avgQuestionScore && (
+                        <div className="flex shrink-0 flex-col items-center sm:items-end">
+                          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                            Overall score
+                          </p>
+                          <p className="ph-report-score-value">{avgQuestionScore}</p>
+                          <p className="text-sm text-muted-foreground">out of 10</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
 
                   <div className="flex flex-col items-stretch gap-4 sm:flex-row">
                     {/* Profile card */}
-                    <Card className="flex-1">
+                    <Card className="flex-1 border-border/70 shadow-sm">
                       <CardContent className="flex h-full items-center gap-5 p-5">
                         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-muted bg-muted">
                           {avatarUrl ? (
@@ -654,54 +705,6 @@ function SessionDetail({
                         </div>
                       </CardContent>
                     </Card>
-
-                    {/* Score card */}
-                    {avgQuestionScore && (
-                      <Card className="shrink-0 sm:w-40">
-                        <CardContent className="flex h-full flex-col items-center justify-center p-5">
-                          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60">
-                            Avg Score
-                          </p>
-                          <div className="relative mt-2 flex h-24 w-24 items-center justify-center">
-                            <svg
-                              className="absolute inset-0 h-full w-full -rotate-90"
-                              viewBox="0 0 100 100"
-                            >
-                              <circle
-                                cx="50"
-                                cy="50"
-                                r="42"
-                                fill="none"
-                                stroke="hsl(var(--muted))"
-                                strokeWidth="8"
-                              />
-                              <circle
-                                cx="50"
-                                cy="50"
-                                r="42"
-                                fill="none"
-                                stroke={
-                                  parseFloat(avgQuestionScore) >= 7
-                                    ? "hsl(142, 60%, 45%)"
-                                    : parseFloat(avgQuestionScore) >= 4
-                                      ? "hsl(24, 80%, 55%)"
-                                      : "hsl(var(--destructive))"
-                                }
-                                strokeWidth="8"
-                                strokeLinecap="round"
-                                strokeDasharray={`${parseFloat(avgQuestionScore) * 10 * 2.64} 264`}
-                              />
-                            </svg>
-                            <span className="text-2xl font-bold">
-                              {avgQuestionScore}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            out of 10
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
                   </div>
                 </div>
               );
@@ -746,19 +749,48 @@ function SessionDetail({
 
             {/* Summary */}
             {summary.data?.summary && (
-              <Card>
+              <Card className="border-border/70 shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-lg">
                     <FileText className="h-4 w-4" />
-                    Summary
+                    Executive summary
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="whitespace-pre-line text-sm leading-relaxed">
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                     {summary.data.summary}
                   </p>
                 </CardContent>
               </Card>
+            )}
+
+            {(topStrengths.length > 0 || topImprovements.length > 0) && (
+              <div className="grid gap-4 md:grid-cols-2">
+                {topStrengths.length > 0 && (
+                  <div className="ph-report-insight-card ph-report-strengths">
+                    <h3 className="mb-3">Top strengths</h3>
+                    <ul className="space-y-2">
+                      {topStrengths.map((item, i) => (
+                        <li key={i} className="ph-insight-pill">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {topImprovements.length > 0 && (
+                  <div className="ph-report-insight-card ph-report-improvements">
+                    <h3 className="mb-3">Top improvements</h3>
+                    <ul className="space-y-2">
+                      {topImprovements.map((item, i) => (
+                        <li key={i} className="ph-insight-pill">
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
 
             {summary.data?.interviewObjective && (
@@ -793,8 +825,8 @@ function SessionDetail({
                     <div
                       key={i}
                       className={cn(
-                        "space-y-3 rounded-lg border p-4",
-                        excluded && "border-muted bg-muted/30 opacity-80",
+                        "ph-question-eval-card",
+                        excluded && "border-muted bg-muted/30 opacity-80 shadow-none",
                       )}
                     >
                       <div className="flex items-start justify-between gap-4">
@@ -827,7 +859,7 @@ function SessionDetail({
                       {scoreNum != null && Number.isFinite(scoreNum) && (
                         <Progress value={scoreNum * 10} className="h-2" />
                       )}
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm leading-relaxed text-muted-foreground">
                         {qe.evaluation}
                       </p>
                       <div className="grid gap-4 sm:grid-cols-2">

@@ -1645,7 +1645,7 @@ export function VoiceInterface({
       )}
 
       {/* Header */}
-      <div className="shrink-0 border-b bg-card px-3 py-2 md:px-6 md:py-3">
+      <div className="ph-voice-header">
         <div className="flex items-center justify-between">
           <div className="mr-2 min-w-0 flex-1">
             <h1 className="truncate text-sm font-semibold md:text-base">{interviewTitle}</h1>
@@ -1686,8 +1686,10 @@ export function VoiceInterface({
           </p>
         )}
         {voice.isConnected && showPracticeQuestionDetails && (
-          <div className="mt-2 rounded-lg border border-border bg-card px-3 py-2.5 shadow-sm">
-            <p className="text-xs font-semibold text-foreground">Question Details</p>
+          <div className="ph-voice-question-card">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Current question
+            </p>
             <p className="mt-1.5 text-sm leading-relaxed text-foreground whitespace-pre-wrap">
               {currentQuestionText}
             </p>
@@ -2082,24 +2084,27 @@ export function VoiceInterface({
                   </div>
                 )}
                 {voice.isSpeaking && (
-                  <div className="flex items-center gap-2 text-primary">
-                    <Volume2 className="h-5 w-5 animate-pulse" />
-                    <span className="text-sm font-medium">{aiName} is speaking...</span>
+                  <div className="ph-voice-status-pill ph-voice-status-pill-active">
+                    <Volume2 className="h-4 w-4 animate-pulse" />
+                    <span>{aiName} is speaking</span>
                   </div>
                 )}
                 {voice.isListening && (
-                  <div className="flex flex-col items-center gap-3">
-                    {/* Mic icon with fill level */}
-                    <div className="relative h-10 w-10">
-                      <Mic className="absolute inset-0 h-full w-full text-muted-foreground/30" />
-                      <div
-                        className="absolute inset-0 overflow-hidden transition-[clip-path] duration-150 ease-out"
-                        style={{ clipPath: `inset(${(1 - voice.audioLevel) * 100}% 0 0 0)` }}
-                      >
-                        <Mic className="h-full w-full text-secondary-400" />
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="ph-voice-orb">
+                      <div className="relative h-12 w-12">
+                        <Mic className="absolute inset-0 h-full w-full text-muted-foreground/30" />
+                        <div
+                          className="absolute inset-0 overflow-hidden transition-[clip-path] duration-200 ease-out"
+                          style={{ clipPath: `inset(${(1 - voice.audioLevel) * 100}% 0 0 0)` }}
+                        >
+                          <Mic className="h-full w-full text-primary" />
+                        </div>
                       </div>
                     </div>
-                    <span className="text-sm font-medium text-secondary-500">Listening...</span>
+                    <span className="ph-voice-status-pill ph-voice-status-pill-active">
+                      Listening
+                    </span>
                   </div>
                 )}
 
@@ -2117,18 +2122,22 @@ export function VoiceInterface({
 
                 {/* Audio waveform — driven by real audio level */}
                 {(voice.isSpeaking || voice.isListening) && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex h-10 items-end justify-center gap-1">
                     {Array.from({ length: 20 }).map((_, i) => {
                       const level = voice.isSpeaking ? 0.5 : voice.audioLevel;
                       const barVariance = Math.sin((i + Date.now() / 200) * 0.7) * 0.3 + 0.7;
+                      const h = 8 + level * barVariance * 32;
                       return (
                         <div
                           key={i}
-                          className={`w-1 rounded-full transition-all duration-150 ${
-                            level > 0.02 ? "bg-primary" : "bg-muted"
-                          }`}
+                          className={
+                            level > 0.02
+                              ? "ph-wave-bar"
+                              : "ph-wave-bar bg-muted opacity-40"
+                          }
                           style={{
-                            height: `${8 + level * barVariance * 32}px`,
+                            height: `${h}px`,
+                            animationDelay: `${(i % 10) * 0.08}s`,
                           }}
                         />
                       );
