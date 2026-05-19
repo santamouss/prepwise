@@ -322,7 +322,7 @@ export const practiceRouter = router({
         videoEnabled: false,
         antiCheatingEnabled: false,
         isPractice: true,
-        customBranding: buildPracticeCustomBranding(practiceMode),
+        customBranding: buildPracticeCustomBranding(practiceMode, interviewType),
         requireInvite: false,
         aiName: "Parker",
         aiTone: "FRIENDLY",

@@ -71,12 +71,22 @@ export const DEFAULT_MOCK_ANSWER_COMPLETION_MS = 3000;
 export const DEFAULT_STRICT_NAV_MAX_WORDS = 6;
 export const DEFAULT_CLEAR_NEXT_COMMAND_MAX_WORDS = 10;
 
-/** Coach mode: stricter server VAD to reduce accidental turn commits. */
+/** Coach mode: patient server VAD; responses only via relay (create_response: false). */
 export const COACH_SERVER_VAD_TURN_DETECTION = {
   type: "server_vad" as const,
   threshold: 0.65,
   prefix_padding_ms: 400,
-  silence_duration_ms: 700,
+  silence_duration_ms: 6500,
+  create_response: false,
+};
+
+/** Mock technical practice: longer silence before turn end than behavioral mock. */
+export const MOCK_TECHNICAL_SERVER_VAD_TURN_DETECTION = {
+  type: "server_vad" as const,
+  threshold: 0.55,
+  prefix_padding_ms: 350,
+  silence_duration_ms: 4800,
+  create_response: false,
 };
 
 /** Mock mode: semantic VAD with low eagerness; responses driven by relay logic. */
@@ -87,12 +97,28 @@ export const MOCK_SEMANTIC_VAD_TURN_DETECTION = {
   interrupt_response: true,
 };
 
+export type PracticeTurnDetectionContext = {
+  practiceMode?: "mock" | "coach";
+  practiceInterviewType?: string;
+  isPractice?: boolean;
+};
+
 export function buildPracticeTurnDetection(
-  practiceMode?: "mock" | "coach",
-): typeof COACH_SERVER_VAD_TURN_DETECTION | typeof MOCK_SEMANTIC_VAD_TURN_DETECTION {
-  return practiceMode === "coach"
-    ? COACH_SERVER_VAD_TURN_DETECTION
-    : MOCK_SEMANTIC_VAD_TURN_DETECTION;
+  ctx?: PracticeTurnDetectionContext | "mock" | "coach",
+): typeof COACH_SERVER_VAD_TURN_DETECTION | typeof MOCK_SEMANTIC_VAD_TURN_DETECTION | typeof MOCK_TECHNICAL_SERVER_VAD_TURN_DETECTION {
+  const practiceMode =
+    typeof ctx === "string" ? ctx : ctx?.practiceMode;
+  const interviewType =
+    typeof ctx === "string" ? undefined : ctx?.practiceInterviewType;
+  const isPractice = typeof ctx === "string" ? true : ctx?.isPractice !== false;
+
+  if (practiceMode === "coach") {
+    return COACH_SERVER_VAD_TURN_DETECTION;
+  }
+  if (isPractice && interviewType === "TECHNICAL") {
+    return MOCK_TECHNICAL_SERVER_VAD_TURN_DETECTION;
+  }
+  return MOCK_SEMANTIC_VAD_TURN_DETECTION;
 }
 
 export interface TranscriptCommitThresholds {
@@ -205,20 +231,63 @@ export function isTranscriptReadyAfterSilence(
   return sinceUpdate >= stabilityMs || sinceSpeechStop >= maxWaitMs;
 }
 
+const THINKING_PAUSE_PHRASES: RegExp[] = [
+  /\blet me think\b/i,
+  /\bgive me a (?:moment|second|minute|sec)\b/i,
+  /\bneed (?:a )?(?:moment|second|minute)\b/i,
+  /\bone (?:moment|second|minute)\b/i,
+  /\bhang on\b/i,
+  /\bhold on\b/i,
+  /\bi need to think\b/i,
+];
+
+export function isThinkingPauseRequest(text: string): boolean {
+  const normalized = text.trim();
+  if (!normalized) return false;
+  return THINKING_PAUSE_PHRASES.some((pattern) => pattern.test(normalized));
+}
+
 export function readVoiceTranscriptTiming(
   practiceMode?: "mock" | "coach",
+  practiceInterviewType?: string,
 ): VoiceTranscriptTiming {
   if (practiceMode === "coach") {
     return {
-      speechStopFinalizeMs: 2400,
-      transcriptStabilityMs: 1200,
-      transcriptMaxWaitMs: 5500,
+      speechStopFinalizeMs: 5500,
+      transcriptStabilityMs: 1600,
+      transcriptMaxWaitMs: 8000,
+    };
+  }
+  if (practiceInterviewType === "TECHNICAL") {
+    return {
+      speechStopFinalizeMs: 4500,
+      transcriptStabilityMs: 1100,
+      transcriptMaxWaitMs: 6500,
     };
   }
   return {
     speechStopFinalizeMs: DEFAULT_MOCK_ANSWER_COMPLETION_MS,
     transcriptStabilityMs: 900,
     transcriptMaxWaitMs: 4500,
+  };
+}
+
+export type VoiceNavigationDecision = {
+  accepted: boolean;
+  commandPhrase: string;
+  normalized: string;
+};
+
+/** Authoritative short navigation phrases only — no fuzzy/embedded matches. */
+export function evaluateVoiceNavigationCommand(
+  text: string,
+  maxWords = DEFAULT_CLEAR_NEXT_COMMAND_MAX_WORDS,
+): VoiceNavigationDecision {
+  const command = isClearNextQuestionCommand(text, maxWords);
+  return {
+    accepted: command.detected,
+    commandPhrase: command.commandPhrase,
+    normalized: command.normalized,
   };
 }
 

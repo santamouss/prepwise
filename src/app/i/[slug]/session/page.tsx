@@ -10,7 +10,7 @@ import { PreparingScreen } from "@/components/session/preparing-screen";
 import { SessionCompletionScreen } from "@/components/session/session-completion-screen";
 import type { InterviewContext } from "@/hooks/use-voice";
 import { isPracticeInterview } from "@/lib/practice/is-practice-interview";
-import { getPracticeMode } from "@/lib/practice/practice-mode";
+import { getPracticeInterviewType, getPracticeMode } from "@/lib/practice/practice-mode";
 import { shouldSkipCandidatePracticeOnboarding } from "@/lib/session/skip-practice-onboarding";
 import type { SessionCompletionPayload } from "@/lib/session/session-completion-types";
 import { trpc } from "@/lib/trpc/client";
@@ -215,6 +215,9 @@ export default function SlugSessionPage() {
 
   if (useVoice) {
     const practiceMode = isPractice ? getPracticeMode(interviewData) : undefined;
+    const practiceInterviewType = isPractice
+      ? getPracticeInterviewType(interviewData)
+      : undefined;
     const interviewContext = {
       title: interviewData.title,
       objective: interviewData.objective,
@@ -223,7 +226,11 @@ export default function SlugSessionPage() {
       language: interviewData.language,
       followUpDepth: interviewData.followUpDepth,
       ...(isPractice && practiceMode
-        ? { practiceMode, isPractice: true }
+        ? {
+            practiceMode,
+            isPractice: true,
+            ...(practiceInterviewType ? { practiceInterviewType } : {}),
+          }
         : isPractice
           ? { isPractice: true }
           : {}),

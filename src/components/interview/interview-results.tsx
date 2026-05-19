@@ -810,7 +810,7 @@ function SessionDetail({
                               {statusLabel}
                             </Badge>
                           )}
-                          {excluded && (
+                          {excluded && !statusLabel?.includes("excluded") && (
                             <p className="text-xs text-muted-foreground">
                               Excluded from score
                             </p>

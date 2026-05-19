@@ -17,7 +17,7 @@ export const COACH_RETRY_SYSTEM_PROMPT =
   "The candidate wants to retry the same question. Re-ask the current question and do not move forward. Do NOT call signal_question_change.";
 
 export const COACH_ANSWER_DONE_SYSTEM_PROMPT =
-  "The candidate clicked \"I'm done answering\" and has finished their answer. Give concise coach-style feedback now: quick X/10 when appropriate, one strength, one gap, one specific improvement, and a short example phrase (\"For example, you could say…\" or \"Try adding a sentence like…\") when useful — not a full model answer. Use STAR for behavioral gaps; user/observation/improvement/metric for product/case. If too short, say so and give a simple retry structure. End by pointing them to the Try Again or Next Question buttons. Do NOT call signal_question_change.";
+  "The candidate clicked \"I'm done answering\" and has finished their answer. Give concise coach-style feedback now: quick X/10 when appropriate, one strength, one gap, one specific improvement, and a short example phrase (\"For example, you could say…\" or \"Try adding a sentence like…\") when useful — not a full model answer. Use STAR for behavioral gaps; user/observation/improvement/metric for product/case. If too short, say so and give a simple retry structure. End by telling them to use the on-screen Try again or Next question buttons (do not rely on voice commands). Do NOT call signal_question_change. Do NOT repeat the same coaching feedback twice.";
 
 export function isCoachModePractice(practiceMode?: PracticeMode): boolean {
   return practiceMode === "coach";
@@ -59,25 +59,32 @@ const COACH_RETRY_PHRASES = [
   /\bdo it again\b/i,
 ];
 
-const COACH_NEXT_PHRASES = [
-  /\bnext question\b/i,
-  /\bmove on\b/i,
-  /\bskip\b/i,
-  /\bcontinue\b/i,
-  /\bgo to the next\b/i,
-];
-
 export function isCoachRetryPhrase(text: string): boolean {
   const normalized = text.trim();
   if (!normalized) return false;
   return COACH_RETRY_PHRASES.some((pattern) => pattern.test(normalized));
 }
 
+/** Coach voice "next" must match the same strict navigation whitelist as the relay. */
 export function isCoachNextPhrase(text: string): boolean {
   const normalized = text.trim();
-  if (!normalized) return false;
-  if (isCoachRetryPhrase(normalized)) return false;
-  return COACH_NEXT_PHRASES.some((pattern) => pattern.test(normalized));
+  if (!normalized || isCoachRetryPhrase(normalized)) return false;
+  // Lazy import avoided in client bundle — mirror relay whitelist with word-count cap.
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length > 10) return false;
+  const lower = normalized.toLowerCase().replace(/[^\w\u4e00-\u9fff]+/g, " ").replace(/\s+/g, " ").trim();
+  const exact = new Set([
+    "next question",
+    "move on",
+    "skip",
+    "skip this",
+    "go next",
+    "can we move on",
+    "can we go to the next question",
+    "lets move on",
+    "let s move on",
+  ]);
+  return exact.has(lower);
 }
 
 export function shouldShowCoachControls(

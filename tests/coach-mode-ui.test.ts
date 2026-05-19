@@ -24,9 +24,11 @@ describe("coach mode UI helpers", () => {
     assert.equal(shouldShowCoachControls("coach", true), false);
   });
 
-  it("detects retry and next voice phrases", () => {
+  it("detects retry and strict next voice phrases", () => {
     assert.equal(isCoachRetryPhrase("can I try again"), true);
-    assert.equal(isCoachNextPhrase("next question please"), true);
+    assert.equal(isCoachNextPhrase("next question"), true);
+    assert.equal(isCoachNextPhrase("can we move on"), true);
+    assert.equal(isCoachNextPhrase("next question please"), false);
     assert.equal(isCoachRetryPhrase("next question"), false);
   });
 

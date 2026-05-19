@@ -1198,6 +1198,7 @@ export function VoiceInterface({
   }, [saveCurrentContent, voice]);
 
   const handleCoachDoneAnswering = useCallback(() => {
+    if (coachPhase !== "answering") return;
     if (!hasCoachAnswerContent(voice.userTranscript, messages)) {
       setCoachError(COACH_ANSWER_REQUIRED_MESSAGE);
       return;
@@ -1205,7 +1206,7 @@ export function VoiceInterface({
     setCoachError("");
     setCoachPhase("coaching");
     voice.sendCoachAnswerDone();
-  }, [voice, messages]);
+  }, [voice, messages, coachPhase]);
 
   const handleCoachTryAgain = useCallback(() => {
     setCoachError("");
@@ -1220,6 +1221,9 @@ export function VoiceInterface({
     setCoachAttempt(1);
     await handleNextQuestion();
   }, [handleNextQuestion]);
+
+  const coachDoneAnsweringDisabled =
+    coachPhase === "coaching" || voice.isProcessing;
 
   // ── Editor toggle helpers (save before deactivate, restore on activate)
   const saveCodeEditorState = useCallback(() => {
@@ -1705,6 +1709,7 @@ export function VoiceInterface({
           isConnected={voice.isConnected}
           isTransitioning={voice.isTransitioning}
           canGoNext={voice.currentQuestionIndex < voice.totalQuestions - 1}
+          doneAnsweringDisabled={coachDoneAnsweringDisabled}
           onDoneAnswering={handleCoachDoneAnswering}
           onTryAgain={handleCoachTryAgain}
           onNextQuestion={handleCoachNextQuestion}

@@ -20,6 +20,7 @@ interface CoachModeControlsProps {
   isConnected: boolean;
   isTransitioning: boolean;
   canGoNext: boolean;
+  doneAnsweringDisabled?: boolean;
   onDoneAnswering: () => void;
   onTryAgain: () => void;
   onNextQuestion: () => void;
@@ -32,11 +33,13 @@ export function CoachModeControls({
   isConnected,
   isTransitioning,
   canGoNext,
+  doneAnsweringDisabled = false,
   onDoneAnswering,
   onTryAgain,
   onNextQuestion,
 }: CoachModeControlsProps) {
   const disabled = !isConnected || isTransitioning;
+  const doneDisabled = disabled || doneAnsweringDisabled;
 
   return (
     <div className="mx-4 mt-3 space-y-3 rounded-lg border border-[#3B6FF0]/25 bg-[#EEF2FF] px-4 py-3 text-[#1e3a8a]">
@@ -56,7 +59,7 @@ export function CoachModeControls({
         <Button
           type="button"
           className="w-full bg-[#3B6FF0] hover:bg-[#3B6FF0]/90"
-          disabled={disabled}
+          disabled={doneDisabled}
           onClick={onDoneAnswering}
         >
           {COACH_UI_DONE_ANSWERING}
@@ -71,24 +74,29 @@ export function CoachModeControls({
       )}
 
       {phase === "waiting_for_choice" && (
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            type="button"
-            variant="outline"
-            className={cn("flex-1 border-[#3B6FF0]/40 bg-white/70")}
-            disabled={disabled}
-            onClick={onTryAgain}
-          >
-            {COACH_UI_TRY_AGAIN}
-          </Button>
-          <Button
-            type="button"
-            className="flex-1 bg-[#3B6FF0] hover:bg-[#3B6FF0]/90"
-            disabled={disabled || !canGoNext}
-            onClick={onNextQuestion}
-          >
-            {COACH_UI_NEXT_QUESTION}
-          </Button>
+        <div className="space-y-2">
+          <p className="text-center text-xs text-[#1e3a8a]/85">
+            Choose your next step:
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              className={cn("flex-1 border-[#3B6FF0]/40 bg-white/70")}
+              disabled={disabled}
+              onClick={onTryAgain}
+            >
+              {COACH_UI_TRY_AGAIN}
+            </Button>
+            <Button
+              type="button"
+              className="flex-1 bg-[#3B6FF0] hover:bg-[#3B6FF0]/90"
+              disabled={disabled || !canGoNext}
+              onClick={onNextQuestion}
+            >
+              {COACH_UI_NEXT_QUESTION}
+            </Button>
+          </div>
         </div>
       )}
     </div>

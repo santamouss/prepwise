@@ -292,9 +292,9 @@ export function statusDisplayLabel(
 ): string {
   switch (status) {
     case "not_reached":
-      return "Not reached";
+      return "Not reached — excluded from score";
     case "timed_out":
-      return "Not completed";
+      return "Not completed — excluded from score";
     case "partial":
       return "Partial";
     case "skipped":

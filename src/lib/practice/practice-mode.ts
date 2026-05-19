@@ -1,3 +1,4 @@
+import type { PracticeInterviewType } from "@/lib/practice/constants";
 import { isPracticeInterview, type PracticeInterviewLike } from "@/lib/practice/is-practice-interview";
 
 export type PracticeMode = "mock" | "coach";
@@ -25,12 +26,35 @@ export function getPracticeMode(interview: PracticeInterviewLike): PracticeMode 
   return normalizePracticeMode(branding?.practiceMode);
 }
 
+export function getPracticeInterviewType(
+  interview: PracticeInterviewLike,
+): PracticeInterviewType | undefined {
+  if (!isPracticeInterview(interview)) return undefined;
+  const branding = interview.customBranding as
+    | { practiceInterviewType?: unknown }
+    | null
+    | undefined;
+  const raw = branding?.practiceInterviewType;
+  if (
+    raw === "BEHAVIORAL" ||
+    raw === "ROLE_SPECIFIC" ||
+    raw === "TECHNICAL" ||
+    raw === "SALES" ||
+    raw === "LEADERSHIP"
+  ) {
+    return raw;
+  }
+  return undefined;
+}
+
 export function buildPracticeCustomBranding(
   practiceMode: PracticeMode,
+  practiceInterviewType?: PracticeInterviewType,
 ): Record<string, unknown> {
   return {
     isPractice: true,
     source: "practice",
     practiceMode,
+    ...(practiceInterviewType ? { practiceInterviewType } : {}),
   };
 }

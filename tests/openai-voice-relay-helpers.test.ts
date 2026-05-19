@@ -6,6 +6,9 @@ import {
   buildRealtimeConversationCreateEvent,
   buildRealtimeTextContent,
   COACH_SERVER_VAD_TURN_DETECTION,
+  evaluateVoiceNavigationCommand,
+  isThinkingPauseRequest,
+  MOCK_TECHNICAL_SERVER_VAD_TURN_DETECTION,
   DEFAULT_MOCK_ANSWER_COMPLETION_MS,
   isAllowedMockResponseCreateReason,
   isClearNextQuestionCommand,
@@ -27,12 +30,37 @@ import {
   shouldSuppressEmptyResponseRetry,
 } from "../server/openai-voice-relay-helpers";
 
-test("buildPracticeTurnDetection uses stricter server_vad for coach mode", () => {
+test("buildPracticeTurnDetection uses patient server_vad for coach mode", () => {
   assert.deepEqual(buildPracticeTurnDetection("coach"), COACH_SERVER_VAD_TURN_DETECTION);
   assert.equal(COACH_SERVER_VAD_TURN_DETECTION.threshold, 0.65);
   assert.equal(COACH_SERVER_VAD_TURN_DETECTION.prefix_padding_ms, 400);
-  assert.equal(COACH_SERVER_VAD_TURN_DETECTION.silence_duration_ms, 700);
+  assert.equal(COACH_SERVER_VAD_TURN_DETECTION.silence_duration_ms, 6500);
+  assert.equal(COACH_SERVER_VAD_TURN_DETECTION.create_response, false);
   assert.equal(buildPracticeTurnDetection("mock").type, "semantic_vad");
+});
+
+test("buildPracticeTurnDetection uses longer server_vad for mock technical practice", () => {
+  assert.deepEqual(
+    buildPracticeTurnDetection({
+      practiceMode: "mock",
+      practiceInterviewType: "TECHNICAL",
+      isPractice: true,
+    }),
+    MOCK_TECHNICAL_SERVER_VAD_TURN_DETECTION,
+  );
+});
+
+test("evaluateVoiceNavigationCommand accepts only explicit short phrases", () => {
+  assert.equal(evaluateVoiceNavigationCommand("next question").accepted, true);
+  assert.equal(evaluateVoiceNavigationCommand("can we move on").accepted, true);
+  assert.equal(evaluateVoiceNavigationCommand("move on").accepted, true);
+  assert.equal(evaluateVoiceNavigationCommand("cough move on thanks").accepted, false);
+  assert.equal(evaluateVoiceNavigationCommand("yeah").accepted, false);
+});
+
+test("isThinkingPauseRequest detects thinking phrases", () => {
+  assert.equal(isThinkingPauseRequest("let me think for a second"), true);
+  assert.equal(isThinkingPauseRequest("next question"), false);
 });
 
 test("buildRealtimeTextContent uses output_text for assistant and input_text otherwise", () => {

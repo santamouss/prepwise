@@ -38,7 +38,6 @@ import {
   COACH_ANSWER_DONE_SYSTEM_PROMPT,
   COACH_ANSWER_REQUIRED_MESSAGE,
   COACH_RETRY_SYSTEM_PROMPT,
-  isCoachNextPhrase,
   isCoachRetryPhrase,
 } from "../src/lib/practice/coach-mode-ui";
 import {
@@ -62,8 +61,9 @@ import {
   readVoiceTranscriptTiming,
   shouldAllowTtsBargeIn,
   isAllowedMockResponseCreateReason,
-  isClearNextQuestionCommand,
+  evaluateVoiceNavigationCommand,
   isNoisyEmbeddedNextCommandCandidate,
+  isThinkingPauseRequest,
   isTranscriptReadyAfterSilence,
   mergeAsrText,
   MOCK_ANSWER_COMPLETION_REASON,
@@ -420,6 +420,7 @@ interface InterviewContext {
   language: string;
   followUpDepth: string;
   practiceMode?: "mock" | "coach";
+  practiceInterviewType?: string;
   isPractice?: boolean;
   startQuestionIndex?: number;
   questions: Array<{
@@ -1175,6 +1176,11 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   let pendingSpeechFinalize: ReturnType<typeof setTimeout> | null = null;
   let speechTranscriptCommitted = false;
   let responseInFlight = false;
+  let coachFeedbackInFlight = false;
+  let lastCoachAnswerDoneAt = 0;
+  let thinkingPauseUntil = 0;
+  const COACH_ANSWER_DONE_DEBOUNCE_MS = 2500;
+  const THINKING_PAUSE_EXTENSION_MS = 10_000;
 
   let pendingQuestionPrompt: string | null = null;
   let pendingPromptTimer: ReturnType<typeof setTimeout> | null = null;
@@ -1187,7 +1193,15 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     ctx.practiceMode,
   );
   const liveTranscriptGate = createLiveTranscriptGateState();
-  const voiceTiming = readVoiceTranscriptTiming(ctx.practiceMode);
+  const voiceTiming = readVoiceTranscriptTiming(
+    ctx.practiceMode,
+    ctx.practiceInterviewType,
+  );
+  const turnDetectionCtx = {
+    practiceMode: ctx.practiceMode,
+    practiceInterviewType: ctx.practiceInterviewType,
+    isPractice: ctx.isPractice,
+  };
   const USER_TRANSCRIPT_STABILITY_MS = voiceTiming.transcriptStabilityMs;
   const USER_TRANSCRIPT_MAX_WAIT_MS = voiceTiming.transcriptMaxWaitMs;
   const USER_SPEECH_STOP_FINALIZE_MS = voiceTiming.speechStopFinalizeMs;
@@ -1511,6 +1525,16 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function handleCoachAnswerDone() {
+    const now = Date.now();
+    if (coachFeedbackInFlight || responseInFlight) {
+      log.info("[coach-mode] coach response already in flight");
+      return;
+    }
+    if (now - lastCoachAnswerDoneAt < COACH_ANSWER_DONE_DEBOUNCE_MS) {
+      log.info("[coach-mode] duplicate answer_done ignored");
+      return;
+    }
+
     let answerText = bestAvailableTranscript();
     if (!answerText && speechTranscriptCommitted) {
       answerText = lastCommittedUserAnswerText();
@@ -1539,11 +1563,15 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       COACH_ANSWER_DONE_SYSTEM_PROMPT +
         buildCoachDeliverySystemAddendum(deliveryAnalysis),
     );
+    lastCoachAnswerDoneAt = now;
+    coachFeedbackInFlight = true;
     requestAssistantResponse("coach answer done");
     log.info("[coach-mode] coach_answer_done — coaching requested");
   }
 
   function handleCoachRetryQuestion(source: string) {
+    coachFeedbackInFlight = false;
+    lastCoachAnswerDoneAt = 0;
     resetCoachAnswerBuffers();
     sendConversationTextMessage(oaiWs!, "system", COACH_RETRY_SYSTEM_PROMPT);
     requestAssistantResponse(`coach retry (${source})`);
@@ -1551,15 +1579,22 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
   }
 
   function tryHandlePendingNavigationCommand(pending: string): boolean {
-    const command = isClearNextQuestionCommand(pending);
-    if (!command.detected) {
-      if (isNoisyEmbeddedNextCommandCandidate(pending)) {
-        log.info("[voice-command] ignored noisy next command candidate");
+    const nav = evaluateVoiceNavigationCommand(pending);
+    if (!nav.accepted) {
+      if (
+        isNoisyEmbeddedNextCommandCandidate(pending) ||
+        /\b(move on|next question|skip)\b/i.test(pending)
+      ) {
+        log.info(
+          `[voice-navigation] rejected low-confidence navigation candidate: ${JSON.stringify(pending.slice(0, 80))}`,
+        );
       }
       return false;
     }
 
-    log.info(`[voice-command] next command detected: ${command.commandPhrase}`);
+    log.info(
+      `[voice-navigation] accepted explicit navigation command: ${nav.commandPhrase}`,
+    );
     if (!speechTranscriptCommitted) {
       commitUserTranscript("voice command");
     }
@@ -1628,6 +1663,10 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
 
   function scheduleMockAnswerCompletion(reason: string, delayMs = USER_SPEECH_STOP_FINALIZE_MS) {
     if (ctx.practiceMode === "coach") return;
+    if (isThinkingPauseActive()) {
+      log.info(`[voice-pipeline] mock auto-response deferred (${reason}): thinking pause`);
+      return;
+    }
     clearMockAutoResponseTimer();
     log.info(
       `[voice-pipeline] mock auto-response timer scheduled (${reason}, ${delayMs}ms)`,
@@ -1692,10 +1731,18 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
     );
   }
 
+  function isThinkingPauseActive(now = Date.now()): boolean {
+    return thinkingPauseUntil > now;
+  }
+
   function noteTranscriptUpdate() {
     const now = Date.now();
     lastTranscriptUpdateAt = now;
     const pending = bestAvailableTranscript();
+    if (pending && isThinkingPauseRequest(pending)) {
+      thinkingPauseUntil = now + THINKING_PAUSE_EXTENSION_MS;
+      log.info("[voice-pipeline] thinking pause extended");
+    }
     if (pending) {
       if (
         pendingTurnAnchorAt > 0 &&
@@ -2179,7 +2226,7 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       ...(includeTranscription
         ? { transcription: { model: OPENAI_REALTIME_TRANSCRIPTION_MODEL } }
         : {}),
-      turn_detection: buildPracticeTurnDetection(ctx.practiceMode),
+      turn_detection: buildPracticeTurnDetection(turnDetectionCtx),
     };
   }
 
@@ -2664,6 +2711,9 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
             const respStatus = msg.response?.status || "unknown";
             const respOutputCount = msg.response?.output?.length ?? 0;
             responseInFlight = false;
+            if (ctx.practiceMode === "coach") {
+              coachFeedbackInFlight = false;
+            }
             const queuedResponse = takeQueuedAssistantResponse();
 
             // Flush pending ASR debounce
@@ -3053,12 +3103,24 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return true;
     }
 
-    if (ctx.practiceMode === "coach" && isCoachNextPhrase(userText)) {
-      const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
-      if (nextIdx === currentQuestionIndex) return false;
-      log.info(`Coach next from voice: "${userText}"`);
-      requestTransition(nextIdx, "Next Question", "user_request");
-      return true;
+    if (ctx.practiceMode === "coach") {
+      const nav = evaluateVoiceNavigationCommand(userText);
+      if (nav.accepted) {
+        const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
+        if (nextIdx === currentQuestionIndex) return false;
+        log.info(
+          `[voice-navigation] accepted explicit navigation command: ${nav.commandPhrase}`,
+        );
+        resetCoachAnswerBuffers();
+        coachFeedbackInFlight = false;
+        requestTransition(nextIdx, "Next Question", "user_request");
+        return true;
+      }
+      if (/\b(move on|next question|skip)\b/i.test(userText)) {
+        log.info(
+          `[voice-navigation] rejected low-confidence navigation candidate: ${JSON.stringify(userText.slice(0, 80))}`,
+        );
+      }
     }
 
     if (
@@ -3072,12 +3134,17 @@ async function handleInterview(browserWs: WebSocket, ctx: InterviewContext) {
       return true;
     }
 
-    if (isClearNextQuestionCommand(userText).detected) {
-      const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
-      if (nextIdx === currentQuestionIndex) return false;
-      log.info(`Fast-path NEXT transition from user: "${userText}"`);
-      requestTransition(nextIdx, "Next Question", "user_request");
-      return true;
+    if (ctx.practiceMode !== "coach") {
+      const nav = evaluateVoiceNavigationCommand(userText);
+      if (nav.accepted) {
+        const nextIdx = Math.min(currentQuestionIndex + 1, sortedQuestions.length);
+        if (nextIdx === currentQuestionIndex) return false;
+        log.info(
+          `[voice-navigation] accepted explicit navigation command: ${nav.commandPhrase}`,
+        );
+        requestTransition(nextIdx, "Next Question", "user_request");
+        return true;
+      }
     }
 
     return false;

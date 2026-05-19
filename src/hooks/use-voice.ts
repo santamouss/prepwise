@@ -27,6 +27,7 @@ export interface InterviewContext {
   language: string;
   followUpDepth: string;
   practiceMode?: "mock" | "coach";
+  practiceInterviewType?: string;
   isPractice?: boolean;
   startQuestionIndex?: number;
   questions: Array<{
@@ -915,11 +916,20 @@ export function useVoice({
     relayConnectorRef.current?.sendJson({ type: "whiteboard_update", imageDataUrl });
   }, []);
 
+  const coachAnswerDoneSentRef = useRef(false);
+
   const sendCoachAnswerDone = useCallback(() => {
+    if (coachAnswerDoneSentRef.current) return;
+    coachAnswerDoneSentRef.current = true;
     relayConnectorRef.current?.sendJson({ type: "coach_answer_done" });
   }, []);
 
+  useEffect(() => {
+    coachAnswerDoneSentRef.current = false;
+  }, [state.currentQuestionIndex]);
+
   const sendCoachRetryQuestion = useCallback(() => {
+    coachAnswerDoneSentRef.current = false;
     relayConnectorRef.current?.sendJson({ type: "coach_retry_question" });
   }, []);
 
