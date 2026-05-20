@@ -1,0 +1,336 @@
+/* ParkerHero blog — extends .parker-marketing */
+.parker-blog .pk-nav-active {
+  color: var(--pk-ink-900);
+  font-weight: 600;
+}
+
+.parker-blog .pk-blog-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+}
+
+@media (min-width: 641px) {
+  .parker-blog .pk-blog-header-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    height: 80px;
+  }
+
+  .parker-blog .pk-blog-header-inner .pk-header-logo {
+    justify-self: start;
+  }
+
+  .parker-blog .pk-blog-nav {
+    justify-self: center;
+  }
+
+  .parker-blog .pk-blog-header-actions {
+    justify-self: end;
+  }
+}
+
+.parker-blog .pk-blog-header .pk-logo-img-lg {
+  height: 36px;
+}
+
+.parker-blog .pk-blog-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parker-blog .pk-blog-main {
+  padding: 56px 0 80px;
+}
+
+.parker-blog .pk-blog-hero {
+  max-width: 720px;
+  margin: 0 auto 48px;
+  text-align: center;
+}
+
+.parker-blog .pk-blog-hero h1 {
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  margin: 0 0 14px;
+}
+
+.parker-blog .pk-blog-hero p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--pk-ink-500);
+}
+
+.parker-blog .pk-blog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  max-width: var(--pk-container);
+  margin: 0 auto;
+}
+
+.parker-blog .pk-blog-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--pk-line);
+  border-radius: var(--pk-radius-lg);
+  background: #fff;
+  padding: 24px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.parker-blog .pk-blog-card:hover {
+  border-color: var(--pk-blue-100);
+  box-shadow: var(--pk-shadow-sm);
+}
+
+.parker-blog .pk-blog-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12.5px;
+  color: var(--pk-ink-400);
+}
+
+.parker-blog .pk-blog-card-category {
+  font-weight: 600;
+  color: var(--pk-blue);
+  background: var(--pk-blue-50);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.parker-blog .pk-blog-card h2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  color: var(--pk-ink-900);
+}
+
+.parker-blog .pk-blog-card-excerpt {
+  margin: 0 0 18px;
+  flex: 1;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--pk-ink-500);
+}
+
+.parker-blog .pk-blog-card-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--pk-blue);
+}
+
+.parker-blog .pk-blog-card-link:hover {
+  color: var(--pk-blue-600);
+}
+
+.parker-blog .pk-blog-empty {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 48px 28px;
+  border: 1px dashed var(--pk-line);
+  border-radius: var(--pk-radius-lg);
+  background: var(--pk-bg-soft);
+}
+
+.parker-blog .pk-blog-empty h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+}
+
+.parker-blog .pk-blog-empty p {
+  margin: 0;
+  color: var(--pk-ink-500);
+  font-size: 15px;
+}
+
+/* Post page */
+.parker-blog .pk-blog-post-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.parker-blog .pk-blog-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 28px;
+  font-size: 14px;
+  color: var(--pk-ink-500);
+}
+
+.parker-blog .pk-blog-back:hover {
+  color: var(--pk-ink-900);
+}
+
+.parker-blog .pk-blog-post-head {
+  margin-bottom: 36px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-blog .pk-blog-post-head .pk-blog-card-meta {
+  margin-bottom: 14px;
+}
+
+.parker-blog .pk-blog-post-head h1 {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+
+.parker-blog .pk-blog-post-byline {
+  margin: 0;
+  font-size: 14px;
+  color: var(--pk-ink-400);
+}
+
+.parker-blog .pk-blog-prose {
+  font-size: 16px;
+  line-height: 1.7;
+  color: var(--pk-ink-700);
+}
+
+.parker-blog .pk-blog-prose > *:first-child {
+  margin-top: 0;
+}
+
+.parker-blog .pk-blog-prose h2 {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--pk-ink-900);
+  margin: 40px 0 14px;
+}
+
+.parker-blog .pk-blog-prose h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--pk-ink-900);
+  margin: 28px 0 10px;
+}
+
+.parker-blog .pk-blog-prose p {
+  margin: 0 0 16px;
+}
+
+.parker-blog .pk-blog-prose ul,
+.parker-blog .pk-blog-prose ol {
+  margin: 0 0 16px;
+  padding-left: 1.35rem;
+}
+
+.parker-blog .pk-blog-prose li {
+  margin-bottom: 8px;
+}
+
+.parker-blog .pk-blog-prose li:last-child {
+  margin-bottom: 0;
+}
+
+.parker-blog .pk-blog-prose strong {
+  color: var(--pk-ink-900);
+  font-weight: 600;
+}
+
+.parker-blog .pk-blog-prose blockquote {
+  margin: 20px 0;
+  padding: 14px 18px;
+  border-left: 3px solid var(--pk-blue);
+  background: var(--pk-blue-50);
+  border-radius: 0 var(--pk-radius) var(--pk-radius) 0;
+  color: var(--pk-ink-700);
+}
+
+.parker-blog .pk-blog-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+.parker-blog .pk-blog-prose code {
+  font-size: 0.9em;
+  background: var(--pk-bg-soft);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.parker-blog .pk-blog-prose hr {
+  border: none;
+  border-top: 1px solid var(--pk-line-soft);
+  margin: 36px 0;
+}
+
+.parker-blog .pk-blog-cta {
+  margin-top: 48px;
+  padding: 28px 24px;
+  border-radius: var(--pk-radius-lg);
+  background: linear-gradient(135deg, var(--pk-blue-50) 0%, #fff 100%);
+  border: 1px solid var(--pk-blue-100);
+  text-align: center;
+}
+
+.parker-blog .pk-blog-cta p {
+  margin: 0 0 16px;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--pk-ink-900);
+}
+
+.parker-blog .pk-blog-cta a {
+  color: var(--pk-blue);
+  font-weight: 600;
+}
+
+.parker-blog .pk-blog-cta a:hover {
+  color: var(--pk-blue-600);
+}
+
+@media (max-width: 960px) {
+  .parker-blog .pk-blog-grid {
+    grid-template-columns: 1fr;
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 640px) {
+  .parker-blog .pk-blog-nav {
+    display: none;
+  }
+
+  .parker-blog .pk-blog-header-inner {
+    height: 56px;
+  }
+
+  .parker-blog .pk-blog-header .pk-logo-img-lg {
+    height: 22px;
+  }
+
+  .parker-blog .pk-blog-header-actions .pk-sign-in {
+    display: none;
+  }
+
+  .parker-blog .pk-blog-main {
+    padding: 40px 0 64px;
+  }
+
+  .parker-blog .pk-blog-hero h1 {
+    font-size: 30px;
+  }
+
+  .parker-blog .pk-blog-post-head h1 {
+    font-size: 28px;
+  }
+}

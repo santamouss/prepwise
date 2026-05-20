@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import {
+  MARKETING_BLOG,
   MARKETING_HIRING_REGISTER,
   MARKETING_LOGIN,
   MARKETING_PRACTICE_REGISTER,
@@ -69,6 +70,7 @@ export function ParkerHeroHome() {
             <Link href="#how">How it works</Link>
             <Link href="#coach">Coach Mode</Link>
             <Link href="#pricing">Pricing</Link>
+            <Link href={MARKETING_BLOG}>Blog</Link>
           </nav>
           <div className="pk-header-cta">
             <Link href={MARKETING_LOGIN} className="pk-sign-in">
@@ -434,6 +436,7 @@ export function ParkerHeroHome() {
             <Logo />
           </Link>
           <nav className="pk-footer-nav" aria-label="Footer">
+            <Link href={MARKETING_BLOG}>Blog</Link>
             <Link href={MARKETING_PRIVACY}>Privacy</Link>
             <Link href={MARKETING_TERMS}>Terms</Link>
             <a href="mailto:info@parkerhero.com">Contact</a>

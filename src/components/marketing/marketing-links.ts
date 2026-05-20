@@ -1,4 +1,5 @@
 export const MARKETING_HOME = "/";
+export const MARKETING_BLOG = "/blog";
 export const MARKETING_PRIVACY = "/privacy";
 export const MARKETING_TERMS = "/terms";
 export const MARKETING_LOGIN = "/login";
