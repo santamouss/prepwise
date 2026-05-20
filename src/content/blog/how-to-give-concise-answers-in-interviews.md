@@ -1,6 +1,6 @@
 ---
 title: "How to Give Concise Answers Without Rambling in Interviews"
-date: "2025-05-19"
+date: "2023-01-16"
 slug: "how-to-give-concise-answers-in-interviews"
 category: "interview-questions"
 excerpt: "Rambling usually means you are thinking on the page instead of delivering a headline. Use answer-first structure, time targets, and voice reps to land behavioral answers in 60–90 seconds."

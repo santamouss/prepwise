@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Tell Me About a Time You Led a Team"'
-date: "2025-05-19"
+date: "2022-11-25"
 slug: "how-to-answer-tell-me-about-a-time-you-led-a-team"
 category: "interview-questions"
 excerpt: "Use STAR to show how you set direction, unblocked people, and delivered results—even if you never had a formal manager title."

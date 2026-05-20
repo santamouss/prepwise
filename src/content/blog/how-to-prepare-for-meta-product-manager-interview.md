@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Meta Product Manager Interview"
-date: "2025-05-19"
+date: "2024-02-07"
 slug: "how-to-prepare-for-meta-product-manager-interview"
 category: "interview-questions"
 excerpt: "Meta PM interview prep for product sense, execution, leadership, and analytics—structured frameworks, sample answers, and voice practice with Parker."

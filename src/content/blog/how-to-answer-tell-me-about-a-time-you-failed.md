@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Tell Me About a Time You Failed"'
-date: "2025-05-19"
+date: "2026-01-25"
 slug: "how-to-answer-tell-me-about-a-time-you-failed"
 category: "interview-questions"
 excerpt: "Own a real failure with STAR structure, accountability, and lessons you still apply—without a story that disqualifies you."

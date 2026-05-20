@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Customer Success Manager Interview"
-date: "2025-05-19"
+date: "2023-07-03"
 slug: "how-to-prepare-for-customer-success-manager-interview"
 category: "interview-questions"
 excerpt: "Customer success manager interview prep: retention metrics, difficult customer stories, onboarding playbooks, and voice practice so you sound calm under pressure."

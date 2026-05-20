@@ -1,6 +1,6 @@
 ---
 title: "Voice Interview Practice — Why Speaking Out Loud Matters"
-date: "2025-05-19"
+date: "2024-05-10"
 slug: "voice-interview-practice-why-speaking-out-loud-matters"
 category: "interview-questions"
 excerpt: "Written prep and silent rehearsal do not train the skill interviews actually test: spoken clarity under pressure. Learn why voice practice matters and how to do it well."

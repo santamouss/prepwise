@@ -1,6 +1,6 @@
 ---
 title: "How to Use AI to Prepare for Behavioral Interviews"
-date: "2025-05-19"
+date: "2024-06-25"
 slug: "how-to-use-ai-for-behavioral-interview-prep"
 category: "interview-questions"
 excerpt: "Use AI for behavioral interview prep the right way: story banks, STAR structure, voice mock rounds, and Coach Mode reps—not generic scripts you memorize."

@@ -1,6 +1,6 @@
 ---
 title: "Mock Interview vs Interview Coach: Which Should You Use?"
-date: "2026-05-15"
+date: "2022-10-07"
 slug: mock-interview-vs-interview-coach
 category: "Product"
 excerpt: "Mock Interview simulates realistic pacing; Coach Mode pauses for feedback. Here’s how to choose—and combine—them before a high-stakes loop."

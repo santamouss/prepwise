@@ -1,6 +1,6 @@
 ---
 title: "What Interviewers Are Actually Looking For"
-date: "2025-05-19"
+date: "2023-02-03"
 slug: "what-interviewers-are-actually-looking-for"
 category: "interview-questions"
 excerpt: "What hiring managers and interviewers really evaluate—beyond the job description—and how to show competence, judgment, and fit in every round."

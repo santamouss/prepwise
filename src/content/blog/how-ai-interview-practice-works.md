@@ -1,6 +1,6 @@
 ---
 title: 'How AI Interview Practice Works and Why It Is Better Than Practicing Alone'
-date: "2025-05-19"
+date: "2024-09-21"
 slug: "how-ai-interview-practice-works"
 category: "interview-questions"
 excerpt: "AI interview practice adds realistic question pressure, turn-taking, and delivery feedback that solo prep cannot replicate. Learn how it works and when to use it."

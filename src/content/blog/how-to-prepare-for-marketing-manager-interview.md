@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Marketing Manager Interview"
-date: "2025-05-19"
+date: "2023-06-02"
 slug: "how-to-prepare-for-marketing-manager-interview"
 category: "interview-questions"
 excerpt: "Marketing manager interview preparation: channel strategy, campaign metrics, cross-functional stories, and a prep calendar—with voice practice so you sound strategic, not tactical-only."

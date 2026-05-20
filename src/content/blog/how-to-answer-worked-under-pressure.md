@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Tell Me About a Time You Worked Under Pressure"'
-date: "2025-05-19"
+date: "2023-09-06"
 slug: "how-to-answer-worked-under-pressure"
 category: "interview-questions"
 excerpt: "Prove you prioritize, communicate, and deliver when deadlines tighten—without glorifying burnout or chaos."

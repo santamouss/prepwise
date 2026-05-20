@@ -1,6 +1,6 @@
 ---
 title: "How to Answer Tell Me About a Time You Missed a Deadline"
-date: "2025-05-19"
+date: "2024-12-26"
 slug: "how-to-answer-missed-a-deadline"
 category: "interview-questions"
 excerpt: "Own the miss, explain root cause without excuses, show how you communicated early, and prove you fixed the system—not just the symptom."

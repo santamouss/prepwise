@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for an Amazon Leadership Principles Interview"
-date: "2025-05-19"
+date: "2024-11-03"
 slug: "how-to-prepare-for-amazon-leadership-principles-interview"
 category: "interview-questions"
 excerpt: "Map your STAR stories to Amazon Leadership Principles, prepare for bar-raiser depth, and practice out loud so your answers show ownership, customer obsession, and bias for action."

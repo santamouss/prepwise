@@ -1,6 +1,6 @@
 ---
 title: "How to Research a Company Before an Interview"
-date: "2025-05-19"
+date: "2026-02-22"
 slug: "how-to-research-a-company-before-an-interview"
 category: "interview-questions"
 excerpt: "A practical company research checklist for interviews—what to read, what to note, and how to turn homework into answers that sound informed, not rehearsed."

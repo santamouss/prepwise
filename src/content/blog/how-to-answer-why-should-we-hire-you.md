@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Why Should We Hire You"'
-date: "2025-05-19"
+date: "2024-10-12"
 slug: "how-to-answer-why-should-we-hire-you"
 category: "interview-questions"
 excerpt: "Connect your proven strengths to their top priorities—confident without arrogant, specific without reciting your resume."

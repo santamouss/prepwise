@@ -1,6 +1,6 @@
 ---
 title: "How to Answer Tell Me About a Time You Influenced Without Authority"
-date: "2025-05-19"
+date: "2023-05-09"
 slug: "how-to-answer-influenced-without-authority"
 category: "interview-questions"
 excerpt: "Prove you can align stakeholders, build trust, and drive outcomes when you do not control the org chart."

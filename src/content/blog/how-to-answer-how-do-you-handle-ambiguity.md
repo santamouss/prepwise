@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "How Do You Handle Ambiguity"'
-date: "2025-05-19"
+date: "2024-04-06"
 slug: "how-to-answer-how-do-you-handle-ambiguity"
 category: "interview-questions"
 excerpt: "Show how you move forward without perfect information—clarify what matters, decide with constraints, and communicate as you learn."

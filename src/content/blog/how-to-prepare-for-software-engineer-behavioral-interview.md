@@ -1,6 +1,6 @@
 ---
 title: 'How to Prepare for a Software Engineer Behavioral Interview'
-date: "2025-05-19"
+date: "2022-04-21"
 slug: "how-to-prepare-for-software-engineer-behavioral-interview"
 category: "interview-questions"
 excerpt: "SWE behavioral interviews test ownership, collaboration, and judgment—not leetcode. Use this three-week plan, STAR story bank, and level-specific tips to prep efficiently."

@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Consulting Interview at McKinsey or Bain"
-date: "2025-05-19"
+date: "2025-12-14"
 slug: "how-to-prepare-for-consulting-interview"
 category: "interview-questions"
 excerpt: "Prepare for McKinsey and Bain consulting interviews with a clear plan for case interviews, PEI-style behavioral questions, and fit conversations that show structured thinking."

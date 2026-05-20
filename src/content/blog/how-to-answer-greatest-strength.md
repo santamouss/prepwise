@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "What Is Your Greatest Strength"'
-date: "2025-05-19"
+date: "2022-08-08"
 slug: "how-to-answer-greatest-strength"
 category: "interview-questions"
 excerpt: "Pick one strength that matches the job, prove it with a specific story, and avoid a list of generic adjectives."

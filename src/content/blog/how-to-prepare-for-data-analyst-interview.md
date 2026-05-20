@@ -1,6 +1,6 @@
 ---
 title: 'How to Prepare for a Data Analyst Interview'
-date: "2025-05-19"
+date: "2025-06-13"
 slug: "how-to-prepare-for-data-analyst-interview"
 category: "interview-questions"
 excerpt: "Data analyst interviews blend SQL, statistics, business cases, and communication. Follow this four-week plan with query drills, metric frameworks, and portfolio talking points."

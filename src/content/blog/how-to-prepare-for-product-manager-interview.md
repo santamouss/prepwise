@@ -1,6 +1,6 @@
 ---
 title: 'How to Prepare for a Product Manager Interview'
-date: "2025-05-19"
+date: "2025-02-27"
 slug: "how-to-prepare-for-product-manager-interview"
 category: "interview-questions"
 excerpt: "A four-week PM interview prep plan covering product sense, execution stories, metrics, and stakeholder answers—with frameworks you can use starting tonight."

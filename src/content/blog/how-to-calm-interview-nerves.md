@@ -1,6 +1,6 @@
 ---
 title: "How to Calm Interview Nerves Before and During the Interview"
-date: "2025-05-19"
+date: "2022-12-06"
 slug: "how-to-calm-interview-nerves"
 category: "interview-questions"
 excerpt: "Interview anxiety is normal—your body is treating a conversation like a threat. Use these before-and-during techniques to lower arousal, stay present, and let your preparation show."

@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Tell Me About a Time You Had to Learn Something Quickly"'
-date: "2025-05-19"
+date: "2025-07-18"
 slug: "how-to-answer-learn-something-quickly"
 category: "interview-questions"
 excerpt: "Prove you can ramp fast with a clear learning plan, focused execution, and results—not just enthusiasm for new tools."

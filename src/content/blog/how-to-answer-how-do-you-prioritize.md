@@ -1,6 +1,6 @@
 ---
 title: "How to Answer How Do You Prioritize When Everything Is Urgent"
-date: "2025-05-19"
+date: "2024-07-10"
 slug: "how-to-answer-how-do-you-prioritize"
 category: "interview-questions"
 excerpt: "Show a repeatable system for triage, stakeholder alignment, and saying no—without pretending chaos does not exist."

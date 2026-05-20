@@ -1,6 +1,6 @@
 ---
 title: "How to Answer What Are Your Salary Expectations"
-date: "2025-05-19"
+date: "2025-03-26"
 slug: "how-to-answer-salary-expectations"
 category: "interview-questions"
 excerpt: "Navigate salary expectations with research, ranges, timing, and scripts that protect your offer without killing the conversation."

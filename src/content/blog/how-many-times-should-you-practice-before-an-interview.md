@@ -1,6 +1,6 @@
 ---
 title: "How Many Times Should You Practice Before an Interview"
-date: "2025-05-19"
+date: "2025-04-02"
 slug: "how-many-times-should-you-practice-before-an-interview"
 category: "interview-questions"
 excerpt: "There is no magic number—but three to five focused voice sessions before a standard interview beats ten silent read-throughs. Here is how to calibrate by role, timeline, and weak spots."

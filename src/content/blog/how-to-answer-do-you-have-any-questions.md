@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Do You Have Any Questions for Us"'
-date: "2025-05-19"
+date: "2025-09-10"
 slug: "how-to-answer-do-you-have-any-questions"
 category: "interview-questions"
 excerpt: "Turn the final interview question into a signal of judgment—ask about success, team reality, and priorities, not perks you could Google."

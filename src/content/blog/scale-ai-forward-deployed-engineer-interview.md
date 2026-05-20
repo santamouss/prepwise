@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Scale AI Forward Deployed Engineer Interview"
-date: "2026-05-08"
+date: "2023-04-05"
 slug: scale-ai-forward-deployed-engineer-interview
 category: "Role Guides"
 excerpt: "What Scale AI looks for in FDE interviews, how to structure technical and customer stories, and how to practice with realistic follow-ups."

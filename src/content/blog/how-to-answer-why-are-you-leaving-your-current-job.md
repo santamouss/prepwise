@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Why Are You Leaving Your Current Job"'
-date: "2025-05-19"
+date: "2025-11-25"
 slug: "how-to-answer-why-are-you-leaving-your-current-job"
 category: "interview-questions"
 excerpt: "Frame your move as growth toward the right role—without badmouthing your employer or sounding like you are running away."

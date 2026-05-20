@@ -1,6 +1,6 @@
 ---
 title: "How to Answer Tell Me About a Time You Disagreed With Your Manager"
-date: "2025-05-19"
+date: "2024-08-07"
 slug: "how-to-answer-disagreed-with-manager"
 category: "interview-questions"
 excerpt: "Show respectful disagreement, data-driven persuasion, and commitment after the decision—without sounding like a victim or a rebel."

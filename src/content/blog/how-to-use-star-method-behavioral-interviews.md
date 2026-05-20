@@ -1,6 +1,6 @@
 ---
 title: "How to Use the STAR Method in Behavioral Interviews"
-date: "2025-05-19"
+date: "2023-12-08"
 slug: "how-to-use-star-method-behavioral-interviews"
 category: "interview-questions"
 excerpt: "STAR is not a script to recite—it is a compression format for proof. Learn how to structure stories, trim context, and land results interviewers remember."

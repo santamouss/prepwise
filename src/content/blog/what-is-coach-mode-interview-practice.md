@@ -1,6 +1,6 @@
 ---
 title: "What Is Coach Mode and How It Makes You a Better Interviewer"
-date: "2025-05-19"
+date: "2026-04-04"
 slug: "what-is-coach-mode-interview-practice"
 category: "interview-questions"
 excerpt: "Coach Mode is deliberate interview practice: one question at a time, structured feedback after each answer, and the choice to retry or move on. Learn how it differs from mock interviews and when to use it."

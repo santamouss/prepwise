@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Sales Director Interview"
-date: "2025-05-19"
+date: "2022-06-07"
 slug: "how-to-prepare-for-sales-director-interview"
 category: "interview-questions"
 excerpt: "Prepare for a sales director interview with pipeline math, leadership stories, forecast discipline, and a 7-day plan—plus voice practice so you sound like the leader they need."

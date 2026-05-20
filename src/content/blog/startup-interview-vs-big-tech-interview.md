@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Startup Interview vs Big Tech"
-date: "2025-05-19"
+date: "2023-03-01"
 slug: "startup-interview-vs-big-tech-interview"
 category: "interview-questions"
 excerpt: "Startup vs big tech interviews differ in depth, ambiguity, and signals—learn what to emphasize in each loop and how to practice both with Parker voice mocks."

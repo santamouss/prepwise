@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a UX Designer Interview"
-date: "2025-05-19"
+date: "2023-10-08"
 slug: "how-to-prepare-for-ux-designer-interview"
 category: "interview-questions"
 excerpt: "UX designer interview preparation: portfolio narrative, case study structure, collaboration stories, and voice practice for behavioral rounds—not just slide decks."

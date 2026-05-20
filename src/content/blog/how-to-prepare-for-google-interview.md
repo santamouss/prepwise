@@ -1,6 +1,6 @@
 ---
 title: "How to Prepare for a Google Interview"
-date: "2025-05-19"
+date: "2026-03-27"
 slug: "how-to-prepare-for-google-interview"
 category: "interview-questions"
 excerpt: "A practical Google interview prep plan covering coding, system design, behavioral googliness, and product sense—plus how to rehearse out loud with Parker."

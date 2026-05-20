@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Why Do You Want to Work Here"'
-date: "2025-05-19"
+date: "2022-07-25"
 slug: "how-to-answer-why-do-you-want-to-work-here"
 category: "interview-questions"
 excerpt: "Connect company specifics, role scope, and your track record—without generic praise or desperation."

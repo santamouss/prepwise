@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "What Makes You Unique"'
-date: "2025-05-19"
+date: "2025-08-17"
 slug: "how-to-answer-what-makes-you-unique"
 category: "interview-questions"
 excerpt: "Stand out with a specific combination of skills and proof—not a generic claim that you are a hard worker."

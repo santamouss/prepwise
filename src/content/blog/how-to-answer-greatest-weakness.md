@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "What Is Your Greatest Weakness"'
-date: "2025-05-19"
+date: "2022-05-27"
 slug: "how-to-answer-greatest-weakness"
 category: "interview-questions"
 excerpt: "A real weakness, proof you are improving it, and a sample answer that does not sound like a humble brag."

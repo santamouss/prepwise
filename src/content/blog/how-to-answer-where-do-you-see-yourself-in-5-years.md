@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "Where Do You See Yourself in 5 Years"'
-date: "2025-05-19"
+date: "2023-11-28"
 slug: "how-to-answer-where-do-you-see-yourself-in-5-years"
 category: "interview-questions"
 excerpt: "Show ambition aligned with the role and company—without overpromising a title or sounding like you will leave in six months."

@@ -1,6 +1,6 @@
 ---
 title: 'How to Prepare for a Business Development Representative Interview'
-date: "2025-05-19"
+date: "2023-08-28"
 slug: "how-to-prepare-for-bdr-interview"
 category: "interview-questions"
 excerpt: "BDR and SDR interviews test grit, process, and communication—not just enthusiasm. Use this three-week plan with pitch drills, objection handling, and role-play prep."

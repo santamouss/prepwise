@@ -1,6 +1,6 @@
 ---
 title: "How to Practice for an Interview Alone"
-date: "2025-05-19"
+date: "2022-09-26"
 slug: "how-to-practice-for-an-interview-alone"
 category: "interview-questions"
 excerpt: "You do not need a partner to prepare well. Use a solo prep system—story bank, timed drills, recording, and AI voice mocks—to simulate real interview pressure."

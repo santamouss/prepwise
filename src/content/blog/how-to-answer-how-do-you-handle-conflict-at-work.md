@@ -1,6 +1,6 @@
 ---
 title: 'How to Answer "How Do You Handle Conflict at Work"'
-date: "2025-05-19"
+date: "2025-10-10"
 slug: "how-to-answer-how-do-you-handle-conflict-at-work"
 category: "interview-questions"
 excerpt: "Show you de-escalate, focus on interests not personalities, and follow through—without pretending you never disagree."

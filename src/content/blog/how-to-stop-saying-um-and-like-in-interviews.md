@@ -1,6 +1,6 @@
 ---
 title: "How to Stop Saying Um and Like in Interviews"
-date: "2025-05-19"
+date: "2024-01-20"
 slug: "how-to-stop-saying-um-and-like-in-interviews"
 category: "interview-questions"
 excerpt: "Filler words spike under stress—but they are fixable. Use pause drills, scripted bridges, and voice feedback to sound clear and confident in real interviews."

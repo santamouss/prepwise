@@ -1,6 +1,6 @@
 ---
 title: "How to Answer “Tell Me About Yourself” in an Interview"
-date: "2026-05-12"
+date: "2025-01-20"
 slug: tell-me-about-yourself-interview-answer
 category: "Behavioral"
 excerpt: "A present → past → future framework, weak vs strong examples, and how to practice the opener so it sounds natural—not memorized."

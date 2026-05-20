@@ -1,6 +1,6 @@
 ---
 title: "How to Follow Up After a Job Interview"
-date: "2025-05-19"
+date: "2024-03-28"
 slug: "how-to-follow-up-after-a-job-interview"
 category: "interview-questions"
 excerpt: "When to send a thank-you email after an interview, what to write, what to avoid, and how to follow up without sounding pushy—or disappearing."
