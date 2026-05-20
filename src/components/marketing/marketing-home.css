@@ -99,6 +99,7 @@
   align-items: center;
   justify-content: space-between;
   height: 64px;
+  position: relative;
 }
 
 .parker-marketing .pk-logo {
@@ -108,6 +109,41 @@
   font-weight: 600;
   font-size: 16px;
   letter-spacing: -0.02em;
+}
+
+.parker-marketing .pk-logo-img {
+  height: 22px;
+}
+
+.parker-marketing .pk-logo-img-lg {
+  height: 44px;
+}
+
+/* Desktop header: logo left, nav centered, CTAs right */
+@media (min-width: 641px) {
+  .parker-marketing .pk-header-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    height: 80px;
+  }
+
+  .parker-marketing .pk-header-logo {
+    justify-self: start;
+  }
+
+  .parker-marketing .pk-nav {
+    justify-self: center;
+  }
+
+  .parker-marketing .pk-header-cta {
+    justify-self: end;
+    gap: 8px;
+  }
+
+  .parker-marketing .pk-menu-toggle {
+    display: none;
+  }
 }
 
 .parker-marketing .pk-logo-mark {
@@ -861,12 +897,14 @@
 }
 
 .parker-marketing .pk-price {
+  --pk-price-pad: 28px;
   border: 1px solid var(--pk-line);
   border-radius: var(--pk-radius-lg);
-  padding: 28px;
+  padding: var(--pk-price-pad);
   background: #fff;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .parker-marketing .pk-price-featured {
@@ -876,7 +914,6 @@
 
 .parker-marketing .pk-price-recommended {
   position: relative;
-  padding-top: 36px;
 }
 
 @media (min-width: 961px) {
@@ -887,10 +924,7 @@
 }
 
 .parker-marketing .pk-price-ribbon {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  margin: calc(-1 * var(--pk-price-pad)) calc(-1 * var(--pk-price-pad)) 12px;
   text-align: center;
   font-size: 11.5px;
   font-weight: 600;
@@ -905,9 +939,7 @@
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  text-align: center;
 }
 
 .parker-marketing .pk-price-tag {
@@ -944,6 +976,7 @@
   font-weight: 600;
   letter-spacing: -0.025em;
   margin: 6px 0 4px;
+  text-align: center;
 }
 
 .parker-marketing .pk-price-billed {
@@ -1092,8 +1125,6 @@
   color: var(--pk-ink-700);
   width: 40px;
   height: 40px;
-  display: grid;
-  place-items: center;
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -1197,18 +1228,24 @@
 @media (max-width: 640px) {
   /* Header & Navigation */
   .parker-marketing .pk-nav,
-  .parker-marketing .pk-sign-in,
-  .parker-marketing .pk-header-cta .pk-btn {
+  .parker-marketing .pk-header-cta {
     display: none;
   }
   .parker-marketing .pk-menu-toggle {
     display: grid;
+    place-items: center;
   }
   .parker-marketing .pk-mobile-menu {
     display: block;
   }
   .parker-marketing .pk-header-inner {
+    display: flex;
+    justify-content: space-between;
     height: 56px;
+  }
+
+  .parker-marketing .pk-header-logo .pk-logo-img-lg {
+    height: 22px;
   }
   .parker-marketing .pk-container {
     padding: 0 16px;
@@ -1322,27 +1359,82 @@
     border-bottom: none;
   }
 
-  /* Pricing */
-  .parker-marketing .pk-pricing-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  /* Pricing — compact cards on small screens */
+  .parker-marketing #pricing.pk-section {
+    padding-top: 40px;
+    padding-bottom: 40px;
   }
-  .parker-marketing .pk-price {
-    padding: 20px;
+  .parker-marketing #pricing .pk-section-head {
+    margin-bottom: 28px;
   }
-  .parker-marketing .pk-price-recommended {
-    padding-top: 20px;
-    transform: none;
-  }
-  .parker-marketing .pk-price-ribbon {
-    padding: 6px 10px;
-    font-size: 10px;
-  }
-  .parker-marketing .pk-price-amount {
-    font-size: 28px;
+  .parker-marketing .pk-pricing-toggle-wrap {
+    margin-bottom: 24px;
   }
   .parker-marketing .pk-pricing-toggle {
     min-width: 100%;
+  }
+  .parker-marketing .pk-pricing-toggle-option {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  .parker-marketing .pk-pricing-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .parker-marketing .pk-price {
+    --pk-price-pad: 16px;
+    border-radius: var(--pk-radius);
+  }
+  .parker-marketing .pk-price-recommended {
+    transform: none;
+  }
+  .parker-marketing .pk-price-ribbon {
+    margin-bottom: 10px;
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  .parker-marketing .pk-price-name {
+    font-size: 13px;
+    margin-bottom: 4px;
+  }
+  .parker-marketing .pk-price-amount-shell {
+    min-height: 48px;
+    margin-bottom: 4px;
+  }
+  .parker-marketing .pk-price-amount {
+    font-size: 24px;
+    margin: 2px 0 0;
+  }
+  .parker-marketing .pk-price-per {
+    font-size: 13px;
+  }
+  .parker-marketing .pk-price-features {
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .parker-marketing .pk-price-features li {
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+  .parker-marketing .pk-price-check {
+    width: 14px;
+    height: 14px;
+    margin-top: 2px;
+  }
+  .parker-marketing .pk-price .pk-btn {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13.5px;
+    border-radius: 8px;
+  }
+  .parker-marketing .pk-pricing-cta .pk-btn {
+    height: 40px;
+  }
+  .parker-marketing .pk-pricing-note {
+    margin-top: 10px;
+    font-size: 12px;
   }
 
   /* Recruiter Section */
@@ -1421,8 +1513,10 @@
     padding: 0 12px;
   }
   .parker-marketing .pk-step,
-  .parker-marketing .pk-feature,
+  .parker-marketing .pk-feature {
+    padding: 14px;
+  }
   .parker-marketing .pk-price {
-    padding: 16px;
+    --pk-price-pad: 14px;
   }
 }

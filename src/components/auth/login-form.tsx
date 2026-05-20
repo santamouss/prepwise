@@ -17,8 +17,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { getPostLoginPath, getRegisterHref } from "@/lib/auth/post-login-redirect";
+import { MARKETING_HOME } from "@/components/marketing/marketing-links";
 import { createClient } from "@/lib/supabase/client";
-import { Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -107,8 +108,8 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="justify-center">
-        <p className="text-sm text-muted-foreground">
+      <CardFooter className="flex flex-col items-center gap-3">
+        <p className="text-center text-sm text-muted-foreground">
           {t("auth.noAccount")}{" "}
           <Link
             href={getRegisterHref(redirect, autoStart)}
@@ -117,6 +118,13 @@ export function LoginForm() {
             {t("auth.signUp")}
           </Link>
         </p>
+        <Link
+          href={MARKETING_HOME}
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          {t("auth.backToHome")}
+        </Link>
       </CardFooter>
     </Card>
   );

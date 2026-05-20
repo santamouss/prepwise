@@ -31,15 +31,21 @@ function CheckIcon() {
   );
 }
 
-function Logo({ showWordmark = true }: { showWordmark?: boolean }) {
+function Logo({
+  showWordmark = true,
+  large = false,
+}: {
+  showWordmark?: boolean;
+  large?: boolean;
+}) {
   return (
     <span className="pk-logo">
       <Image
         src="/images/marketing/parker-logo.png"
         alt=""
-        width={120}
-        height={28}
-        className="h-[22px] w-auto"
+        width={large ? 240 : 120}
+        height={large ? 56 : 28}
+        className={large ? "pk-logo-img-lg w-auto" : "pk-logo-img w-auto"}
         priority
       />
       {showWordmark ? <span className="sr-only">ParkerHero</span> : null}
@@ -54,8 +60,8 @@ export function ParkerHeroHome() {
     <div className="parker-marketing min-h-screen">
       <header className="pk-header">
         <div className="pk-container pk-header-inner">
-          <Link href="/" className="pk-logo" aria-label="ParkerHero home">
-            <Logo />
+          <Link href="/" className="pk-logo pk-header-logo" aria-label="ParkerHero home">
+            <Logo large />
           </Link>
           <nav className="pk-nav" aria-label="Primary">
             <Link href="#how">How it works</Link>
