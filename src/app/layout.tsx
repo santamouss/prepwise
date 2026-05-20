@@ -16,14 +16,14 @@ const inter = Inter({
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "sans-serif"],
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://parker.app";
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://parkerhero.com";
 
 const defaultTitle = "Parker – AI Interview Practice";
 const defaultDescription =
   "Practice interviews with AI voice coaching and get instant feedback";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(baseUrl),
   title: {
     default: defaultTitle,
     template: "%s | Parker",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     "interview feedback",
   ],
   alternates: {
-    canonical: siteUrl,
+    canonical: baseUrl,
   },
   openGraph: {
     type: "website",
@@ -52,10 +52,10 @@ export const metadata: Metadata = {
     siteName: "Parker",
     title: defaultTitle,
     description: defaultDescription,
-    url: siteUrl,
+    url: baseUrl,
     images: [
       {
-        url: `${siteUrl}/images/marketing/hero-screenshots.webp`,
+        url: `${baseUrl}/images/marketing/hero-screenshots.webp`,
         width: 1920,
         height: 960,
         alt: "Parker – AI Interview Practice",
@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: defaultTitle,
     description: defaultDescription,
-    images: [`${siteUrl}/images/marketing/hero-screenshots.webp`],
+    images: [`${baseUrl}/images/marketing/hero-screenshots.webp`],
   },
 };
 
