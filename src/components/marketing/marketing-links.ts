@@ -1,4 +1,6 @@
 export const MARKETING_HOME = "/";
+export const MARKETING_PRIVACY = "/privacy";
+export const MARKETING_TERMS = "/terms";
 export const MARKETING_LOGIN = "/login";
 /** Primary CTA: practice setup (login required only when starting a session). */
 export const MARKETING_PRACTICE = "/practice";

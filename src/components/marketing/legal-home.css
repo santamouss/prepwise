@@ -1,0 +1,243 @@
+/* ParkerHero legal pages — extends .parker-marketing */
+.parker-legal {
+  background: linear-gradient(180deg, var(--pk-bg-soft) 0%, var(--pk-bg) 240px);
+}
+
+.parker-legal .pk-legal-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 72px;
+}
+
+.parker-legal .pk-legal-header .pk-logo-img-lg {
+  height: 36px;
+}
+
+.parker-legal .pk-legal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.parker-legal .pk-legal-main {
+  padding: 48px 0 72px;
+}
+
+.parker-legal .pk-legal-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  max-width: 900px;
+}
+
+.parker-legal .pk-legal-toc {
+  position: sticky;
+  top: 96px;
+}
+
+.parker-legal .pk-legal-toc-label {
+  margin: 0 0 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pk-ink-400);
+}
+
+.parker-legal .pk-legal-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.parker-legal .pk-legal-toc a {
+  display: block;
+  padding: 6px 0;
+  font-size: 13.5px;
+  color: var(--pk-ink-500);
+  border-left: 2px solid transparent;
+  padding-left: 12px;
+  margin-left: -12px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.parker-legal .pk-legal-toc a:hover {
+  color: var(--pk-ink-900);
+}
+
+.parker-legal .pk-legal-article {
+  max-width: 720px;
+}
+
+.parker-legal .pk-legal-article-head {
+  margin-bottom: 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-legal .pk-legal-article-head h1 {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin: 0 0 12px;
+}
+
+.parker-legal .pk-legal-updated {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--pk-ink-400);
+}
+
+.parker-legal .pk-legal-intro {
+  margin: 20px 0 0;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--pk-ink-500);
+}
+
+.parker-legal .pk-legal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+}
+
+.parker-legal .pk-legal-section {
+  scroll-margin-top: 96px;
+}
+
+.parker-legal .pk-legal-section h2 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+  color: var(--pk-ink-900);
+}
+
+.parker-legal .pk-legal-section p {
+  margin: 0 0 14px;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--pk-ink-700);
+}
+
+.parker-legal .pk-legal-section p:last-child {
+  margin-bottom: 0;
+}
+
+.parker-legal .pk-legal-section ul {
+  margin: 0 0 14px;
+  padding-left: 1.25rem;
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--pk-ink-700);
+}
+
+.parker-legal .pk-legal-section ul:last-child {
+  margin-bottom: 0;
+}
+
+.parker-legal .pk-legal-section li {
+  margin-bottom: 8px;
+}
+
+.parker-legal .pk-legal-section li:last-child {
+  margin-bottom: 0;
+}
+
+.parker-legal .pk-legal-contact {
+  margin-top: 16px;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--pk-ink-700);
+}
+
+.parker-legal .pk-legal-contact a {
+  color: var(--pk-blue);
+}
+
+.parker-legal .pk-legal-contact a:hover {
+  color: var(--pk-blue-600);
+}
+
+.parker-legal .pk-legal-footer .pk-footer-nav a[aria-current="page"] {
+  color: var(--pk-ink-700);
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .parker-legal .pk-legal-layout {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    max-width: none;
+  }
+
+  .parker-legal .pk-legal-toc {
+    position: static;
+    padding: 16px 18px;
+    background: #fff;
+    border: 1px solid var(--pk-line-soft);
+    border-radius: var(--pk-radius);
+  }
+
+  .parker-legal .pk-legal-toc ol {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+  }
+
+  .parker-legal .pk-legal-toc a {
+    border-left: none;
+    padding-left: 0;
+    margin-left: 0;
+    font-size: 13px;
+  }
+
+  .parker-legal .pk-legal-article {
+    max-width: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .parker-legal .pk-legal-header-inner {
+    height: 56px;
+  }
+
+  .parker-legal .pk-legal-header .pk-logo-img-lg {
+    height: 22px;
+  }
+
+  .parker-legal .pk-legal-header-actions .pk-sign-in {
+    display: none;
+  }
+
+  .parker-legal .pk-legal-main {
+    padding: 32px 0 56px;
+  }
+
+  .parker-legal .pk-legal-article-head {
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+  }
+
+  .parker-legal .pk-legal-article-head h1 {
+    font-size: 28px;
+  }
+
+  .parker-legal .pk-legal-intro {
+    font-size: 15px;
+  }
+
+  .parker-legal .pk-legal-body {
+    gap: 28px;
+  }
+
+  .parker-legal .pk-legal-toc ol {
+    grid-template-columns: 1fr;
+  }
+}

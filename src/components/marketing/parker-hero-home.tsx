@@ -7,6 +7,8 @@ import {
   MARKETING_HIRING_REGISTER,
   MARKETING_LOGIN,
   MARKETING_PRACTICE_REGISTER,
+  MARKETING_PRIVACY,
+  MARKETING_TERMS,
 } from "./marketing-links";
 import { PricingSection } from "./pricing-section";
 import "./marketing-home.css";
@@ -432,11 +434,11 @@ export function ParkerHeroHome() {
             <Logo />
           </Link>
           <nav className="pk-footer-nav" aria-label="Footer">
-            <Link href="#">Privacy</Link>
-            <Link href="#">Terms</Link>
-            <Link href="#">Contact</Link>
+            <Link href={MARKETING_PRIVACY}>Privacy</Link>
+            <Link href={MARKETING_TERMS}>Terms</Link>
+            <a href="mailto:info@parkerhero.com">Contact</a>
           </nav>
-          <div>© {new Date().getFullYear()} ParkerHero, Inc.</div>
+          <div>© {new Date().getFullYear()} NeuroWave Labs LLC</div>
         </div>
       </footer>
     </div>
