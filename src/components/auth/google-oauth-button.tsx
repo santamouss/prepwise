@@ -52,6 +52,7 @@ export function GoogleOAuthButton() {
       const next = getOAuthNextParam(
         searchParams.get("redirect"),
         searchParams.get("autoStart"),
+        searchParams.get("next"),
       );
       const callbackUrl = `${getOAuthCallbackUrl()}?next=${encodeURIComponent(next)}`;
       const { error } = await supabase.auth.signInWithOAuth({

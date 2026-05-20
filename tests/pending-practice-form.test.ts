@@ -11,10 +11,10 @@ import {
 } from "../src/lib/auth/post-login-redirect";
 
 describe("pending-practice-form helpers", () => {
-  it("buildPracticeLoginUrl includes redirect and autoStart", () => {
+  it("buildPracticeLoginUrl includes next, redirect, and autoStart", () => {
     assert.equal(
       buildPracticeLoginUrl(),
-      "/login?redirect=%2Fpractice&autoStart=true",
+      "/login?next=%2Fpractice&redirect=%2Fpractice&autoStart=true",
     );
   });
 });
@@ -35,8 +35,12 @@ describe("post-login-redirect", () => {
   it("builds register href with query params", () => {
     assert.equal(
       getRegisterHref("/practice", "true"),
-      "/register?redirect=%2Fpractice&autoStart=true",
+      "/register?redirect=%2Fpractice&next=%2Fpractice&autoStart=true",
     );
+  });
+
+  it("getPostLoginPath accepts next param", () => {
+    assert.equal(getPostLoginPath(null, "true", "/practice"), "/practice?autoStart=true");
   });
 });
 

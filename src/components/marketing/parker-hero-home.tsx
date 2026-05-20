@@ -7,10 +7,10 @@ import {
   MARKETING_BLOG,
   MARKETING_HIRING_REGISTER,
   MARKETING_LOGIN,
-  MARKETING_PRACTICE_REGISTER,
   MARKETING_PRIVACY,
   MARKETING_TERMS,
 } from "./marketing-links";
+import { PracticeCtaLink } from "./practice-cta-link";
 import { PricingSection } from "./pricing-section";
 import "./marketing-home.css";
 
@@ -76,9 +76,9 @@ export function ParkerHeroHome() {
             <Link href={MARKETING_LOGIN} className="pk-sign-in">
               Sign in
             </Link>
-            <Link href={MARKETING_PRACTICE_REGISTER} className="pk-btn pk-btn-primary pk-btn-sm">
+            <PracticeCtaLink className="pk-btn pk-btn-primary pk-btn-sm">
               Start free practice
-            </Link>
+            </PracticeCtaLink>
           </div>
           {/* Mobile hamburger menu button */}
           <button
@@ -112,13 +112,12 @@ export function ParkerHeroHome() {
                 Sign in
               </Link>
             </nav>
-            <Link
-              href={MARKETING_PRACTICE_REGISTER}
+            <PracticeCtaLink
               className="pk-btn pk-btn-primary pk-mobile-cta"
               onClick={() => setMenuOpen(false)}
             >
               Start free practice
-            </Link>
+            </PracticeCtaLink>
           </div>
         )}
       </header>
@@ -139,9 +138,9 @@ export function ParkerHeroHome() {
               real thing.
             </p>
             <div className="pk-hero-cta">
-              <Link href={MARKETING_PRACTICE_REGISTER} className="pk-btn pk-btn-primary">
+              <PracticeCtaLink className="pk-btn pk-btn-primary">
                 Start free practice
-              </Link>
+              </PracticeCtaLink>
               <Link href={MARKETING_HIRING_REGISTER} className="pk-btn pk-btn-secondary">
                 I&apos;m hiring candidates
               </Link>
@@ -424,9 +423,9 @@ export function ParkerHeroHome() {
         <div className="pk-container">
           <h2>Ready for your next interview?</h2>
           <p>Start with a free practice session and get feedback from Parker in minutes.</p>
-          <Link href={MARKETING_PRACTICE_REGISTER} className="pk-btn pk-btn-primary">
+          <PracticeCtaLink className="pk-btn pk-btn-primary">
             Start free practice
-          </Link>
+          </PracticeCtaLink>
         </div>
       </section>
 

@@ -1,7 +1,10 @@
 import type { PracticeDuration, PracticeInterviewType } from "@/lib/practice/constants";
 import type { PracticeMode } from "@/lib/practice/practice-mode";
 
-export const PENDING_PRACTICE_FORM_STORAGE_KEY = "parkerhero:pending-practice-form";
+/** sessionStorage key for practice setup saved before auth */
+export const PENDING_PRACTICE_FORM_STORAGE_KEY = "parker_practice_intent";
+
+const LEGACY_PENDING_PRACTICE_FORM_STORAGE_KEY = "parkerhero:pending-practice-form";
 
 export type PendingPracticeForm = {
   role: string;
@@ -47,10 +50,27 @@ export function savePendingPracticeForm(form: PendingPracticeForm): void {
   }
 }
 
-export function loadPendingPracticeForm(): PendingPracticeForm | null {
+function readPendingPracticeFormRaw(): string | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(PENDING_PRACTICE_FORM_STORAGE_KEY);
+    if (raw) return raw;
+    const legacy = sessionStorage.getItem(LEGACY_PENDING_PRACTICE_FORM_STORAGE_KEY);
+    if (legacy) {
+      sessionStorage.setItem(PENDING_PRACTICE_FORM_STORAGE_KEY, legacy);
+      sessionStorage.removeItem(LEGACY_PENDING_PRACTICE_FORM_STORAGE_KEY);
+      return legacy;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+export function loadPendingPracticeForm(): PendingPracticeForm | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = readPendingPracticeFormRaw();
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     return isPendingPracticeForm(parsed) ? parsed : null;
@@ -72,10 +92,19 @@ export function hasPendingPracticeForm(): boolean {
   return loadPendingPracticeForm() !== null;
 }
 
-export function buildPracticeLoginUrl(): string {
-  const params = new URLSearchParams({
+/** Query params for login/register when returning to practice after auth */
+export function buildPracticeAuthQueryParams(): URLSearchParams {
+  return new URLSearchParams({
+    next: "/practice",
     redirect: "/practice",
     autoStart: "true",
   });
-  return `/login?${params.toString()}`;
+}
+
+export function buildPracticeLoginUrl(): string {
+  return `/login?${buildPracticeAuthQueryParams().toString()}`;
+}
+
+export function buildPracticeRegisterUrl(): string {
+  return `/register?${buildPracticeAuthQueryParams().toString()}`;
 }

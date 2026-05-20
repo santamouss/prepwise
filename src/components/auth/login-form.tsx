@@ -28,6 +28,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
+  const next = searchParams.get("next");
   const autoStart = searchParams.get("autoStart");
   const { toast } = useToast();
   const { t } = useAppLocale();
@@ -112,7 +113,7 @@ export function LoginForm() {
         <p className="text-center text-sm text-muted-foreground">
           {t("auth.noAccount")}{" "}
           <Link
-            href={getRegisterHref(redirect, autoStart)}
+            href={getRegisterHref(redirect, autoStart, next)}
             className="text-primary hover:underline"
           >
             {t("auth.signUp")}

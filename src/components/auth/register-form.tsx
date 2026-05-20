@@ -16,7 +16,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { getPostLoginPath } from "@/lib/auth/post-login-redirect";
+import {
+  getPostLoginPath,
+  resolveAuthRedirect,
+} from "@/lib/auth/post-login-redirect";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
@@ -26,8 +29,11 @@ import { useState } from "react";
 export function RegisterForm() {
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect");
+  const next = searchParams.get("next");
   const autoStart = searchParams.get("autoStart");
-  const postAuthPath = getPostLoginPath(redirect, autoStart);
+  const authRedirect = resolveAuthRedirect(redirect, next);
+  const isPracticeSignup = authRedirect === "/practice";
+  const postAuthPath = getPostLoginPath(redirect, autoStart, next);
   const { toast } = useToast();
   const { t } = useAppLocale();
   const [loading, setLoading] = useState(false);
@@ -99,9 +105,15 @@ export function RegisterForm() {
       <CardHeader className="text-center">
         <ParkerLogo height={128} className="mx-auto mb-2" />
         <CardTitle className="font-heading text-2xl">
-          {t("auth.createAccount")}
+          {isPracticeSignup
+            ? "Create your account to start practicing"
+            : t("auth.createAccount")}
         </CardTitle>
-        <CardDescription>{t("auth.createAccountSubtitle")}</CardDescription>
+        <CardDescription>
+          {isPracticeSignup
+            ? "Create your free account and start practicing in minutes"
+            : t("auth.createAccountSubtitle")}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <GoogleOAuthButton />
@@ -147,9 +159,9 @@ export function RegisterForm() {
           {t("auth.haveAccount")}{" "}
           <Link
             href={
-              redirect || autoStart
+              authRedirect || autoStart
                 ? `/login?${new URLSearchParams({
-                    ...(redirect ? { redirect } : {}),
+                    ...(authRedirect ? { redirect: authRedirect, next: authRedirect } : {}),
                     ...(autoStart === "true" ? { autoStart: "true" } : {}),
                   }).toString()}`
                 : "/login"

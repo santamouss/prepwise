@@ -139,8 +139,8 @@ function PracticePageContent() {
     enabled: Boolean(user),
   });
   const autoStartRequested = searchParams.get("autoStart") === "true";
-  const autoStartAttemptedRef = useRef(false);
-  const autoStartQueryCleanedRef = useRef(false);
+  const intentHandledRef = useRef(false);
+  const [showRestoredBanner, setShowRestoredBanner] = useState(false);
 
   const [role, setRole] = useState("");
   const [company, setCompany] = useState("");
@@ -291,14 +291,12 @@ function PracticePageContent() {
   );
 
   useEffect(() => {
-    if (authLoading || !autoStartRequested || !user || autoStartAttemptedRef.current) {
-      return;
-    }
+    if (authLoading || intentHandledRef.current) return;
 
     const pending = loadPendingPracticeForm();
     if (!pending) return;
 
-    autoStartAttemptedRef.current = true;
+    intentHandledRef.current = true;
     applyPendingToForm(pending, {
       setRole,
       setCompany,
@@ -311,18 +309,43 @@ function PracticePageContent() {
       setPracticeMode,
       setShowContext,
     });
+    clearPendingPracticeForm();
 
-    void startPracticeSession(pending).catch((error) => {
-      autoStartAttemptedRef.current = false;
-      const message =
-        error instanceof Error ? error.message : "Could not start practice. Please try again.";
-      toast({
-        title: "Could not start voice practice",
-        description: message,
-        variant: "destructive",
+    if (user && autoStartRequested) {
+      setShowRestoredBanner(false);
+      if (searchParams.has("autoStart")) {
+        safeReplace(
+          router,
+          pathname,
+          searchParams,
+          stripSearchParams(pathname, searchParams, ["autoStart"]),
+        );
+      }
+      void startPracticeSession(pending).catch((error) => {
+        intentHandledRef.current = false;
+        setShowRestoredBanner(true);
+        const message =
+          error instanceof Error ? error.message : "Could not start practice. Please try again.";
+        toast({
+          title: "Could not start voice practice",
+          description: message,
+          variant: "destructive",
+        });
       });
-    });
-  }, [authLoading, autoStartRequested, user, startPracticeSession, toast]);
+      return;
+    }
+
+    setShowRestoredBanner(true);
+  }, [
+    authLoading,
+    autoStartRequested,
+    user,
+    startPracticeSession,
+    toast,
+    router,
+    pathname,
+    searchParams,
+  ]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -414,6 +437,25 @@ function PracticePageContent() {
             skills before the real thing.
           </p>
         </div>
+
+        {showRestoredBanner && (
+          <div
+            className="mb-4 flex items-start gap-3 rounded-lg border border-primary/25 bg-primary/5 px-4 py-3 text-sm"
+            role="status"
+          >
+            <p className="flex-1 text-foreground">
+              We saved your practice setup. Ready to start?
+            </p>
+            <button
+              type="button"
+              className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setShowRestoredBanner(false)}
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         <div
           className={cn(
