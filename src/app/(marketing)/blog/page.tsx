@@ -1,65 +1,33 @@
-import { BlogCardThumbnail } from "@/components/marketing/blog-card-thumbnail";
+import { BlogIndexClient, type BlogIndexPost } from "@/components/marketing/blog-index-client";
 import { BlogMarketingShell } from "@/components/marketing/blog-marketing-shell";
-import { formatBlogDate, getAllPostSummaries } from "@/lib/blog/posts";
+import { estimateReadingTime } from "@/lib/blog/reading-time";
+import { getAllPosts } from "@/lib/blog/posts";
 import { MARKETING_BLOG } from "@/components/marketing/marketing-links";
 import type { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: {
-    absolute: "Blog | ParkerHero",
+    absolute: "Interview Prep Blog | ParkerHero",
   },
   description:
-    "Practical interview prep guides, answer frameworks, and coaching tips from ParkerHero.",
+    "Guides, tips, and sample answers to help you practice interviews and land the job.",
   alternates: {
     canonical: MARKETING_BLOG,
   },
 };
 
 export default function BlogIndexPage() {
-  const posts = getAllPostSummaries();
+  const posts: BlogIndexPost[] = getAllPosts().map((post) => {
+    const { content, ...summary } = post;
+    return {
+      ...summary,
+      readingTimeMinutes: estimateReadingTime(content),
+    };
+  });
 
   return (
     <BlogMarketingShell activeNav="blog">
-      <div className="pk-container">
-        <header className="pk-blog-hero">
-          <h1>Interview prep, without the fluff</h1>
-          <p>
-            Frameworks, examples, and practice strategies you can use before your next
-            conversation with a hiring manager—or with Parker.
-          </p>
-        </header>
-
-        {posts.length === 0 ? (
-          <div className="pk-blog-empty">
-            <h2>No posts yet</h2>
-            <p>Check back soon for interview guides and coaching tips.</p>
-          </div>
-        ) : (
-          <div className="pk-blog-grid">
-            {posts.map((post) => (
-              <article key={post.slug} className="pk-blog-card">
-                <Link href={`/blog/${post.slug}`} className="pk-blog-card-thumb-link">
-                  <BlogCardThumbnail slug={post.slug} title={post.title} />
-                </Link>
-                <div className="pk-blog-card-body">
-                  <div className="pk-blog-card-meta">
-                    <span className="pk-blog-card-category">{post.category}</span>
-                    <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
-                  </div>
-                  <h2>
-                    <Link href={`/blog/${post.slug}`}>{post.title}</Link>
-                  </h2>
-                  <p className="pk-blog-card-excerpt">{post.excerpt}</p>
-                  <Link href={`/blog/${post.slug}`} className="pk-blog-card-link">
-                    Read article →
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
+      <BlogIndexClient posts={posts} />
     </BlogMarketingShell>
   );
 }

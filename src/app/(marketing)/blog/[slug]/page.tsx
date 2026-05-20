@@ -1,7 +1,14 @@
-import { BlogPostContent } from "@/components/marketing/blog-post-content";
+import { BlogArticleHeader } from "@/components/marketing/blog-article-header";
+import { BlogBottomBanner } from "@/components/marketing/blog-bottom-banner";
 import { BlogMarketingShell } from "@/components/marketing/blog-marketing-shell";
-import { MARKETING_BLOG, MARKETING_PRACTICE } from "@/components/marketing/marketing-links";
-import { formatBlogDate, getAllPostSlugs, getPostBySlug } from "@/lib/blog/posts";
+import { BlogPostContent } from "@/components/marketing/blog-post-content";
+import { BlogPostSidebar } from "@/components/marketing/blog-post-sidebar";
+import { BlogRelatedPosts } from "@/components/marketing/blog-related-posts";
+import { BlogShareButtons } from "@/components/marketing/blog-share-buttons";
+import { extractHeadingsFromMarkdown, stripTrailingParkerCta } from "@/lib/blog/headings";
+import { estimateReadingTime } from "@/lib/blog/reading-time";
+import { MARKETING_BLOG } from "@/components/marketing/marketing-links";
+import { getAllPostSlugs, getPostBySlug } from "@/lib/blog/posts";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -47,31 +54,43 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound();
   }
 
+  const readingTimeMinutes = estimateReadingTime(post.content);
+  const articleBody = stripTrailingParkerCta(post.content);
+  const headings = extractHeadingsFromMarkdown(articleBody);
+
   return (
     <BlogMarketingShell activeNav="blog">
-      <article className="pk-container pk-blog-post-wrap">
+      <div className="pk-container pk-blog-post-layout">
         <Link href={MARKETING_BLOG} className="pk-blog-back">
           ← Back to blog
         </Link>
 
-        <header className="pk-blog-post-head">
-          <div className="pk-blog-card-meta">
-            <span className="pk-blog-card-category">{post.category}</span>
-            <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
+        <div className="pk-blog-post-grid">
+          <div className="pk-blog-post-main">
+            <BlogArticleHeader
+              category={post.category}
+              title={post.title}
+              author={post.author}
+              date={post.date}
+              readingTimeMinutes={readingTimeMinutes}
+            />
+
+            <BlogPostContent slug={post.slug} title={post.title} content={post.content} />
+
+            <BlogBottomBanner />
+
+            <div className="pk-blog-post-share-row">
+              <BlogShareButtons title={post.title} variant="inline" />
+            </div>
           </div>
-          <h1>{post.title}</h1>
-          <p className="pk-blog-post-byline">By {post.author}</p>
-        </header>
 
-        <BlogPostContent slug={post.slug} title={post.title} content={post.content} />
+          <div className="pk-blog-post-sidebar">
+            <BlogPostSidebar headings={headings} title={post.title} />
+          </div>
+        </div>
 
-        <aside className="pk-blog-cta">
-          <p>Ready to practice? Try a free mock interview with Parker →</p>
-          <Link href={MARKETING_PRACTICE} className="pk-btn pk-btn-primary">
-            Start free practice
-          </Link>
-        </aside>
-      </article>
+        <BlogRelatedPosts currentSlug={post.slug} category={post.category} />
+      </div>
     </BlogMarketingShell>
   );
 }
