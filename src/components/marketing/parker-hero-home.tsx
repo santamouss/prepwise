@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import {
   MARKETING_BLOG,
-  MARKETING_HIRING_REGISTER,
   MARKETING_LOGIN,
   MARKETING_PRIVACY,
   MARKETING_TERMS,
@@ -140,9 +139,6 @@ export function ParkerHeroHome() {
             <div className="pk-hero-cta">
               <Link href="/practice" className="pk-btn pk-btn-primary">
                 Start free practice
-              </Link>
-              <Link href={MARKETING_HIRING_REGISTER} className="pk-btn pk-btn-secondary">
-                I&apos;m hiring candidates
               </Link>
             </div>
             <div className="pk-meta-row">
@@ -401,23 +397,6 @@ export function ParkerHeroHome() {
       </section>
 
       <PricingSection />
-
-      <section className="pk-recruiter" id="recruiter">
-        <div className="pk-container">
-          <div className="pk-recruiter-inner">
-            <div>
-              <h3>Hiring candidates?</h3>
-              <p>
-                Create structured AI interviews, share interview links, and review candidate
-                reports — all in one place.
-              </p>
-            </div>
-            <Link href={MARKETING_HIRING_REGISTER} className="pk-btn pk-btn-secondary">
-              Explore hiring tools →
-            </Link>
-          </div>
-        </div>
-      </section>
 
       <section className="pk-final">
         <div className="pk-container">
