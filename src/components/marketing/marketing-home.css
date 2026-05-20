@@ -712,20 +712,23 @@
 }
 
 .parker-marketing .pk-step-image {
+  position: relative;
   width: 100%;
-}
-
-.parker-marketing .pk-step-image img {
-  width: 100%;
-  height: auto;
+  aspect-ratio: 3 / 2;
   border-radius: 20px;
+  overflow: hidden;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
-  object-fit: contain;
-  display: block;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.parker-marketing .pk-step-card:hover .pk-step-image img {
+.parker-marketing .pk-step-image img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.parker-marketing .pk-step-card:hover .pk-step-image {
   transform: translateY(-2px);
   box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
 }
@@ -1585,6 +1588,9 @@
   }
   .parker-marketing .pk-step-card {
     gap: 20px;
+  }
+  .parker-marketing .pk-step-image {
+    min-height: 240px;
   }
   .parker-marketing .pk-step-text h3 {
     font-size: 20px;

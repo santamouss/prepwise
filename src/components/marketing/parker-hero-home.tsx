@@ -593,7 +593,7 @@ export function ParkerHeroHome() {
             <Link href={MARKETING_TERMS}>Terms</Link>
             <a href="mailto:info@parkerhero.com">Contact</a>
           </nav>
-          <div>© {new Date().getFullYear()} NeuroWave Labs LLC</div>
+          <div>© {new Date().getFullYear()} ParkerHero</div>
         </div>
       </footer>
     </div>
