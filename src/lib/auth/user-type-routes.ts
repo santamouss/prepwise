@@ -1,4 +1,19 @@
+import type { ProfileUserType } from "@/lib/profile-user-type";
+
 export const CANDIDATE_ONLY_PATHS = ["/practice", "/my-sessions", "/progress"] as const;
+
+/** Null/undefined user_type is treated as candidate while onboarding is skipped. */
+export function getEffectiveUserType(
+  userType: ProfileUserType | null | undefined,
+): ProfileUserType {
+  return userType === "recruiter" ? "recruiter" : "candidate";
+}
+
+export function isEffectiveCandidate(
+  userType: ProfileUserType | null | undefined,
+): boolean {
+  return getEffectiveUserType(userType) === "candidate";
+}
 
 export const RECRUITER_ONLY_PREFIXES = [
   "/interviews",

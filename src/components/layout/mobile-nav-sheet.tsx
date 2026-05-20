@@ -77,7 +77,8 @@ export function MobileNavSheet({ open, onOpenChange }: MobileNavSheetProps) {
   const [supportOpen, setSupportOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
-  const isCandidate = profile?.user_type === "candidate";
+  const isCandidate =
+    profile?.user_type === "candidate" || profile?.user_type == null;
   const isOrgLevelPage =
     pathname.startsWith("/organizations") ||
     pathname.startsWith("/org/") ||

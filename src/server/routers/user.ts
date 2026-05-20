@@ -1,10 +1,57 @@
+import { getEffectiveUserType } from "@/lib/auth/user-type-routes";
+import type { ProfileUserType } from "@/lib/profile-user-type";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import type { Context } from "../context";
 import { protectedProcedure, router } from "../trpc";
 
 const userTypeSchema = z.enum(["candidate", "recruiter"]);
 
+/** Default persona for new accounts (onboarding selection skipped). */
+export const DEFAULT_PROFILE_USER_TYPE: ProfileUserType = "candidate";
+
+export async function ensureDefaultProfileUserType(
+  supabase: Context["supabase"],
+  userId: string,
+): Promise<ProfileUserType> {
+  const { data: profile, error } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", userId)
+    .single();
+
+  if (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: error.message,
+    });
+  }
+
+  if (profile?.user_type) {
+    return getEffectiveUserType(profile.user_type);
+  }
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ user_type: DEFAULT_PROFILE_USER_TYPE })
+    .eq("id", userId);
+
+  if (updateError) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: updateError.message,
+    });
+  }
+
+  return DEFAULT_PROFILE_USER_TYPE;
+}
+
 export const userRouter = router({
+  ensureDefaultUserType: protectedProcedure.mutation(async ({ ctx }) => {
+    const userType = await ensureDefaultProfileUserType(ctx.supabase, ctx.user.id);
+    return { userType };
+  }),
+
   setUserType: protectedProcedure
     .input(
       z.object({

@@ -19,6 +19,7 @@ import { PRACTICE_LIMIT_EXCEEDED_MESSAGE } from "@/lib/practice/usage/constants"
 import { getPracticeMonthlyUsage } from "@/lib/practice/usage/get-usage";
 import { canStartPracticeSession } from "@/lib/practice/usage/limits";
 import { getSessionOverallScore, type SessionScoreInsights } from "@/lib/session-score";
+import { isEffectiveCandidate } from "@/lib/auth/user-type-routes";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import type { Context } from "../context";
@@ -68,7 +69,7 @@ async function assertCandidateProfile(supabase: Context["supabase"], userId: str
     .eq("id", userId)
     .single();
 
-  if (profile?.user_type !== "candidate") {
+  if (!profile || !isEffectiveCandidate(profile.user_type)) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Practice features are only available for candidate accounts.",

@@ -177,7 +177,8 @@ export function Sidebar({
     pathname.startsWith("/usage");
 
   const isSettingsActive = pathname.startsWith("/settings");
-  const isCandidate = profile?.user_type === "candidate";
+  const isCandidate =
+    profile?.user_type === "candidate" || profile?.user_type == null;
   const homeHref = isCandidate ? "/dashboard" : "/organizations";
 
   return (

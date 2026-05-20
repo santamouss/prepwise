@@ -160,7 +160,8 @@ export function Header({ sidebarToggle }: { sidebarToggle?: React.ReactNode }) {
   const { profile } = useAuth();
   const { t } = useAppLocale();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const isCandidate = profile?.user_type === "candidate";
+  const isCandidate =
+    profile?.user_type === "candidate" || profile?.user_type == null;
   const SEGMENT_LABELS: Record<string, string> = {
     dashboard: t("header.dashboard"),
     interviews: t("header.interviews"),

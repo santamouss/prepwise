@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/components/auth-provider";
+import { isEffectiveCandidate } from "@/lib/auth/user-type-routes";
 import { CandidateDashboard } from "@/components/dashboard/candidate-dashboard";
 import { RecruiterDashboard } from "@/components/dashboard/recruiter-dashboard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +23,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (profile?.user_type === "candidate") {
+  if (isEffectiveCandidate(profile?.user_type)) {
     return <CandidateDashboard />;
   }
 

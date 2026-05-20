@@ -1,5 +1,6 @@
 import { DashboardShell } from "@/components/layout/sidebar";
 import {
+  getEffectiveUserType,
   isCandidateOnlyPath,
   isRecruiterOnlyPath,
 } from "@/lib/auth/user-type-routes";
@@ -34,25 +35,19 @@ export default async function DashboardLayout({
     .eq("id", user.id)
     .single();
 
+  const effectiveUserType = getEffectiveUserType(profile?.user_type);
+
+  if (pathname) {
+    if (effectiveUserType === "candidate" && isRecruiterOnlyPath(pathname)) {
+      redirect("/dashboard");
+    }
+    if (effectiveUserType === "recruiter" && isCandidateOnlyPath(pathname)) {
+      redirect("/dashboard");
+    }
+  }
+
   const onOnboarding =
     pathname === "/onboarding" || pathname.startsWith("/onboarding/");
-
-  if (!profile?.user_type && !onOnboarding) {
-    redirect("/onboarding");
-  }
-
-  if (profile?.user_type && onOnboarding) {
-    redirect("/dashboard");
-  }
-
-  if (profile?.user_type && pathname) {
-    if (profile.user_type === "candidate" && isRecruiterOnlyPath(pathname)) {
-      redirect("/dashboard");
-    }
-    if (profile.user_type === "recruiter" && isCandidateOnlyPath(pathname)) {
-      redirect("/dashboard");
-    }
-  }
 
   if (onOnboarding) {
     return <>{children}</>;
