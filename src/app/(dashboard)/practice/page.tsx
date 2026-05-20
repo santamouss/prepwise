@@ -17,7 +17,7 @@ import {
   type PracticeMode,
 } from "@/lib/practice/practice-mode";
 import {
-  buildPracticeLoginUrl,
+  buildPracticeRegisterUrl,
   clearPendingPracticeForm,
   loadPendingPracticeForm,
   savePendingPracticeForm,
@@ -366,7 +366,7 @@ function PracticePageContent() {
 
     if (!user) {
       savePendingPracticeForm(payload);
-      safePush(router, pathname, searchParams, buildPracticeLoginUrl());
+      safePush(router, pathname, searchParams, buildPracticeRegisterUrl());
       return;
     }
 
