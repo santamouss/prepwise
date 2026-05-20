@@ -1,4 +1,4 @@
-import { BlogMarkdown } from "@/components/marketing/blog-markdown";
+import { BlogPostContent } from "@/components/marketing/blog-post-content";
 import { BlogMarketingShell } from "@/components/marketing/blog-marketing-shell";
 import { MARKETING_BLOG, MARKETING_PRACTICE } from "@/components/marketing/marketing-links";
 import { formatBlogDate, getAllPostSlugs, getPostBySlug } from "@/lib/blog/posts";
@@ -63,7 +63,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <p className="pk-blog-post-byline">By {post.author}</p>
         </header>
 
-        <BlogMarkdown content={post.content} className="pk-blog-prose" />
+        <BlogPostContent slug={post.slug} title={post.title} content={post.content} />
 
         <aside className="pk-blog-cta">
           <p>Ready to practice? Try a free mock interview with Parker →</p>

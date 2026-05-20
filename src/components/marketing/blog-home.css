@@ -81,8 +81,57 @@
   border: 1px solid var(--pk-line);
   border-radius: var(--pk-radius-lg);
   background: #fff;
-  padding: 24px;
+  padding: 0;
+  overflow: hidden;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.parker-blog .pk-blog-card-thumb-link {
+  display: block;
+  flex-shrink: 0;
+}
+
+.parker-blog .pk-blog-card-thumb,
+.parker-blog .pk-blog-card-thumb-placeholder {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #eef2ff;
+}
+
+.parker-blog .pk-blog-card-thumb-placeholder {
+  display: block;
+}
+
+.parker-blog .pk-blog-card-thumb-image {
+  object-fit: cover;
+  border-radius: var(--pk-radius-lg) var(--pk-radius-lg) 0 0;
+}
+
+.parker-blog .pk-blog-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 24px;
+}
+
+.parker-blog .pk-blog-figure {
+  position: relative;
+  width: 100%;
+  height: 400px;
+  margin-bottom: 32px;
+  border-radius: var(--pk-radius);
+  overflow: hidden;
+  background: #eef2ff;
+}
+
+.parker-blog .pk-blog-figure--middle {
+  margin-top: 32px;
+  margin-bottom: 32px;
+}
+
+.parker-blog .pk-blog-image {
+  object-fit: cover;
 }
 
 .parker-blog .pk-blog-card:hover {
@@ -306,6 +355,16 @@
 }
 
 @media (max-width: 640px) {
+  .parker-blog .pk-blog-figure {
+    height: 220px;
+    margin-bottom: 32px;
+  }
+
+  .parker-blog .pk-blog-figure--middle {
+    margin-top: 32px;
+    margin-bottom: 32px;
+  }
+
   .parker-blog .pk-blog-nav {
     display: none;
   }

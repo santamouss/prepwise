@@ -1,3 +1,4 @@
+import { BlogCardThumbnail } from "@/components/marketing/blog-card-thumbnail";
 import { BlogMarketingShell } from "@/components/marketing/blog-marketing-shell";
 import { formatBlogDate, getAllPostSummaries } from "@/lib/blog/posts";
 import { MARKETING_BLOG } from "@/components/marketing/marketing-links";
@@ -38,17 +39,22 @@ export default function BlogIndexPage() {
           <div className="pk-blog-grid">
             {posts.map((post) => (
               <article key={post.slug} className="pk-blog-card">
-                <div className="pk-blog-card-meta">
-                  <span className="pk-blog-card-category">{post.category}</span>
-                  <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
-                </div>
-                <h2>
-                  <Link href={`/blog/${post.slug}`}>{post.title}</Link>
-                </h2>
-                <p className="pk-blog-card-excerpt">{post.excerpt}</p>
-                <Link href={`/blog/${post.slug}`} className="pk-blog-card-link">
-                  Read article →
+                <Link href={`/blog/${post.slug}`} className="pk-blog-card-thumb-link">
+                  <BlogCardThumbnail slug={post.slug} title={post.title} />
                 </Link>
+                <div className="pk-blog-card-body">
+                  <div className="pk-blog-card-meta">
+                    <span className="pk-blog-card-category">{post.category}</span>
+                    <time dateTime={post.date}>{formatBlogDate(post.date)}</time>
+                  </div>
+                  <h2>
+                    <Link href={`/blog/${post.slug}`}>{post.title}</Link>
+                  </h2>
+                  <p className="pk-blog-card-excerpt">{post.excerpt}</p>
+                  <Link href={`/blog/${post.slug}`} className="pk-blog-card-link">
+                    Read article →
+                  </Link>
+                </div>
               </article>
             ))}
           </div>
