@@ -122,34 +122,53 @@ export function ParkerHeroHome() {
       </header>
 
       <section className="pk-hero">
+        {/* Warm gradient background */}
+        <div className="pk-hero-bg-blend"></div>
+
         <div className="pk-container pk-hero-grid">
-          <div className="pk-animate-in">
+          <div className="pk-hero-content pk-animate-in">
             <span className="pk-eyebrow">
               <span className="pk-eyebrow-dot" aria-hidden />
-              Now with voice interviews
+              AI interview coaching
             </span>
-            <h1>
-              Practice interviews with <span className="pk-accent">Parker</span>, your AI
-              interview coach.
+
+            <h1 className="pk-hero-title">
+              Interview confidence
+              <br />
+              <span className="pk-highlight">starts with practice</span>
             </h1>
+
             <p className="pk-hero-sub">
-              Run realistic voice mock interviews, get instant feedback, and improve before the
-              real thing.
+              Voice-first mock interviews with Parker. Get instant, honest feedback on your answers, delivery, and impact. Practice until you're ready.
             </p>
+
+            <div className="pk-hero-benefits">
+              <div className="pk-benefit-item">
+                <CheckIcon />
+                <span>Realistic voice interviews</span>
+              </div>
+              <div className="pk-benefit-item">
+                <CheckIcon />
+                <span>Honest, actionable feedback</span>
+              </div>
+              <div className="pk-benefit-item">
+                <CheckIcon />
+                <span>Coach Mode for deliberate practice</span>
+              </div>
+            </div>
+
             <div className="pk-hero-cta">
-              <Link href="/practice" className="pk-btn pk-btn-primary">
+              <Link href="/practice" className="pk-btn pk-btn-primary pk-btn-lg">
                 Start free practice
               </Link>
+              <Link href="/practice" className="pk-btn pk-btn-secondary pk-btn-lg">
+                I&apos;m hiring candidates
+              </Link>
             </div>
+
             <div className="pk-meta-row">
-              <span>
-                <CheckIcon />
-                Free to start
-              </span>
-              <span>
-                <CheckIcon />
-                No credit card
-              </span>
+              <span className="pk-meta-badge">Free to start</span>
+              <span className="pk-meta-badge">No credit card</span>
             </div>
           </div>
 
@@ -236,22 +255,177 @@ export function ParkerHeroHome() {
             <h2>Three steps to a better interview.</h2>
             <p>From job description to feedback in under five minutes.</p>
           </div>
-          <div className="pk-steps">
-            <div className="pk-step">
-              <div className="pk-step-num">01</div>
-              <h3>Choose your role</h3>
-              <p>Tell Parker what role, company, or job description you&apos;re preparing for.</p>
+          <div className="pk-steps-grid">
+            <div className="pk-step-card">
+              <div className="pk-step-image">
+                <Image
+                  src="/images/marketing/create_your_role.png"
+                  alt="Choose your role"
+                  width={600}
+                  height={400}
+                />
+              </div>
+              <div className="pk-step-text">
+                <span className="pk-step-badge">01</span>
+                <h3>Choose your role</h3>
+                <p>Tell Parker what role, company, or job description you&apos;re preparing for.</p>
+              </div>
             </div>
-            <div className="pk-step">
-              <div className="pk-step-num">02</div>
-              <h3>Practice with Parker</h3>
-              <p>Answer realistic interview questions by voice, with natural follow-ups.</p>
+
+            <div className="pk-step-card">
+              <div className="pk-step-image">
+                <Image
+                  src="/images/marketing/practice_with_parker.png"
+                  alt="Practice with Parker"
+                  width={600}
+                  height={400}
+                />
+              </div>
+              <div className="pk-step-text">
+                <span className="pk-step-badge">02</span>
+                <h3>Practice with Parker</h3>
+                <p>Answer realistic interview questions by voice, with natural follow-ups.</p>
+              </div>
             </div>
-            <div className="pk-step">
-              <div className="pk-step-num">03</div>
-              <h3>Get feedback</h3>
-              <p>Review your score, strengths, gaps, and delivery tips after each session.</p>
+
+            <div className="pk-step-card">
+              <div className="pk-step-image">
+                <Image
+                  src="/images/marketing/get_feedback.png"
+                  alt="Get feedback"
+                  width={600}
+                  height={400}
+                />
+              </div>
+              <div className="pk-step-text">
+                <span className="pk-step-badge">03</span>
+                <h3>Get feedback</h3>
+                <p>Review your score, strengths, gaps, and delivery tips after each session.</p>
+              </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="pk-section pk-compare" id="compare">
+        <div className="pk-container">
+          <div className="pk-section-head pk-compare-head">
+            <div className="pk-section-tag pk-compare-tag">Parker vs Generic AI</div>
+            <h2 className="pk-compare-title">Why not just use ChatGPT?</h2>
+            <p className="pk-compare-sub">
+              Generic AI gives you encouragement. Parker gives you the truth.
+            </p>
+          </div>
+
+          <div className="pk-compare-grid">
+            <article className="pk-compare-card pk-compare-card--generic">
+              <header className="pk-compare-card-head">
+                <span className="pk-compare-icon pk-compare-icon--x" aria-hidden>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                    <path
+                      d="M9 9l6 6M15 9l-6 6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </span>
+                <div className="pk-compare-card-titles">
+                  <h3 className="pk-compare-card-title">ChatGPT &amp; Generic AI</h3>
+                  <p className="pk-compare-card-sub">
+                    Great for many things. Not built for this.
+                  </p>
+                </div>
+              </header>
+              <ul className="pk-compare-list">
+                {[
+                  "No honest scoring — praises weak answers",
+                  "No structured interview flow or question management",
+                  "Questions not tailored to your specific role or JD",
+                  "No delivery feedback (filler words, pacing, hedging)",
+                  "No memory — no progress tracking across sessions",
+                  "General purpose, not built for interview practice",
+                  "No Coach Mode — can't retry and refine answers",
+                ].map((item) => (
+                  <li key={item} className="pk-compare-li pk-compare-li--neg">
+                    <span className="pk-compare-mark pk-compare-mark--neg" aria-hidden>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M4 4l8 8M12 4l-8 8"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </article>
+
+            <article className="pk-compare-card pk-compare-card--parker">
+              <span className="pk-compare-card-badge">Built for interviews</span>
+              <header className="pk-compare-card-head">
+                <span className="pk-compare-icon pk-compare-icon--parker" aria-hidden>
+                  P
+                </span>
+                <div className="pk-compare-card-titles">
+                  <h3 className="pk-compare-card-title">Parker</h3>
+                  <p className="pk-compare-card-sub">
+                    Voice-first. Honest. Built for interviews.
+                  </p>
+                </div>
+              </header>
+              <ul className="pk-compare-list">
+                {[
+                  "Voice-first — practice speaking out loud",
+                  "Honest 1–10 scoring with specific gaps",
+                  "Questions from your actual job description",
+                  "STAR method coaching after every answer",
+                  "Progress tracking across sessions",
+                  "Coach Mode — retry until you nail it",
+                ].map((item) => (
+                  <li key={item} className="pk-compare-li pk-compare-li--pos">
+                    <span className="pk-compare-mark pk-compare-mark--pos" aria-hidden>
+                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M3 8.5L6.5 12L13 5"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          <div className="pk-compare-cta">
+            <p className="pk-compare-cta-text">Ready to try the honest way?</p>
+            <Link href="/practice" className="pk-compare-cta-btn">
+              Start free practice
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M4 8h8m0 0L8 4m4 4l-4 4"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </Link>
           </div>
         </div>
       </section>

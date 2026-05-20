@@ -4,6 +4,9 @@
   --pk-blue-600: #2f5fe0;
   --pk-blue-50: #eef3fe;
   --pk-blue-100: #dce6fd;
+  --pk-coral: #e96a4a;
+  --pk-coral-light: rgba(233, 106, 74, 0.08);
+  --pk-coral-border: rgba(233, 106, 74, 0.15);
   --pk-ink-900: #0b1220;
   --pk-ink-700: #2a3346;
   --pk-ink-500: #5b647a;
@@ -20,6 +23,7 @@
   --pk-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(15, 23, 42, 0.04);
   --pk-shadow-md: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.06);
   --pk-shadow-blue: 0 1px 2px rgba(59, 111, 240, 0.18), 0 8px 24px rgba(59, 111, 240, 0.18);
+  --pk-shadow-warm: 0 1px 2px rgba(233, 106, 74, 0.12), 0 8px 24px rgba(233, 106, 74, 0.12);
   --pk-container: 1120px;
 
   color: var(--pk-ink-900);
@@ -82,6 +86,14 @@
   padding: 0 14px;
   font-size: 13.5px;
   border-radius: 8px;
+}
+
+.parker-marketing .pk-btn-lg {
+  height: 48px;
+  padding: 0 24px;
+  font-size: 15px;
+  border-radius: 10px;
+  font-weight: 600;
 }
 
 .parker-marketing .pk-header {
@@ -199,16 +211,31 @@
   overflow: hidden;
 }
 
+/* Warm cream-to-blue gradient background */
+.parker-marketing .pk-hero-bg-blend {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 250, 245, 0.6) 0%,
+    rgba(240, 245, 255, 0.4) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
 .parker-marketing .pk-hero::before {
   content: "";
   position: absolute;
   inset: 0;
   background: radial-gradient(
     70% 50% at 20% 0%,
-    rgba(59, 111, 240, 0.06),
-    transparent 55%
+    rgba(59, 111, 240, 0.08),
+    rgba(233, 106, 74, 0.04) 55%,
+    transparent 100%
   );
   pointer-events: none;
+  z-index: 0;
 }
 
 .parker-marketing .pk-hero-grid {
@@ -216,6 +243,13 @@
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 72px;
   align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.parker-marketing .pk-hero-content {
+  position: relative;
+  z-index: 2;
 }
 
 .parker-marketing .pk-eyebrow {
@@ -239,7 +273,8 @@
   background: var(--pk-blue);
 }
 
-.parker-marketing .pk-hero h1 {
+.parker-marketing .pk-hero h1,
+.parker-marketing .pk-hero-title {
   font-size: 56px;
   line-height: 1.06;
   letter-spacing: -0.028em;
@@ -248,8 +283,15 @@
   text-wrap: balance;
 }
 
-.parker-marketing .pk-hero h1 .pk-accent {
+.parker-marketing .pk-hero h1 .pk-accent,
+.parker-marketing .pk-hero-title .pk-highlight {
   color: var(--pk-blue);
+}
+
+/* Warm coral accent for highlight */
+.parker-marketing .pk-hero-title .pk-highlight {
+  color: #E96A4A;
+  font-weight: 700;
 }
 
 .parker-marketing .pk-hero-sub {
@@ -261,10 +303,33 @@
   text-wrap: pretty;
 }
 
+.parker-marketing .pk-hero-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 24px 0 32px;
+}
+
+.parker-marketing .pk-benefit-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--pk-ink-700);
+  font-weight: 500;
+}
+
+.parker-marketing .pk-benefit-item .pk-check {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #E96A4A;
+}
+
 .parker-marketing .pk-hero-cta {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -272,10 +337,24 @@
   margin-top: 28px;
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   color: var(--pk-ink-400);
   font-size: 13px;
   flex-wrap: wrap;
+}
+
+.parker-marketing .pk-meta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(233, 106, 74, 0.08);
+  color: #E96A4A;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid rgba(233, 106, 74, 0.15);
 }
 
 .parker-marketing .pk-check {
@@ -295,27 +374,28 @@
   position: absolute;
   inset: -40px -20px;
   background: radial-gradient(
-    60% 60% at 60% 40%,
-    rgba(59, 111, 240, 0.1),
+    70% 70% at 60% 40%,
+    rgba(233, 106, 74, 0.12),
+    rgba(59, 111, 240, 0.08) 40%,
     transparent 70%
   );
   z-index: -1;
   border-radius: 50%;
-  filter: blur(20px);
+  filter: blur(24px);
 }
 
 .parker-marketing .pk-mock {
   background: #fff;
   border: 1px solid var(--pk-line);
   border-radius: var(--pk-radius-xl);
-  box-shadow: var(--pk-shadow-md);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 12px 32px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(233, 106, 74, 0.06) inset;
   overflow: hidden;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
 }
 
 .parker-marketing .pk-mock-wrap:hover .pk-mock {
-  transform: translateY(-3px);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 16px 40px rgba(15, 23, 42, 0.08);
+  transform: translateY(-4px);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 20px 48px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(233, 106, 74, 0.1) inset;
 }
 
 .parker-marketing .pk-mock-bar {
@@ -392,7 +472,7 @@
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
-  background: var(--pk-blue-50);
+  background: linear-gradient(135deg, var(--pk-blue-50) 0%, rgba(233, 106, 74, 0.05) 100%);
   border: 1px solid var(--pk-blue-100);
   border-radius: var(--pk-radius);
 }
@@ -515,12 +595,13 @@
 }
 
 .parker-marketing .pk-feedback-inline {
-  border: 1px solid var(--pk-line);
+  border: 1px solid var(--pk-coral-border);
   border-radius: var(--pk-radius);
   padding: 14px 16px;
   display: flex;
   gap: 12px;
   align-items: flex-start;
+  background: var(--pk-coral-light);
 }
 
 .parker-marketing .pk-feedback-inline-icon {
@@ -528,8 +609,8 @@
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: var(--pk-blue-50);
-  color: var(--pk-blue);
+  background: rgba(233, 106, 74, 0.12);
+  color: var(--pk-coral);
   display: grid;
   place-items: center;
 }
@@ -613,6 +694,313 @@
   background: var(--pk-bg-soft);
   border-top: 1px solid var(--pk-line-soft);
   border-bottom: 1px solid var(--pk-line-soft);
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
+
+.parker-marketing .pk-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.parker-marketing .pk-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.parker-marketing .pk-step-image {
+  width: 100%;
+}
+
+.parker-marketing .pk-step-image img {
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.1);
+  object-fit: contain;
+  display: block;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.parker-marketing .pk-step-card:hover .pk-step-image img {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.12);
+}
+
+.parker-marketing .pk-step-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.parker-marketing .pk-step-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--pk-blue);
+  color: #fff;
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+}
+
+.parker-marketing .pk-step-text h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #0e1014;
+  margin: 14px 0 10px;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+.parker-marketing .pk-step-text p {
+  font-size: 15px;
+  color: #6c7280;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* ---------- Comparison section ---------- */
+.parker-marketing .pk-compare {
+  background: #faf7f1;
+  padding-top: 96px;
+  padding-bottom: 96px;
+  border-bottom: 1px solid var(--pk-line-soft);
+}
+
+.parker-marketing .pk-compare-head {
+  margin-bottom: 56px;
+}
+
+.parker-marketing .pk-compare-tag {
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #e96a4a;
+  margin-bottom: 18px;
+}
+
+.parker-marketing .pk-compare-title {
+  color: #0e1014;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: 0 0 16px;
+}
+
+.parker-marketing .pk-compare-sub {
+  color: #6c7280;
+  font-size: 18px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.parker-marketing .pk-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  max-width: 1040px;
+  margin: 0 auto;
+  align-items: stretch;
+}
+
+.parker-marketing .pk-compare-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 36px;
+  border-radius: 20px;
+  height: 100%;
+}
+
+.parker-marketing .pk-compare-card--generic {
+  background: #ffffff;
+  border: 1px solid #e8e5de;
+}
+
+.parker-marketing .pk-compare-card--parker {
+  background: #0e1014;
+  color: #ffffff;
+  border-top: 3px solid #3b6ff0;
+  box-shadow: 0 20px 60px rgba(14, 16, 20, 0.18);
+}
+
+.parker-marketing .pk-compare-card-badge {
+  position: absolute;
+  top: -14px;
+  left: 36px;
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #3b6ff0;
+  color: #ffffff;
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  line-height: 1.4;
+  box-shadow: 0 4px 14px rgba(59, 111, 240, 0.35);
+}
+
+.parker-marketing .pk-compare-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.parker-marketing .pk-compare-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.parker-marketing .pk-compare-icon--x {
+  background: #f1f2f5;
+  color: #9aa0a8;
+}
+
+.parker-marketing .pk-compare-icon--parker {
+  background: #3b6ff0;
+  color: #ffffff;
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.parker-marketing .pk-compare-card-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.parker-marketing .pk-compare-card--generic .pk-compare-card-title {
+  color: #6c7280;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.parker-marketing .pk-compare-card--parker .pk-compare-card-title {
+  color: #ffffff;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.parker-marketing .pk-compare-card--generic .pk-compare-card-sub {
+  color: #9aa0a8;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.parker-marketing .pk-compare-card--parker .pk-compare-card-sub {
+  color: #9197a3;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.parker-marketing .pk-compare-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.parker-marketing .pk-compare-li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.parker-marketing .pk-compare-li--neg {
+  color: #6c7280;
+}
+
+.parker-marketing .pk-compare-li--pos {
+  color: #e6e8ec;
+}
+
+.parker-marketing .pk-compare-mark {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  margin-top: 1px;
+}
+
+.parker-marketing .pk-compare-mark--neg {
+  background: rgba(154, 160, 168, 0.18);
+  color: #9aa0a8;
+}
+
+.parker-marketing .pk-compare-mark--pos {
+  background: rgba(34, 197, 94, 0.18);
+  color: #22c55e;
+}
+
+.parker-marketing .pk-compare-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 48px;
+  text-align: center;
+}
+
+.parker-marketing .pk-compare-cta-text {
+  font-size: 17px;
+  color: #0e1014;
+  margin: 0;
+  font-weight: 500;
+}
+
+.parker-marketing .pk-compare-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 32px;
+  background: #3b6ff0;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 8px 24px rgba(59, 111, 240, 0.25);
+}
+
+.parker-marketing .pk-compare-cta-btn:hover {
+  background: #2f5fe0;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(59, 111, 240, 0.32);
 }
 
 .parker-marketing .pk-steps {
@@ -1178,7 +1566,8 @@
     grid-template-columns: 1fr;
     gap: 48px;
   }
-  .parker-marketing .pk-hero h1 {
+  .parker-marketing .pk-hero h1,
+  .parker-marketing .pk-hero-title {
     font-size: 42px;
   }
   .parker-marketing .pk-section {
@@ -1188,6 +1577,38 @@
   .parker-marketing .pk-features-grid,
   .parker-marketing .pk-pricing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .parker-marketing .pk-steps-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .parker-marketing .pk-step-card {
+    gap: 20px;
+  }
+  .parker-marketing .pk-step-text h3 {
+    font-size: 20px;
+  }
+
+  .parker-marketing .pk-compare {
+    padding-top: 72px;
+    padding-bottom: 72px;
+  }
+  .parker-marketing .pk-compare-title {
+    font-size: 30px;
+  }
+  .parker-marketing .pk-compare-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .parker-marketing .pk-compare-card--parker {
+    order: -1;
+  }
+  .parker-marketing .pk-compare-card {
+    padding: 28px;
+  }
+  .parker-marketing .pk-compare-card-badge {
+    left: 28px;
   }
 
   .parker-marketing .pk-price-recommended {
@@ -1255,7 +1676,8 @@
   .parker-marketing .pk-hero {
     padding: 48px 0 40px;
   }
-  .parker-marketing .pk-hero h1 {
+  .parker-marketing .pk-hero h1,
+  .parker-marketing .pk-hero-title {
     font-size: 28px;
     line-height: 1.2;
     margin: 16px 0 16px;
@@ -1264,22 +1686,39 @@
     font-size: 15px;
     margin: 0 0 24px;
   }
+  .parker-marketing .pk-hero-benefits {
+    margin: 20px 0 24px;
+    gap: 10px;
+  }
+  .parker-marketing .pk-benefit-item {
+    font-size: 14px;
+  }
   .parker-marketing .pk-hero-cta {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
-  .parker-marketing .pk-hero-cta a {
+  .parker-marketing .pk-hero-cta a,
+  .parker-marketing .pk-hero-cta .pk-btn {
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+  .parker-marketing .pk-hero-cta .pk-btn-lg {
+    height: 44px;
+    font-size: 14px;
   }
   .parker-marketing .pk-mock-wrap {
     display: none;
   }
   .parker-marketing .pk-meta-row {
     margin-top: 20px;
-    gap: 12px;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .parker-marketing .pk-meta-badge {
+    height: 26px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
