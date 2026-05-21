@@ -1049,46 +1049,506 @@
 
 .parker-marketing .pk-features-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
 }
 
 .parker-marketing .pk-feature {
-  border: 1px solid var(--pk-line);
-  border-radius: var(--pk-radius-lg);
-  padding: 28px;
+  position: relative;
   background: #fff;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  border: 1px solid var(--pk-line);
+  border-radius: 20px;
+  padding: 28px;
+  display: grid;
+  grid-template-rows: 220px auto auto;
+  gap: 18px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
 }
 
 .parker-marketing .pk-feature:hover {
-  border-color: var(--pk-blue-100);
-  box-shadow: var(--pk-shadow-md);
   transform: translateY(-2px);
+  border-color: #d8def0;
+  box-shadow: 0 24px 50px -28px rgba(15, 23, 42, 0.22),
+    0 6px 18px -10px rgba(15, 23, 42, 0.08);
 }
 
-.parker-marketing .pk-feature-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+.parker-marketing .pk-feature-visual {
+  position: relative;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fcfdff 0%, #f6f8ff 100%);
+  border: 1px solid var(--pk-line-soft);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.parker-marketing .pk-feature-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(59, 111, 240, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 111, 240, 0.04) 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 75%);
+  mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 75%);
+}
+
+.parker-marketing .pk-feature-title {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: -0.015em;
+  font-weight: 700;
+  color: var(--pk-ink-900);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.parker-marketing .pk-feature-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   background: var(--pk-blue-50);
   color: var(--pk-blue);
   display: grid;
   place-items: center;
-  margin-bottom: 18px;
+  flex-shrink: 0;
+  transition: background 0.3s ease, color 0.3s ease, transform 0.3s ease;
 }
 
-.parker-marketing .pk-feature h3 {
-  font-size: 17px;
-  font-weight: 600;
-  margin: 0 0 6px;
+.parker-marketing .pk-feature:hover .pk-feature-badge {
+  background: var(--pk-blue);
+  color: #fff;
+  transform: scale(1.05) rotate(-2deg);
 }
 
-.parker-marketing .pk-feature p {
-  font-size: 14.5px;
-  color: var(--pk-ink-500);
-  line-height: 1.55;
+.parker-marketing .pk-feature-desc {
   margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--pk-ink-500);
+  max-width: 52ch;
+}
+
+/* ============================================================
+   Feature visual 1 — Mock Interviews
+   ============================================================ */
+.parker-marketing .pk-fv-mock {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+.parker-marketing .pk-fv-mock-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.parker-marketing .pk-fv-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--pk-ink-500);
+  font-weight: 500;
+}
+.parker-marketing .pk-fv-ava {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #4f6dff, #1c45e0);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+}
+.parker-marketing .pk-fv-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pk-ink-700);
+}
+.parker-marketing .pk-fv-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e0413a;
+  box-shadow: 0 0 0 0 rgba(224, 65, 58, 0.5);
+  animation: pk-fv-rec 1.6s ease-out infinite;
+}
+@keyframes pk-fv-rec {
+  0% {
+    box-shadow: 0 0 0 0 rgba(224, 65, 58, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(224, 65, 58, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(224, 65, 58, 0);
+  }
+}
+.parker-marketing .pk-fv-quote {
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--pk-ink-700);
+  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.12);
+  max-width: 86%;
+  align-self: flex-start;
+}
+.parker-marketing .pk-fv-quote em {
+  font-style: normal;
+  color: var(--pk-blue);
+  font-weight: 600;
+}
+.parker-marketing .pk-fv-wave-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.12);
+}
+.parker-marketing .pk-fv-mic {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--pk-blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.parker-marketing .pk-fv-wave {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  height: 26px;
+}
+.parker-marketing .pk-fv-wave span {
+  display: block;
+  width: 3px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, var(--pk-blue) 0%, #8aa2ff 100%);
+  animation: pk-fv-bar 1.2s ease-in-out infinite;
+}
+@keyframes pk-fv-bar {
+  0%, 100% {
+    transform: scaleY(0.22);
+    transform-origin: center;
+  }
+  50% {
+    transform: scaleY(1);
+    transform-origin: center;
+  }
+}
+.parker-marketing .pk-fv-timestamp {
+  font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--pk-ink-700);
+}
+
+/* ============================================================
+   Feature visual 2 — Coach Mode
+   ============================================================ */
+.parker-marketing .pk-fv-coach {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+.parker-marketing .pk-fv-qcard {
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.12);
+}
+.parker-marketing .pk-fv-qhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--pk-blue);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.parker-marketing .pk-fv-pip {
+  display: inline-flex;
+  gap: 3px;
+}
+.parker-marketing .pk-fv-pip i {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--pk-line);
+  display: block;
+}
+.parker-marketing .pk-fv-pip i.on {
+  background: var(--pk-blue);
+}
+.parker-marketing .pk-fv-qtext {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--pk-ink-900);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.parker-marketing .pk-fv-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.parker-marketing .pk-fv-att {
+  display: grid;
+  grid-template-columns: 22px 1fr 28px;
+  gap: 10px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.parker-marketing .pk-fv-att--best {
+  background: rgba(59, 111, 240, 0.06);
+  border-color: rgba(59, 111, 240, 0.4);
+}
+.parker-marketing .pk-fv-att-n {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: #f4f6fb;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--pk-ink-700);
+  display: grid;
+  place-items: center;
+}
+.parker-marketing .pk-fv-att--best .pk-fv-att-n {
+  background: var(--pk-blue);
+  color: #fff;
+}
+.parker-marketing .pk-fv-att-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--pk-line-soft);
+  overflow: hidden;
+}
+.parker-marketing .pk-fv-att-bar > i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--pk-blue), #6e8cff);
+  border-radius: 999px;
+  transform: translateX(-100%);
+  animation: pk-fv-grow 1.6s ease-out forwards;
+}
+@keyframes pk-fv-grow {
+  to {
+    transform: translateX(0);
+  }
+}
+.parker-marketing .pk-fv-att-score {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--pk-ink-900);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.parker-marketing .pk-fv-att--best .pk-fv-att-score {
+  color: var(--pk-blue);
+}
+
+/* ============================================================
+   Feature visual 3 — Delivery Feedback
+   ============================================================ */
+.parker-marketing .pk-fv-deliv {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 10px;
+  height: 100%;
+}
+.parker-marketing .pk-fv-trans {
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--pk-ink-700);
+  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+.parker-marketing .pk-fv-tag {
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.parker-marketing .pk-fv-tag--fill {
+  background: rgba(224, 65, 58, 0.12);
+  color: #b8302a;
+  border-bottom: 1.5px dashed rgba(224, 65, 58, 0.5);
+}
+.parker-marketing .pk-fv-tag--hedge {
+  background: rgba(217, 119, 6, 0.12);
+  color: #a25e02;
+  border-bottom: 1.5px dashed rgba(217, 119, 6, 0.5);
+}
+.parker-marketing .pk-fv-tag--strong {
+  background: rgba(22, 163, 107, 0.12);
+  color: #0d7a4f;
+}
+.parker-marketing .pk-fv-gauges {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.parker-marketing .pk-fv-g {
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.parker-marketing .pk-fv-g-lbl {
+  font-size: 10px;
+  color: var(--pk-ink-500);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.parker-marketing .pk-fv-g-val {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pk-ink-900);
+  margin: 2px 0 6px;
+  font-variant-numeric: tabular-nums;
+}
+.parker-marketing .pk-fv-g-val small {
+  font-size: 10px;
+  color: var(--pk-ink-500);
+  font-weight: 500;
+  margin-left: 2px;
+}
+.parker-marketing .pk-fv-g-meter {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--pk-line-soft);
+  overflow: hidden;
+}
+.parker-marketing .pk-fv-g-meter > i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--pk-blue), #6e8cff);
+}
+.parker-marketing .pk-fv-g-meter--warn > i {
+  background: linear-gradient(90deg, #d97706, #fbbf24);
+}
+.parker-marketing .pk-fv-g-meter--good > i {
+  background: linear-gradient(90deg, #16a36b, #4ade80);
+}
+
+/* ============================================================
+   Feature visual 4 — Progress Tracking
+   ============================================================ */
+.parker-marketing .pk-fv-prog {
+  position: relative;
+  z-index: 1;
+  padding: 18px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 10px;
+  height: 100%;
+}
+.parker-marketing .pk-fv-prog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.parker-marketing .pk-fv-prog-lbl {
+  font-size: 11px;
+  color: var(--pk-ink-500);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.parker-marketing .pk-fv-prog-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #16a36b;
+  background: rgba(22, 163, 107, 0.1);
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+.parker-marketing .pk-fv-prog-chart {
+  position: relative;
+  background: #fff;
+  border: 1px solid var(--pk-line);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.12);
+}
+.parker-marketing .pk-fv-prog-chart svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.parker-marketing .pk-fv-prog-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: pk-fv-draw 1.6s cubic-bezier(0.22, 0.61, 0.36, 1) 0.2s forwards;
+}
+@keyframes pk-fv-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.parker-marketing .pk-fv-streak {
+  display: grid;
+  grid-template-columns: repeat(14, 1fr);
+  gap: 4px;
+}
+.parker-marketing .pk-fv-streak i {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--pk-line-soft);
+}
+.parker-marketing .pk-fv-streak-l1 {
+  background: rgba(59, 111, 240, 0.22) !important;
+}
+.parker-marketing .pk-fv-streak-l2 {
+  background: rgba(59, 111, 240, 0.5) !important;
+}
+.parker-marketing .pk-fv-streak-l3 {
+  background: var(--pk-blue) !important;
 }
 
 .parker-marketing .pk-feedback-section {
@@ -1766,14 +2226,15 @@
     gap: 16px;
   }
   .parker-marketing .pk-feature {
-    padding: 20px;
+    padding: 22px;
+    grid-template-rows: 200px auto auto;
+    gap: 16px;
   }
-  .parker-marketing .pk-feature h3 {
-    font-size: 15px;
-    margin: 0 0 6px;
+  .parker-marketing .pk-feature-title {
+    font-size: 19px;
   }
-  .parker-marketing .pk-feature p {
-    font-size: 13px;
+  .parker-marketing .pk-feature-desc {
+    font-size: 14.5px;
   }
 
   /* Feedback Section */

@@ -439,133 +439,29 @@ export function ParkerHeroHome() {
           </div>
           <div className="pk-features-grid">
             <FeatureCard
-              icon={
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path
-                    d="M10 13a3 3 0 003-3V5a3 3 0 10-6 0v5a3 3 0 003 3z"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M5 10a5 5 0 0010 0M10 15v3"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              }
+              visual={<MockVisual />}
+              icon={<MicIcon />}
               title="Mock Interviews"
               description="Simulate a real interview with natural follow-ups across behavioral, technical, and case formats."
             />
             <FeatureCard
-              icon={
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path
-                    d="M3 5h14M3 10h14M3 15h9"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              }
+              visual={<CoachVisual />}
+              icon={<CoachIcon />}
               title="Coach Mode"
               description="Practice one question at a time. Retry your answer, refine your story, and build confidence."
             />
             <FeatureCard
-              icon={
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <path
-                    d="M3 16l4-4 3 3 7-7"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <path
-                    d="M14 8h3v3"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              }
+              visual={<DeliveryVisual />}
+              icon={<DeliveryIcon />}
               title="Delivery Feedback"
               description="See pacing, filler words, hedging, and clarity suggestions — not just what you said, but how."
             />
             <FeatureCard
-              icon={
-                <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden>
-                  <rect
-                    x="3"
-                    y="3"
-                    width="14"
-                    height="14"
-                    rx="2"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                  />
-                  <path
-                    d="M7 13V9M10 13V7M13 13v-2"
-                    stroke="currentColor"
-                    strokeWidth="1.6"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              }
+              visual={<ProgressVisual />}
+              icon={<ProgressIcon />}
               title="Progress Tracking"
               description="Track sessions, scores, and improvement areas over time — so you can see what's working."
             />
-          </div>
-        </div>
-      </section>
-
-      <section className="pk-section pk-feedback-section">
-        <div className="pk-container">
-          <div className="pk-section-head">
-            <div className="pk-section-tag">Feedback that&apos;s actually useful</div>
-            <h2>Specific notes, not generic praise.</h2>
-            <p>Parker tells you exactly what to change, and why it matters.</p>
-          </div>
-          <div className="pk-feedback-card">
-            <div className="pk-feedback-head">
-              <div className="pk-feedback-avatar">P</div>
-              <div>
-                <div className="pk-feedback-name">Parker</div>
-                <div className="pk-feedback-role">
-                  Reviewing: &quot;Tell me about a product launch…&quot;
-                </div>
-              </div>
-              <div className="pk-feedback-badge">Behavioral · Q3</div>
-            </div>
-            <div className="pk-feedback-body">
-              <p className="pk-quote">
-                <span className="pk-quote-mark">&ldquo;</span>
-                Good structure. One thing missing is the outcome. Try adding a measurable result,
-                like adoption, revenue impact, time saved, or customer feedback.
-                <span className="pk-quote-mark">&rdquo;</span>
-              </p>
-              <div className="pk-feedback-stats">
-                <div className="pk-stat pk-stat-score">
-                  <div className="pk-stat-label">Score</div>
-                  <div className="pk-stat-value">
-                    7<span className="pk-stat-denom">/10</span>
-                  </div>
-                </div>
-                <div className="pk-stat">
-                  <div className="pk-stat-label">Strength</div>
-                  <div className="pk-stat-value">Clear context</div>
-                </div>
-                <div className="pk-stat">
-                  <div className="pk-stat-label">Improve</div>
-                  <div className="pk-stat-value">Add measurable impact</div>
-                </div>
-                <div className="pk-stat">
-                  <div className="pk-stat-label">Try again with</div>
-                  <div className="pk-stat-value">Situation → Action → Result</div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -601,19 +497,256 @@ export function ParkerHeroHome() {
 }
 
 function FeatureCard({
+  visual,
   icon,
   title,
   description,
 }: {
+  visual: ReactNode;
   icon: ReactNode;
   title: string;
   description: string;
 }) {
   return (
-    <div className="pk-feature">
-      <div className="pk-feature-icon">{icon}</div>
-      <h3>{title}</h3>
-      <p>{description}</p>
+    <article className="pk-feature">
+      <div className="pk-feature-visual">{visual}</div>
+      <h3 className="pk-feature-title">
+        <span className="pk-feature-badge">{icon}</span>
+        {title}
+      </h3>
+      <p className="pk-feature-desc">{description}</p>
+    </article>
+  );
+}
+
+/* -------- Feature card icons (used inside the title badge) -------- */
+function MicIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="9" y="3" width="6" height="12" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3" />
+    </svg>
+  );
+}
+function CoachIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+      <path d="M3 21v-5h5" />
+    </svg>
+  );
+}
+function DeliveryIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M4 6h12" />
+      <path d="M4 12h16" />
+      <path d="M4 18h8" />
+    </svg>
+  );
+}
+function ProgressIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="4" y="13" width="4" height="7" rx="1" />
+      <rect x="10" y="9" width="4" height="11" rx="1" />
+      <rect x="16" y="5" width="4" height="15" rx="1" />
+    </svg>
+  );
+}
+
+/* -------- Feature card visuals -------- */
+
+// Deterministic waveform bars so SSR and CSR match
+const WAVE_BARS = Array.from({ length: 28 }, (_, i) => {
+  const base = 22 + Math.round(Math.sin(i * 0.5) * 16) + ((i * 37) % 30);
+  return {
+    height: Math.min(100, Math.max(12, base)),
+    delay: i * 55,
+    duration: 900 + ((i * 113) % 700),
+  };
+});
+
+function MockVisual() {
+  return (
+    <div className="pk-fv-mock">
+      <div className="pk-fv-mock-topline">
+        <span className="pk-fv-who">
+          <span className="pk-fv-ava">I</span>
+          Interviewer · Senior PM
+        </span>
+        <span className="pk-fv-live">
+          <span className="pk-fv-live-dot" aria-hidden />
+          Live
+        </span>
+      </div>
+      <div className="pk-fv-quote">
+        &ldquo;Walk me through how you&apos;d evaluate launching{" "}
+        <em>Stories</em> inside a B2B notes app.&rdquo;
+      </div>
+      <div className="pk-fv-wave-row">
+        <div className="pk-fv-mic" aria-hidden>
+          <MicIcon />
+        </div>
+        <div className="pk-fv-wave" aria-hidden>
+          {WAVE_BARS.map((bar, i) => (
+            <span
+              key={i}
+              style={{
+                height: `${bar.height}%`,
+                animationDelay: `${bar.delay}ms`,
+                animationDuration: `${bar.duration}ms`,
+              }}
+            />
+          ))}
+        </div>
+        <div className="pk-fv-timestamp">00:42</div>
+      </div>
+    </div>
+  );
+}
+
+function CoachVisual() {
+  const attempts = [
+    { n: "04", score: 88, width: 88, delay: 0, best: true },
+    { n: "03", score: 74, width: 74, delay: 120 },
+    { n: "02", score: 61, width: 61, delay: 240 },
+  ];
+  return (
+    <div className="pk-fv-coach">
+      <div className="pk-fv-qcard">
+        <div className="pk-fv-qhead">
+          <span>Behavioral · Question 3</span>
+          <span className="pk-fv-pip" aria-hidden>
+            <i className="on" />
+            <i className="on" />
+            <i className="on" />
+            <i />
+            <i />
+            <i />
+          </span>
+        </div>
+        <div className="pk-fv-qtext">
+          &ldquo;Tell me about a time you disagreed with a senior leader.&rdquo;
+        </div>
+      </div>
+      <div className="pk-fv-attempts">
+        {attempts.map((a) => (
+          <div key={a.n} className={a.best ? "pk-fv-att pk-fv-att--best" : "pk-fv-att"}>
+            <span className="pk-fv-att-n">{a.n}</span>
+            <div className="pk-fv-att-bar">
+              <i
+                style={{
+                  width: `${a.width}%`,
+                  animationDelay: `${a.delay}ms`,
+                }}
+              />
+            </div>
+            <span className="pk-fv-att-score">{a.score}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DeliveryVisual() {
+  return (
+    <div className="pk-fv-deliv">
+      <div className="pk-fv-trans">
+        <span className="pk-fv-tag pk-fv-tag--strong">
+          When our director pushed to ship,
+        </span>{" "}
+        I, <span className="pk-fv-tag pk-fv-tag--fill">um</span>, knew the data
+        wasn&apos;t there.{" "}
+        <span className="pk-fv-tag pk-fv-tag--hedge">I kind of</span> felt
+        we&apos;d tank activation, so I ran a quick test —{" "}
+        <span className="pk-fv-tag pk-fv-tag--fill">like</span>, real calls.{" "}
+        <span className="pk-fv-tag pk-fv-tag--strong">
+          I brought back a one-pager and a two-week delay.
+        </span>
+      </div>
+      <div className="pk-fv-gauges">
+        <div className="pk-fv-g">
+          <div className="pk-fv-g-lbl">Pace</div>
+          <div className="pk-fv-g-val">
+            142<small>wpm</small>
+          </div>
+          <div className="pk-fv-g-meter">
+            <i style={{ width: "68%" }} />
+          </div>
+        </div>
+        <div className="pk-fv-g">
+          <div className="pk-fv-g-lbl">Filler</div>
+          <div className="pk-fv-g-val">7</div>
+          <div className="pk-fv-g-meter pk-fv-g-meter--warn">
+            <i style={{ width: "45%" }} />
+          </div>
+        </div>
+        <div className="pk-fv-g">
+          <div className="pk-fv-g-lbl">Clarity</div>
+          <div className="pk-fv-g-val">82</div>
+          <div className="pk-fv-g-meter pk-fv-g-meter--good">
+            <i style={{ width: "82%" }} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProgressVisual() {
+  const streak = ["l1", "l2", "l1", "l2", "", "l1", "l2", "l3", "l2", "l3", "l3", "l2", "l3", "l3"];
+  return (
+    <div className="pk-fv-prog">
+      <div className="pk-fv-prog-head">
+        <span className="pk-fv-prog-lbl">Score · last 14 days</span>
+        <span className="pk-fv-prog-delta">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M6 15l6-6 6 6" />
+          </svg>
+          +18%
+        </span>
+      </div>
+      <div className="pk-fv-prog-chart">
+        <svg viewBox="0 0 280 90" preserveAspectRatio="none" aria-hidden>
+          <defs>
+            <linearGradient id="pk-fv-ga" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#3b6ff0" stopOpacity="0.22" />
+              <stop offset="100%" stopColor="#3b6ff0" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <g stroke="#eef1f7" strokeWidth="1">
+            <line x1="0" y1="22" x2="280" y2="22" />
+            <line x1="0" y1="50" x2="280" y2="50" />
+            <line x1="0" y1="78" x2="280" y2="78" />
+          </g>
+          <path
+            d="M0,72 L20,68 L40,70 L60,60 L80,55 L100,58 L120,48 L140,42 L160,38 L180,40 L200,28 L220,22 L240,16 L260,10 L280,8 L280,90 L0,90 Z"
+            fill="url(#pk-fv-ga)"
+          />
+          <path
+            className="pk-fv-prog-line"
+            d="M0,72 L20,68 L40,70 L60,60 L80,55 L100,58 L120,48 L140,42 L160,38 L180,40 L200,28 L220,22 L240,16 L260,10 L280,8"
+            fill="none"
+            stroke="#3b6ff0"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            pathLength={1}
+          />
+          <circle cx="280" cy="8" r="4" fill="#3b6ff0" />
+          <circle cx="280" cy="8" r="8" fill="#3b6ff0" opacity="0.18" />
+        </svg>
+      </div>
+      <div className="pk-fv-streak" aria-hidden>
+        {streak.map((cls, i) => (
+          <i key={i} className={cls ? `pk-fv-streak-${cls}` : ""} />
+        ))}
+      </div>
     </div>
   );
 }
